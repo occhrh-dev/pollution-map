@@ -1,15 +1,30 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>แผนที่ควบคุมมลพิษ + รัศมีแบบโต้ตอบ</title>
+    <title>แผนที่ควบคุมมลพิษแบบโต้ตอบ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: sans-serif;
+      }
       #map {
-        height: 80vh;
+        height: 70vh;
         width: 100%;
       }
       #controls {
         padding: 10px;
         background: #f0f0f0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      input, button {
+        padding: 5px;
+        font-size: 16px;
       }
       table {
         width: 100%;
@@ -25,7 +40,7 @@
   </head>
   <body>
     <div id="controls">
-      <label for="radiusInput">กำหนดรัศมี (เมตร): </label>
+      <label for="radiusInput">กำหนดรัศมี (เมตร):</label>
       <input type="number" id="radiusInput" value="1000" min="100" step="100">
       <button onclick="undoLast()">Undo</button>
       <button onclick="clearMap()">ล้างแผนที่</button>
@@ -51,54 +66,67 @@
       let markers = [];
       let data = [];
 
+      function drawCircle(latLng) {
+        const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
+
+        const circle = new google.maps.Circle({
+          strokeColor: "#FF0000",
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: "#FF0000",
+          fillOpacity: 0.35,
+          map,
+          center: latLng,
+          radius: radius,
+        });
+        circles.push(circle);
+
+        const marker = new google.maps.Marker({
+          position: latLng,
+          map: map,
+        });
+        markers.push(marker);
+
+        data.push({
+          lat: latLng.lat(),
+          lng: latLng.lng(),
+          radius: radius,
+        });
+
+        updateTable();
+      }
+
       function initMap() {
         map = new google.maps.Map(document.getElementById("map"), {
           center: { lat: 12.738, lng: 101.185 },
           zoom: 12,
+          styles: [
+            { featureType: "poi", stylers: [{ visibility: "off" }] },
+            { featureType: "transit", stylers: [{ visibility: "off" }] },
+            { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
+            { featureType: "administrative", elementType: "labels", stylers: [{ visibility: "off" }] }
+          ]
         });
 
         // โหลดโครงร่างจาก GeoJSON
         map.data.loadGeoJson('ผังโครงร่างเขตควบคุมมลพิษ.json');
 
         // สไตล์พื้นที่
-        map.data.setStyle(function(feature) {
-          return {
-            fillColor: feature.getProperty('fill') || '#FF0000',
-            fillOpacity: feature.getProperty('fill-opacity') || 0.3,
-            strokeColor: feature.getProperty('stroke') || '#FF0000',
-            strokeWeight: feature.getProperty('stroke-width') || 2
-          };
+        map.data.setStyle(feature => ({
+          fillColor: feature.getProperty('fill') || '#FF0000',
+          fillOpacity: feature.getProperty('fill-opacity') || 0.3,
+          strokeColor: feature.getProperty('stroke') || '#FF0000',
+          strokeWeight: feature.getProperty('stroke-width') || 2
+        }));
+
+        // คลิกบนแผนที่
+        map.addListener("click", (e) => {
+          drawCircle(e.latLng);
         });
 
-        // คลิกเพื่อวาดรัศมี
-        map.addListener("click", (e) => {
-          const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
-
-          const circle = new google.maps.Circle({
-            strokeColor: "#FF0000",
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            fillColor: "#FF0000",
-            fillOpacity: 0.35,
-            map,
-            center: e.latLng,
-            radius: radius,
-          });
-          circles.push(circle);
-
-          const marker = new google.maps.Marker({
-            position: e.latLng,
-            map: map,
-          });
-          markers.push(marker);
-
-          data.push({
-            lat: e.latLng.lat(),
-            lng: e.latLng.lng(),
-            radius: radius,
-          });
-
-          updateTable();
+        // คลิกบนโครงร่าง
+        map.data.addListener("click", (e) => {
+          drawCircle(e.latLng);
         });
       }
 
