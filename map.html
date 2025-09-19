@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>แผนที่ควบคุมมลพิษ + รัศมีแบบโต้ตอบ</title>
+    <style>
+      #map {
+        height: 80vh;
+        width: 100%;
+      }
+      #controls {
+        padding: 10px;
+        background: #f0f0f0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th, td {
+        border: 1px solid #ccc;
+        padding: 5px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <label for="radiusInput">กำหนดรัศมี (เมตร): </label>
+      <input type="number" id="radiusInput" value="1000" min="100" step="100">
+      <button onclick="undoLast()">Undo</button>
+      <button onclick="clearMap()">ล้างแผนที่</button>
+    </div>
+
+    <div id="map"></div>
+
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>ละติจูด</th>
+          <th>ลองจิจูด</th>
+          <th>รัศมี (เมตร)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      let map;
+      let circles = [];
+      let markers = [];
+      let data = [];
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+          center: { lat: 12.738, lng: 101.185 },
+          zoom: 12,
+        });
+
+        // โหลดโครงร่างจาก GeoJSON
+        map.data.loadGeoJson('ผังโครงร่างเขตควบคุมมลพิษ.json');
+
+        // สไตล์พื้นที่
+        map.data.setStyle(function(feature) {
+          return {
+            fillColor: feature.getProperty('fill') || '#FF0000',
+            fillOpacity: feature.getProperty('fill-opacity') || 0.3,
+            strokeColor: feature.getProperty('stroke') || '#FF0000',
+            strokeWeight: feature.getProperty('stroke-width') || 2
+          };
+        });
+
+        // คลิกเพื่อวาดรัศมี
+        map.addListener("click", (e) => {
+          const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
+
+          const circle = new google.maps.Circle({
+            strokeColor: "#FF0000",
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: "#FF0000",
+            fillOpacity: 0.35,
+            map,
+            center: e.latLng,
+            radius: radius,
+          });
+          circles.push(circle);
+
+          const marker = new google.maps.Marker({
+            position: e.latLng,
+            map: map,
+          });
+          markers.push(marker);
+
+          data.push({
+            lat: e.latLng.lat(),
+            lng: e.latLng.lng(),
+            radius: radius,
+          });
+
+          updateTable();
+        });
+      }
+
+      function clearMap() {
+        circles.forEach(c => c.setMap(null));
+        markers.forEach(m => m.setMap(null));
+        circles = [];
+        markers = [];
+        data = [];
+        updateTable();
+      }
+
+      function undoLast() {
+        if (circles.length > 0) {
+          circles.pop().setMap(null);
+          markers.pop().setMap(null);
+          data.pop();
+          updateTable();
+        }
+      }
+
+      function updateTable() {
+        const tbody = document.querySelector("#dataTable tbody");
+        tbody.innerHTML = "";
+        data.forEach((item, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${item.lat.toFixed(6)}</td>
+            <td>${item.lng.toFixed(6)}</td>
+            <td>${item.radius}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+    </script>
+
+    <script async
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
+    </script>
+  </body>
+</html>
