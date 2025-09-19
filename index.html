@@ -22,7 +22,7 @@
         gap: 10px;
         align-items: center;
       }
-      select, input, button {
+      input, button {
         padding: 5px;
         font-size: 16px;
       }
@@ -40,13 +40,10 @@
   </head>
   <body>
     <div id="controls">
-      <label for="levelSelect">ระดับ:</label>
-      <select id="levelSelect">
-        <option value="500" data-color="#2196F3">เขตเฝ้าระวัง (500 ม.)</option>
-        <option value="1000" data-color="#4CAF50">เขตควบคุมเบื้องต้น (1000 ม.)</option>
-        <option value="2000" data-color="#FFEB3B">เขตควบคุมเข้มข้น (2000 ม.)</option>
-        <option value="3000" data-color="#F44336">เขตอันตราย (3000 ม.)</option>
-      </select>
+      <label for="radiusInput">รัศมี (เมตร):</label>
+      <input type="number" id="radiusInput" value="1000" min="100" step="100">
+      <label for="colorInput">สี:</label>
+      <input type="color" id="colorInput" value="#FF0000">
       <button onclick="undoLast()">Undo</button>
       <button onclick="clearMap()">ล้างแผนที่</button>
     </div>
@@ -60,7 +57,7 @@
           <th>ละติจูด</th>
           <th>ลองจิจูด</th>
           <th>รัศมี (เมตร)</th>
-          <th>ระดับ</th>
+          <th>สี</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -73,10 +70,8 @@
       let data = [];
 
       function drawCircle(latLng) {
-        const select = document.getElementById("levelSelect");
-        const radius = parseInt(select.value);
-        const color = select.options[select.selectedIndex].getAttribute("data-color");
-        const label = select.options[select.selectedIndex].text;
+        const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
+        const color = document.getElementById("colorInput").value;
 
         const circle = new google.maps.Circle({
           strokeColor: color,
@@ -100,7 +95,7 @@
           lat: latLng.lat(),
           lng: latLng.lng(),
           radius: radius,
-          label: label
+          color: color
         });
 
         updateTable();
@@ -177,7 +172,7 @@
             <td>${item.lat.toFixed(6)}</td>
             <td>${item.lng.toFixed(6)}</td>
             <td>${item.radius}</td>
-            <td>${item.label}</td>
+            <td><span style="background:${item.color}; padding: 4px 10px; border-radius: 4px;">${item.color}</span></td>
           `;
           tbody.appendChild(row);
         });
