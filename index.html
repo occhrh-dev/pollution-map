@@ -11,7 +11,7 @@
         font-family: sans-serif;
       }
       #map {
-        height: calc(100vh - 220px);
+        height: calc(100vh - 180px);
         width: 100%;
       }
       #controls {
@@ -54,8 +54,6 @@
       <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
       <label for="communitySelect">เลือกชุมชน:</label>
       <select id="communitySelect" multiple onchange="showSelectedCommunities()"></select>
-      <button onclick="showAllCommunityLabels()">แสดงชื่อชุมชนทั้งหมด</button>
-      <button onclick="clearCommunityLabelsOnly()">ลบชื่อชุมชนทั้งหมด</button>
     </div>
 
     <div id="map"></div>
@@ -120,20 +118,26 @@
       }
 
       function showSelectedCommunities() {
-        const selected = Array.from(document.getElementById("communitySelect").selectedOptions).map(opt => opt.value);
+        const select = document.getElementById("communitySelect");
+        const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+
         selected.forEach(name => {
           if (labelMarkers[name]) return;
+
           const feature = communityFeatures[name];
           if (!feature) return;
+
           const geometry = feature.getGeometry();
           let center;
+
           if (geometry.getType() === 'Polygon') {
             center = getPolygonCentroid(geometry.getAt(0));
           } else if (geometry.getType() === 'MultiPolygon') {
             center = getPolygonCentroid(geometry.getAt(0).getAt(0));
           }
+
           if (center) {
-            labelMarkers[name] = new google.maps.Marker({
+            const labelMarker = new google.maps.Marker({
               position: center,
               map: map,
               label: {
@@ -143,58 +147,14 @@
                 color: "#FFFFFF",
                 className: "community-label"
               },
-              icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 }
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 0
+              }
             });
+            labelMarkers[name] = labelMarker;
           }
         });
-      }
-
-      function showAllCommunityLabels() {
-        Object.keys(communityFeatures).forEach(name => {
-          if (labelMarkers[name]) return;
-          const feature = communityFeatures[name];
-          const geometry = feature.getGeometry();
-          let center;
-          if (geometry.getType() === 'Polygon') {
-            center = getPolygonCentroid(geometry.getAt(0));
-          } else if (geometry.getType() === 'MultiPolygon') {
-            center = getPolygonCentroid(geometry.getAt(0).getAt(0));
-          }
-          if (center) {
-            labelMarkers[name] = new google.maps.Marker({
-              position: center,
-              map: map,
-              label: {
-                text: name,
-                fontSize: "14px",
-                fontWeight: "bold",
-                color: "#FFFFFF",
-                className: "community-label"
-              },
-              icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 }
-            });
-          }
-        });
-      }
-
-      function clearCommunityLabelsOnly() {
-        Object.values(labelMarkers).forEach(m => m.setMap(null));
-        labelMarkers = {};
-      }
-
-      function clearMap() {
-        circles.forEach(c => c.setMap(null));
-        markers.forEach(m => m.setMap(null));
-        clearCommunityLabelsOnly();
-        circles = [];
-        markers = [];
-      }
-
-      function undoLast() {
-        if (circles.length > 0) {
-          circles.pop().setMap(null);
-          markers.pop().setMap(null);
-        }
       }
 
       function initMap() {
@@ -218,13 +178,55 @@
           strokeWeight: feature.getProperty('stroke-width') || 2
         }));
 
-        map.data.addListener("addfeature", event => {
-          const name =
-      </script>
+        map.data.addListener("addfeature", function(event) {
+          const feature = event.feature;
+          const name = feature.getProperty("name");
+          if (name) {
+            communityFeatures[name] = feature;
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            document.getElementById("communitySelect").appendChild(option);
+          }
+        });
 
-    <!-- ✅ บรรทัดที่คุณต้องการ: โหลด Google Maps API -->
+        map.data.addListener("click", (event) => {
+          const geometry = event.feature.getGeometry();
+          let latLng;
+          if (geometry.getType() === 'Polygon') {
+            latLng = geometry.getAt(0).getAt(0);
+          } else if (geometry.getType() === 'MultiPolygon') {
+            latLng = geometry.getAt(0).getAt(0).getAt(0);
+          }
+          if (latLng) {
+            drawCircle(latLng);
+          }
+        });
+
+        map.addListener("click", (e) => {
+          drawCircle(e.latLng);
+        });
+      }
+
+      function clearMap() {
+        circles.forEach(c => c.setMap(null));
+        markers.forEach(m => m.setMap(null));
+        Object.values(labelMarkers).forEach(m => m.setMap(null));
+        circles = [];
+        markers = [];
+        labelMarkers = {};
+      }
+
+      function undoLast() {
+        if (circles.length > 0) {
+          circles.pop().setMap(null);
+          markers.pop().setMap(null);
+        }
+      }
+    </script>
+
     <script async
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyABC1234567890XYZ&callback=initMap">
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </body>
 </html>
