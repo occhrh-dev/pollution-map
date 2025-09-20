@@ -65,7 +65,7 @@
       let circles = [];
       let markers = [];
       let communityFeatures = {};
-      let labelMarkers = [];
+      let labelMarkers = {};
 
       function drawCircle(latLng) {
         const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
@@ -104,13 +104,12 @@
       }
 
       function showSelectedCommunities() {
-        labelMarkers.forEach(m => m.setMap(null));
-        labelMarkers = [];
-
         const select = document.getElementById("communitySelect");
         const selected = Array.from(select.selectedOptions).map(opt => opt.value);
 
         selected.forEach(name => {
+          if (labelMarkers[name]) return;
+
           const feature = communityFeatures[name];
           if (!feature) return;
 
@@ -141,7 +140,7 @@
                 scale: 0
               }
             });
-            labelMarkers.push(labelMarker);
+            labelMarkers[name] = labelMarker;
           }
         });
       }
@@ -204,10 +203,10 @@
       function clearMap() {
         circles.forEach(c => c.setMap(null));
         markers.forEach(m => m.setMap(null));
-        labelMarkers.forEach(m => m.setMap(null));
+        Object.values(labelMarkers).forEach(m => m.setMap(null));
         circles = [];
         markers = [];
-        labelMarkers = [];
+        labelMarkers = {};
       }
 
       function undoLast() {
