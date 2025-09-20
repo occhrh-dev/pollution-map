@@ -49,7 +49,24 @@
     white-space: nowrap;
   }
 </style>
+    <!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   </head>
+  <script>
+  $(document).ready(function() {
+    $('#communitySelect').select2({
+      placeholder: "ค้นหาชุมชน...",
+      width: 'resolve'
+    });
+  });
+</script>
+
   <body>
     <div id="controls">
       <label for="radiusInput">รัศมี (เมตร):</label>
@@ -65,8 +82,12 @@
       <input type="number" id="lngInput" step="0.000001" placeholder="เช่น 101.185">
       <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
       <label for="communitySelect">เลือกชุมชน:</label>
-      <select id="communitySelect" multiple onchange="showSelectedCommunities()"></select>
-    </div>
+      <select id="communitySelect" multiple onchange="showSelectedCommunities()">
+        <option value="A">ชุมชน A</option>
+        <option value="B">ชุมชน B</option>
+        <option value="C">ชุมชน C</option>
+    </select>
+  </div>
 
     <div id="map"></div>
 
@@ -283,6 +304,7 @@ function drawCircle(latLng) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
