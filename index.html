@@ -191,15 +191,8 @@
         });
 
         map.data.addListener("click", (event) => {
-          const geometry = event.feature.getGeometry();
-          let latLng;
-          if (geometry.getType() === 'Polygon') {
-            latLng = geometry.getAt(0).getAt(0);
-          } else if (geometry.getType() === 'MultiPolygon') {
-            latLng = geometry.getAt(0).getAt(0).getAt(0);
-          }
-          if (latLng) {
-            drawCircle(latLng);
+          if (event.latLng) {
+            drawCircle(event.latLng);
           }
         });
 
