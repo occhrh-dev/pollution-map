@@ -100,15 +100,21 @@
         }
       }
 
-      function getWeightedCentroid(geometry) {
-        let latSum = 0, lngSum = 0, count = 0;
-        geometry.forEachLatLng(function(latlng) {
-          latSum += latlng.lat();
-          lngSum += latlng.lng();
-          count++;
-        });
-        if (count === 0) return null;
-        return new google.maps.LatLng(latSum / count, lngSum / count);
+      function getPolygonCentroid(path) {
+        let area = 0, x = 0, y = 0;
+        const len = path.getLength();
+        for (let i = 0; i < len; i++) {
+          const p1 = path.getAt(i);
+          const p2 = path.getAt((i + 1) % len);
+          const f = p1.lat() * p2.lng() - p2.lat() * p1.lng();
+          area += f;
+          x += (p1.lat() + p2.lat()) * f;
+          y += (p1.lng() + p2.lng()) * f;
+        }
+        area *= 0.5;
+        x /= (6 * area);
+        y /= (6 * area);
+        return new google.maps.LatLng(x, y);
       }
 
       function showSelectedCommunities() {
@@ -122,7 +128,13 @@
           if (!feature) return;
 
           const geometry = feature.getGeometry();
-          const center = getWeightedCentroid(geometry);
+          let center;
+
+          if (geometry.getType() === 'Polygon') {
+            center = getPolygonCentroid(geometry.getAt(0));
+          } else if (geometry.getType() === 'MultiPolygon') {
+            center = getPolygonCentroid(geometry.getAt(0).getAt(0));
+          }
 
           if (center) {
             const labelMarker = new google.maps.Marker({
