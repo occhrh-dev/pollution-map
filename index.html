@@ -140,12 +140,23 @@ function drawCircle(latLng) {
   });
   circles.push(circle);
 
-  // 🔵 สร้าง marker กลางจุด
-  const marker = new google.maps.Marker({
-    position: latLng,
-    map: map,
-  });
-  markers.push(marker);
+// 🔵 สร้าง marker กลางจุด
+const starPath = "M 0,-15 L 4,-4 L 15,-4 L 6,2 L 9,12 L 0,6 -9,12 -6,2 -15,-4 -4,-4 Z";
+
+const marker = new google.maps.Marker({
+  position: latLng,
+  map: map,
+  icon: {
+    path: starPath,
+    scale: 1.5,
+    fillColor: "#FFD700",      // สีทอง
+    fillOpacity: 1,
+    strokeWeight: 1,
+    strokeColor: "#333"
+  }
+});
+
+markers.push(marker);
 
   // 🏷 สร้าง label ระยะรัศมี (ขยับตามขนาดของวง)
   const kmText = Math.round(radius / 1000) + " กม.";
@@ -326,6 +337,7 @@ function drawCircle(latLng) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
