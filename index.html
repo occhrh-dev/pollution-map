@@ -58,11 +58,24 @@
 <!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   </head>
-  <script>
+ <script>
   $(document).ready(function() {
+    // เปิดใช้งาน Select2
     $('#communitySelect').select2({
       placeholder: "ค้นหาชุมชน...",
       width: 'resolve'
+    });
+
+    // ✅ เพิ่มตรงนี้: ลบ label เมื่อชุมชนถูกลบออกจาก dropdown
+    $('#communitySelect').on('change', function () {
+      const selected = $(this).val() || [];
+
+      for (const name in labelMarkers) {
+        if (!selected.includes(name)) {
+          labelMarkers[name].setMap(null); // ซ่อน label
+          delete labelMarkers[name];       // ลบออกจากตัวแปร
+        }
+      }
     });
   });
 </script>
@@ -95,6 +108,7 @@
       let communityFeatures = {};
       let labelMarkers = {};
       let radiusLabels = [];
+      let communityLabels = {};
 
 function drawCircle(latLng) {
   const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
@@ -301,6 +315,7 @@ function drawCircle(latLng) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
