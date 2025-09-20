@@ -26,21 +26,25 @@
         padding: 5px;
         font-size: 16px;
       }
+      #tableContainer {
+        max-height: 200px;
+        overflow-y: auto;
+        margin-top: 5px;
+        padding: 0 10px;
+      }
       table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 10px;
-        font-size: 14px;
+        font-size: 13px;
       }
       th, td {
         border: 1px solid #ccc;
-        padding: 3px 6px;
+        padding: 2px 4px;
         text-align: center;
-        line-height: 1.2;
+        line-height: 1.1;
       }
-      #dataTable {
+      #tableContainer.hidden {
         display: none;
-        transition: all 0.3s ease;
       }
     </style>
   </head>
@@ -57,18 +61,20 @@
 
     <div id="map"></div>
 
-    <table id="dataTable">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>ละติจูด</th>
-          <th>ลองจิจูด</th>
-          <th>รัศมี (เมตร)</th>
-          <th>สี</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div id="tableContainer" class="hidden">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ละติจูด</th>
+            <th>ลองจิจูด</th>
+            <th>รัศมี (เมตร)</th>
+            <th>สี</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
     <script>
       let map;
@@ -179,15 +185,15 @@
             <td>${item.lat.toFixed(6)}</td>
             <td>${item.lng.toFixed(6)}</td>
             <td>${item.radius}</td>
-            <td><span style="background:${item.color}; padding: 4px 10px; border-radius: 4px;">${item.color}</span></td>
+            <td><span style="background:${item.color}; padding: 2px 8px; border-radius: 4px;">${item.color}</span></td>
           `;
           tbody.appendChild(row);
         });
       }
 
       function toggleTable() {
-        const table = document.getElementById("dataTable");
-        table.style.display = (table.style.display === "none") ? "table" : "none";
+        const container = document.getElementById("tableContainer");
+        container.classList.toggle("hidden");
       }
     </script>
 
