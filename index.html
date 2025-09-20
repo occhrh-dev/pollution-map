@@ -11,7 +11,7 @@
         font-family: sans-serif;
       }
       #map {
-        height: calc(100vh - 60px);
+        height: calc(100vh - 100px);
         width: 100%;
       }
       #controls {
@@ -26,6 +26,9 @@
         padding: 5px;
         font-size: 16px;
       }
+      input[type="number"] {
+        width: 100px;
+      }
     </style>
   </head>
   <body>
@@ -36,6 +39,11 @@
       <input type="color" id="colorInput" value="#FF0000">
       <button onclick="undoLast()">Undo</button>
       <button onclick="clearMap()">ล้างแผนที่</button>
+      <label>ละติจูด:</label>
+      <input type="number" id="latInput" step="0.000001" placeholder="เช่น 12.738">
+      <label>ลองจิจูด:</label>
+      <input type="number" id="lngInput" step="0.000001" placeholder="เช่น 101.185">
+      <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
     </div>
 
     <div id="map"></div>
@@ -67,6 +75,17 @@
           map: map,
         });
         markers.push(marker);
+      }
+
+      function addPointFromInput() {
+        const lat = parseFloat(document.getElementById("latInput").value);
+        const lng = parseFloat(document.getElementById("lngInput").value);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          const latLng = new google.maps.LatLng(lat, lng);
+          drawCircle(latLng);
+        } else {
+          alert("กรุณากรอกพิกัดให้ถูกต้อง");
+        }
       }
 
       function initMap() {
