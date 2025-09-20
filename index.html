@@ -103,6 +103,26 @@
         }
       }
 
+      function getPolygonCentroid(path) {
+        let area = 0, x = 0, y = 0;
+        const len = path.getLength();
+
+        for (let i = 0; i < len; i++) {
+          const p1 = path.getAt(i);
+          const p2 = path.getAt((i + 1) % len);
+          const f = p1.lat() * p2.lng() - p2.lat() * p1.lng();
+          area += f;
+          x += (p1.lat() + p2.lat()) * f;
+          y += (p1.lng() + p2.lng()) * f;
+        }
+
+        area *= 0.5;
+        x /= (6 * area);
+        y /= (6 * area);
+
+        return new google.maps.LatLng(x, y);
+      }
+
       function showSelectedCommunities() {
         const select = document.getElementById("communitySelect");
         const selected = Array.from(select.selectedOptions).map(opt => opt.value);
@@ -118,10 +138,10 @@
 
           if (geometry.getType() === 'Polygon') {
             const path = geometry.getAt(0);
-            center = path.getAt(Math.floor(path.getLength() / 2));
+            center = getPolygonCentroid(path);
           } else if (geometry.getType() === 'MultiPolygon') {
             const path = geometry.getAt(0).getAt(0);
-            center = path.getAt(Math.floor(path.getLength() / 2));
+            center = getPolygonCentroid(path);
           }
 
           if (center) {
@@ -204,21 +224,3 @@
         circles.forEach(c => c.setMap(null));
         markers.forEach(m => m.setMap(null));
         Object.values(labelMarkers).forEach(m => m.setMap(null));
-        circles = [];
-        markers = [];
-        labelMarkers = {};
-      }
-
-      function undoLast() {
-        if (circles.length > 0) {
-          circles.pop().setMap(null);
-          markers.pop().setMap(null);
-        }
-      }
-    </script>
-
-    <script async
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
-    </script>
-  </body>
-</html>
