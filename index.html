@@ -73,7 +73,7 @@
         const circle = new google.maps.Circle({
           strokeColor: color,
           strokeOpacity: 0.8,
-          strokeWeight: 4,
+          strokeWeight: 4, // เพิ่มความหนาเส้น
           fillColor: color,
           fillOpacity: fillOpacity,
           map,
@@ -117,6 +117,21 @@
         return new google.maps.LatLng(x, y);
       }
 
+      function updateLabelSizes() {
+        const zoom = map.getZoom();
+        const fontSize = Math.max(10, Math.min(zoom * 1.2, 24)) + "px";
+
+        Object.values(labelMarkers).forEach(marker => {
+          const label = marker.getLabel();
+          if (label) {
+            marker.setLabel({
+              ...label,
+              fontSize: fontSize
+            });
+          }
+        });
+      }
+
       function showSelectedCommunities() {
         const select = document.getElementById("communitySelect");
         const selected = Array.from(select.selectedOptions).map(opt => opt.value);
@@ -142,7 +157,7 @@
               map: map,
               label: {
                 text: name,
-                fontSize: "14px",
+                fontSize: "14px", // จะถูก override โดย updateLabelSizes()
                 fontWeight: "bold",
                 color: "#FFFFFF",
                 className: "community-label"
@@ -153,6 +168,7 @@
               }
             });
             labelMarkers[name] = labelMarker;
+            updateLabelSizes(); // ปรับขนาดตาม zoom
           }
         });
       }
@@ -199,6 +215,8 @@
         map.addListener("click", (e) => {
           drawCircle(e.latLng);
         });
+
+        map.addListener("zoom_changed", updateLabelSizes); // ปรับขนาด label ตาม zoom
       }
 
       function clearMap() {
@@ -221,6 +239,4 @@
     <script async
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
-  </body>
-</html>
-
+  </
