@@ -11,7 +11,7 @@
         font-family: sans-serif;
       }
       #map {
-        height: 70vh;
+        height: calc(100vh - 60px);
         width: 100%;
       }
       #controls {
@@ -26,26 +26,6 @@
         padding: 5px;
         font-size: 16px;
       }
-      #tableContainer {
-        max-height: 200px;
-        overflow-y: auto;
-        margin-top: 5px;
-        padding: 0 10px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-      }
-      th, td {
-        border: 1px solid #ccc;
-        padding: 2px 4px;
-        text-align: center;
-        line-height: 1.1;
-      }
-      #tableContainer.hidden {
-        display: none;
-      }
     </style>
   </head>
   <body>
@@ -56,31 +36,14 @@
       <input type="color" id="colorInput" value="#FF0000">
       <button onclick="undoLast()">Undo</button>
       <button onclick="clearMap()">ล้างแผนที่</button>
-      <button onclick="toggleTable()">แสดง/ซ่อนตาราง</button>
     </div>
 
     <div id="map"></div>
-
-    <div id="tableContainer" class="hidden">
-      <table id="dataTable">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>ละติจูด</th>
-            <th>ลองจิจูด</th>
-            <th>รัศมี (เมตร)</th>
-            <th>สี</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
 
     <script>
       let map;
       let circles = [];
       let markers = [];
-      let data = [];
 
       function drawCircle(latLng) {
         const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
@@ -103,15 +66,6 @@
           map: map,
         });
         markers.push(marker);
-
-        data.push({
-          lat: latLng.lat(),
-          lng: latLng.lng(),
-          radius: radius,
-          color: color
-        });
-
-        updateTable();
       }
 
       function initMap() {
@@ -162,38 +116,13 @@
         markers.forEach(m => m.setMap(null));
         circles = [];
         markers = [];
-        data = [];
-        updateTable();
       }
 
       function undoLast() {
         if (circles.length > 0) {
           circles.pop().setMap(null);
           markers.pop().setMap(null);
-          data.pop();
-          updateTable();
         }
-      }
-
-      function updateTable() {
-        const tbody = document.querySelector("#dataTable tbody");
-        tbody.innerHTML = "";
-        data.forEach((item, index) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${item.lat.toFixed(6)}</td>
-            <td>${item.lng.toFixed(6)}</td>
-            <td>${item.radius}</td>
-            <td><span style="background:${item.color}; padding: 2px 8px; border-radius: 4px;">${item.color}</span></td>
-          `;
-          tbody.appendChild(row);
-        });
-      }
-
-      function toggleTable() {
-        const container = document.getElementById("tableContainer");
-        container.classList.toggle("hidden");
       }
     </script>
 
