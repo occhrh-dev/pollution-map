@@ -88,6 +88,29 @@
           map: map,
         });
         markers.push(marker);
+
+        // 🏷 Label ระยะรัศมี (ล่างซ้ายของวงกลม)
+        const kmText = (radius / 1000).toFixed(1) + " กม.";
+        const offsetLat = latLng.lat() - 0.002;
+        const offsetLng = latLng.lng() - 0.002;
+        const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
+
+        const radiusLabel = new google.maps.Marker({
+          position: offsetPosition,
+          map: map,
+          label: {
+            text: kmText,
+            fontSize: "14px",
+            fontWeight: "bold",
+            color: "#000000",
+            className: "radius-label"
+          },
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 0
+          }
+        });
+        radiusLabels.push(radiusLabel);
       }
 
       function addPointFromInput() {
@@ -240,3 +263,4 @@
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
