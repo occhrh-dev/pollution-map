@@ -121,18 +121,46 @@
       let radiusLabels = [];
       let communityLabels = {};
 
+// ✅ 1. ประกาศฟังก์ชันสร้างวงกลมด้วย Polygon
+function createCirclePolygon(center, radiusMeters, points = 60) {
+  const coords = [];
+  const earthRadius = 6378137;
+  const lat = center.lat() * Math.PI / 180;
+  const lng = center.lng() * Math.PI / 180;
+
+  for (let i = 0; i < points; i++) {
+    const angle = (i / points) * 2 * Math.PI;
+    const dx = radiusMeters * Math.cos(angle);
+    const dy = radiusMeters * Math.sin(angle);
+
+    const latOffset = dy / earthRadius;
+    const lngOffset = dx / (earthRadius * Math.cos(lat));
+
+    coords.push({
+      lat: (lat + latOffset) * 180 / Math.PI,
+      lng: (lng + lngOffset) * 180 / Math.PI
+    });
+  }
+
+  return new google.maps.Polygon({
+    paths: coords,
+    map: map // ✅ ใส่ map ตรงนี้เลย
+  });
+}
+
+////////////////////////////////////////////////////
+
+// ✅ 2. ฟังก์ชัน drawCircle ที่เรียกใช้ createCirclePolygon
 function drawCircle(latLng) {
   const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
   const color = document.getElementById("colorInput").value;
   const fillOpacity = document.getElementById("fillToggle").checked ? 0.35 : 0;
 
-  // 🟢 สร้างวงรัศมีด้วย Polygon
   const circlePolygon = createCirclePolygon(latLng, radius);
   circlePolygon.setOptions({
     strokeColor: color,
     fillColor: color,
-    fillOpacity: fillOpacity,
-    map: map
+    fillOpacity: fillOpacity
   });
   circles.push(circlePolygon);
 
@@ -330,6 +358,7 @@ function drawCircle(latLng) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
