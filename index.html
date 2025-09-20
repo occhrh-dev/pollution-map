@@ -11,7 +11,7 @@
         font-family: sans-serif;
       }
       #map {
-        height: calc(100vh - 120px);
+        height: calc(100vh - 160px);
         width: 100%;
       }
       #controls {
@@ -22,7 +22,7 @@
         gap: 10px;
         align-items: center;
       }
-      input, button, label {
+      input, button, label, select {
         padding: 5px;
         font-size: 16px;
       }
@@ -45,6 +45,10 @@
       <label>ลองจิจูด:</label>
       <input type="number" id="lngInput" step="0.000001" placeholder="เช่น 101.185">
       <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
+      <label for="communitySelect">เลือกชุมชน:</label>
+      <select id="communitySelect" onchange="showCommunityLabel(this.value)">
+        <option value="">-- เลือก --</option>
+      </select>
     </div>
 
     <div id="map"></div>
@@ -53,6 +57,8 @@
       let map;
       let circles = [];
       let markers = [];
+      let communityFeatures = {};
+      let infoWindow;
 
       function drawCircle(latLng) {
         const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
@@ -90,6 +96,32 @@
         }
       }
 
+      function showCommunityLabel(name) {
+        if (infoWindow) infoWindow.close();
+        const feature = communityFeatures[name];
+        if (!feature) return;
+
+        const geometry = feature.getGeometry();
+        let center;
+
+        if (geometry.getType() === 'Polygon') {
+          const path = geometry.getAt(0);
+          center = path.getAt(Math.floor(path.getLength() / 2));
+        } else if (geometry.getType() === 'MultiPolygon') {
+          const path = geometry.getAt(0).getAt(0);
+          center = path.getAt(Math.floor(path.getLength() / 2));
+        }
+
+        if (center) {
+          infoWindow = new google.maps.InfoWindow({
+            content: `<div style="font-size:14px; font-weight:bold;">${name}</div>`,
+            position: center,
+            pixelOffset: new google.maps.Size(0, -10)
+          });
+          infoWindow.open(map);
+        }
+      }
+
       function initMap() {
         map = new google.maps.Map(document.getElementById("map"), {
           center: { lat: 12.738, lng: 101.185 },
@@ -111,13 +143,21 @@
           strokeWeight: feature.getProperty('stroke-width') || 2
         }));
 
-        map.data.addListener("click", (event) => {
-          const name = event.feature.getProperty("name");
+        map.data.addListener("addfeature", function(event) {
+          const feature = event.feature;
+          const name = feature.getProperty("name");
           if (name) {
-            alert("คุณคลิกที่ชุมชน: " + name);
+            communityFeatures[name] = feature;
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            document.getElementById("communitySelect").appendChild(option);
           }
+        });
 
+        map.data.addListener("click", (event) => {
           let latLng;
+          const name = event.feature.getProperty("name");
           if (event.latLng) {
             latLng = event.latLng;
           } else {
@@ -143,6 +183,7 @@
         markers.forEach(m => m.setMap(null));
         circles = [];
         markers = [];
+        if (infoWindow) infoWindow.close();
       }
 
       function undoLast() {
