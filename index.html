@@ -11,7 +11,7 @@
         font-family: sans-serif;
       }
       #map {
-        height: calc(100vh - 160px);
+        height: calc(100vh - 180px);
         width: 100%;
       }
       #controls {
@@ -28,6 +28,10 @@
       }
       input[type="number"] {
         width: 100px;
+      }
+      #communitySelect {
+        min-width: 200px;
+        height: 80px;
       }
     </style>
   </head>
@@ -46,8 +50,8 @@
       <input type="number" id="lngInput" step="0.000001" placeholder="เช่น 101.185">
       <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
       <label for="communitySelect">เลือกชุมชน:</label>
-      <select id="communitySelect" onchange="showCommunityLabel(this.value)">
-        <option value="">-- เลือก --</option>
+      <select id="communitySelect" multiple onchange="showSelectedCommunities()">
+        <!-- รายชื่อจะถูกเติมโดยอัตโนมัติ -->
       </select>
     </div>
 
@@ -58,7 +62,7 @@
       let circles = [];
       let markers = [];
       let communityFeatures = {};
-      let infoWindow;
+      let labelMarkers = [];
 
       function drawCircle(latLng) {
         const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
@@ -96,30 +100,47 @@
         }
       }
 
-      function showCommunityLabel(name) {
-        if (infoWindow) infoWindow.close();
-        const feature = communityFeatures[name];
-        if (!feature) return;
+      function showSelectedCommunities() {
+        // ลบ label เดิมทั้งหมด
+        labelMarkers.forEach(m => m.setMap(null));
+        labelMarkers = [];
 
-        const geometry = feature.getGeometry();
-        let center;
+        const select = document.getElementById("communitySelect");
+        const selected = Array.from(select.selectedOptions).map(opt => opt.value);
 
-        if (geometry.getType() === 'Polygon') {
-          const path = geometry.getAt(0);
-          center = path.getAt(Math.floor(path.getLength() / 2));
-        } else if (geometry.getType() === 'MultiPolygon') {
-          const path = geometry.getAt(0).getAt(0);
-          center = path.getAt(Math.floor(path.getLength() / 2));
-        }
+        selected.forEach(name => {
+          const feature = communityFeatures[name];
+          if (!feature) return;
 
-        if (center) {
-          infoWindow = new google.maps.InfoWindow({
-            content: `<div style="font-size:14px; font-weight:bold;">${name}</div>`,
-            position: center,
-            pixelOffset: new google.maps.Size(0, -10)
-          });
-          infoWindow.open(map);
-        }
+          const geometry = feature.getGeometry();
+          let center;
+
+          if (geometry.getType() === 'Polygon') {
+            const path = geometry.getAt(0);
+            center = path.getAt(Math.floor(path.getLength() / 2));
+          } else if (geometry.getType() === 'MultiPolygon') {
+            const path = geometry.getAt(0).getAt(0);
+            center = path.getAt(Math.floor(path.getLength() / 2));
+          }
+
+          if (center) {
+            const labelMarker = new google.maps.Marker({
+              position: center,
+              map: map,
+              label: {
+                text: name,
+                fontSize: "14px",
+                fontWeight: "bold",
+                color: "#000"
+              },
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 0
+              }
+            });
+            labelMarkers.push(labelMarker);
+          }
+        });
       }
 
       function initMap() {
@@ -157,7 +178,6 @@
 
         map.data.addListener("click", (event) => {
           let latLng;
-          const name = event.feature.getProperty("name");
           if (event.latLng) {
             latLng = event.latLng;
           } else {
@@ -181,9 +201,10 @@
       function clearMap() {
         circles.forEach(c => c.setMap(null));
         markers.forEach(m => m.setMap(null));
+        labelMarkers.forEach(m => m.setMap(null));
         circles = [];
         markers = [];
-        if (infoWindow) infoWindow.close();
+        labelMarkers = [];
       }
 
       function undoLast() {
