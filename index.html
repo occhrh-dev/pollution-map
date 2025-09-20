@@ -111,11 +111,12 @@
           strokeWeight: feature.getProperty('stroke-width') || 2
         }));
 
-        map.addListener("click", (e) => {
-          drawCircle(e.latLng);
-        });
-
         map.data.addListener("click", (event) => {
+          const name = event.feature.getProperty("name");
+          if (name) {
+            alert("คุณคลิกที่ชุมชน: " + name);
+          }
+
           let latLng;
           if (event.latLng) {
             latLng = event.latLng;
@@ -130,6 +131,10 @@
           if (latLng) {
             drawCircle(latLng);
           }
+        });
+
+        map.addListener("click", (e) => {
+          drawCircle(e.latLng);
         });
       }
 
