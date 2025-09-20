@@ -93,7 +93,7 @@
         // 🏷 Label ระยะรัศมี (ล่างซ้ายของวงกลม)
         const kmText = Math.round(radius / 1000) + " กม.";
         const offsetLat = latLng.lat() - 0.01;
-        const offsetLng = latLng.lng() - 0.002;
+        const offsetLng = latLng.lng() - 0.005;
         const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
 
         const radiusLabel = new google.maps.Marker({
@@ -266,6 +266,7 @@
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
