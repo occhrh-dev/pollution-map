@@ -106,7 +106,7 @@ function drawCircle(latLng) {
 
   // 🏷 สร้าง label ระยะรัศมี (ขยับตามขนาดของวง)
   const kmText = Math.round(radius / 1000) + " กม.";
-  const offsetFactor = radius / 150000; // แปลงเมตรเป็นองศาโดยประมาณ
+  const offsetFactor = radius / 140000; // แปลงเมตรเป็นองศาโดยประมาณ
   const offsetLat = latLng.lat() - offsetFactor;
   const offsetLng = latLng.lng() - offsetFactor;
   const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
@@ -283,6 +283,7 @@ function drawCircle(latLng) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
