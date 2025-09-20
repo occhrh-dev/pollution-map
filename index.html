@@ -66,28 +66,57 @@
       let labelMarkers = {};
       let radiusLabels = [];
 
-    const kmText = Math.round(radius / 1000) + " กม.";
-const offsetFactor = radius / 100000;
-const offsetLat = latLng.lat() - offsetFactor;
-const offsetLng = latLng.lng() - offsetFactor;
-const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
+function drawCircle(latLng) {
+  const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
+  const color = document.getElementById("colorInput").value;
+  const fillOpacity = document.getElementById("fillToggle").checked ? 0.35 : 0;
 
-const radiusLabel = new google.maps.Marker({
-  position: offsetPosition,
-  map: map,
-  label: {
-    text: kmText,
-    fontSize: "14px",
-    fontWeight: "bold",
-    color: "#000000",
-    className: "radius-label"
-  },
-  icon: {
-    path: google.maps.SymbolPath.CIRCLE,
-    scale: 0
-  }
-});
-radiusLabels.push(radiusLabel);
+  // 🟢 สร้างวงรัศมี
+  const circle = new google.maps.Circle({
+    strokeColor: color,
+    strokeOpacity: 0.8,
+    strokeWeight: 4,
+    fillColor: color,
+    fillOpacity: fillOpacity,
+    map,
+    center: latLng,
+    radius: radius,
+    clickable: false
+  });
+  circles.push(circle);
+
+  // 🔵 สร้าง marker กลางจุด
+  const marker = new google.maps.Marker({
+    position: latLng,
+    map: map,
+  });
+  markers.push(marker);
+
+  // 🏷 สร้าง label ระยะรัศมี (ขยับตามขนาดของวง)
+  const kmText = Math.round(radius / 1000) + " กม.";
+  const offsetFactor = radius / 100000; // แปลงเมตรเป็นองศาโดยประมาณ
+  const offsetLat = latLng.lat() - offsetFactor;
+  const offsetLng = latLng.lng() - offsetFactor;
+  const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
+
+  const radiusLabel = new google.maps.Marker({
+    position: offsetPosition,
+    map: map,
+    label: {
+      text: kmText,
+      fontSize: "14px",
+      fontWeight: "bold",
+      color: "#000000",
+      className: "radius-label"
+    },
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 0
+    }
+  });
+  radiusLabels.push(radiusLabel);
+}
+
 
       function addPointFromInput() {
         const lat = parseFloat(document.getElementById("latInput").value);
@@ -241,6 +270,7 @@ radiusLabels.push(radiusLabel);
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
