@@ -11,7 +11,7 @@
         font-family: sans-serif;
       }
       #map {
-        height: calc(100vh - 180px);
+        height: calc(100vh - 220px);
         width: 100%;
       }
       #controls {
@@ -53,9 +53,9 @@
       <input type="number" id="lngInput" step="0.000001" placeholder="เช่น 101.185">
       <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
       <label for="communitySelect">เลือกชุมชน:</label>
-      <select id="communitySelect" multiple onchange="showSelectedCommunities()">
-        <!-- รายชื่อจะถูกเติมโดยอัตโนมัติ -->
-      </select>
+      <select id="communitySelect" multiple onchange="showSelectedCommunities()"></select>
+      <button onclick="showAllCommunityLabels()">แสดงชื่อชุมชนทั้งหมด</button>
+      <button onclick="clearCommunityLabelsOnly()">ลบชื่อชุมชนทั้งหมด</button>
     </div>
 
     <div id="map"></div>
@@ -96,8 +96,7 @@
         const lat = parseFloat(document.getElementById("latInput").value);
         const lng = parseFloat(document.getElementById("lngInput").value);
         if (!isNaN(lat) && !isNaN(lng)) {
-          const latLng = new google.maps.LatLng(lat, lng);
-          drawCircle(latLng);
+          drawCircle(new google.maps.LatLng(lat, lng));
         } else {
           alert("กรุณากรอกพิกัดให้ถูกต้อง");
         }
@@ -106,7 +105,6 @@
       function getPolygonCentroid(path) {
         let area = 0, x = 0, y = 0;
         const len = path.getLength();
-
         for (let i = 0; i < len; i++) {
           const p1 = path.getAt(i);
           const p2 = path.getAt((i + 1) % len);
@@ -115,37 +113,27 @@
           x += (p1.lat() + p2.lat()) * f;
           y += (p1.lng() + p2.lng()) * f;
         }
-
         area *= 0.5;
         x /= (6 * area);
         y /= (6 * area);
-
         return new google.maps.LatLng(x, y);
       }
 
       function showSelectedCommunities() {
-        const select = document.getElementById("communitySelect");
-        const selected = Array.from(select.selectedOptions).map(opt => opt.value);
-
+        const selected = Array.from(document.getElementById("communitySelect").selectedOptions).map(opt => opt.value);
         selected.forEach(name => {
           if (labelMarkers[name]) return;
-
           const feature = communityFeatures[name];
           if (!feature) return;
-
           const geometry = feature.getGeometry();
           let center;
-
           if (geometry.getType() === 'Polygon') {
-            const path = geometry.getAt(0);
-            center = getPolygonCentroid(path);
+            center = getPolygonCentroid(geometry.getAt(0));
           } else if (geometry.getType() === 'MultiPolygon') {
-            const path = geometry.getAt(0).getAt(0);
-            center = getPolygonCentroid(path);
+            center = getPolygonCentroid(geometry.getAt(0).getAt(0));
           }
-
           if (center) {
-            const labelMarker = new google.maps.Marker({
+            labelMarkers[name] = new google.maps.Marker({
               position: center,
               map: map,
               label: {
@@ -155,14 +143,58 @@
                 color: "#FFFFFF",
                 className: "community-label"
               },
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 0
-              }
+              icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 }
             });
-            labelMarkers[name] = labelMarker;
           }
         });
+      }
+
+      function showAllCommunityLabels() {
+        Object.keys(communityFeatures).forEach(name => {
+          if (labelMarkers[name]) return;
+          const feature = communityFeatures[name];
+          const geometry = feature.getGeometry();
+          let center;
+          if (geometry.getType() === 'Polygon') {
+            center = getPolygonCentroid(geometry.getAt(0));
+          } else if (geometry.getType() === 'MultiPolygon') {
+            center = getPolygonCentroid(geometry.getAt(0).getAt(0));
+          }
+          if (center) {
+            labelMarkers[name] = new google.maps.Marker({
+              position: center,
+              map: map,
+              label: {
+                text: name,
+                fontSize: "14px",
+                fontWeight: "bold",
+                color: "#FFFFFF",
+                className: "community-label"
+              },
+              icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 }
+            });
+          }
+        });
+      }
+
+      function clearCommunityLabelsOnly() {
+        Object.values(labelMarkers).forEach(m => m.setMap(null));
+        labelMarkers = {};
+      }
+
+      function clearMap() {
+        circles.forEach(c => c.setMap(null));
+        markers.forEach(m => m.setMap(null));
+        clearCommunityLabelsOnly();
+        circles = [];
+        markers = [];
+      }
+
+      function undoLast() {
+        if (circles.length > 0) {
+          circles.pop().setMap(null);
+          markers.pop().setMap(null);
+        }
       }
 
       function initMap() {
@@ -186,41 +218,5 @@
           strokeWeight: feature.getProperty('stroke-width') || 2
         }));
 
-        map.data.addListener("addfeature", function(event) {
-          const feature = event.feature;
-          const name = feature.getProperty("name");
-          if (name) {
-            communityFeatures[name] = feature;
-            const option = document.createElement("option");
-            option.value = name;
-            option.textContent = name;
-            document.getElementById("communitySelect").appendChild(option);
-          }
-        });
-
-        map.data.addListener("click", (event) => {
-          let latLng;
-          if (event.latLng) {
-            latLng = event.latLng;
-          } else {
-            const geometry = event.feature.getGeometry();
-            if (geometry.getType() === 'Polygon') {
-              latLng = geometry.getAt(0).getAt(0);
-            } else if (geometry.getType() === 'MultiPolygon') {
-              latLng = geometry.getAt(0).getAt(0).getAt(0);
-            }
-          }
-          if (latLng) {
-            drawCircle(latLng);
-          }
-        });
-
-        map.addListener("click", (e) => {
-          drawCircle(e.latLng);
-        });
-      }
-
-      function clearMap() {
-        circles.forEach(c => c.setMap(null));
-        markers.forEach(m => m.setMap(null));
-        Object.values(labelMarkers).forEach(m => m.setMap(null));
+        map.data.addListener("addfeature", event => {
+          const name =
