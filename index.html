@@ -137,6 +137,7 @@ function drawCircle(latLng) {
     center: latLng,
     radius: radius,
     clickable: false
+    zIndex: 9999 // ✅ เพิ่มตรงนี้เพื่อให้อยู่บนสุด
   });
   circles.push(circle);
 
@@ -337,6 +338,7 @@ markers.push(marker);
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
