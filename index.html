@@ -4,39 +4,51 @@
     <title>แผนที่ควบคุมมลพิษแบบโต้ตอบ</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        font-family: sans-serif;
-      }
-      #map {
-        height: calc(100vh - 180px);
-        width: 100%;
-      }
-      #controls {
-        padding: 10px;
-        background: #f0f0f0;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-      }
-      input, button, label, select {
-        padding: 5px;
-        font-size: 16px;
-      }
-      input[type="number"] {
-        width: 100px;
-      }
-      #communitySelect {
-        min-width: 200px;
-        height: 80px;
-      }
-      .gm-style .community-label {
-        text-shadow: 1px 1px 2px #000;
-      }
-    </style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: sans-serif;
+  }
+  #map {
+    height: calc(100vh - 180px);
+    width: 100%;
+  }
+  #controls {
+    padding: 10px;
+    background: #f0f0f0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  input, button, label, select {
+    padding: 5px;
+    font-size: 16px;
+  }
+  input[type="number"] {
+    width: 100px;
+  }
+  #communitySelect {
+    min-width: 200px;
+    height: 80px;
+  }
+  .gm-style .community-label {
+    text-shadow: 1px 1px 2px #000;
+  }
+
+  /* ✅ เพิ่มตรงนี้ */
+  .gm-style .radius-label {
+    background-color: white;
+    border-radius: 8px;
+    padding: 2px 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    color: black;
+    font-weight: bold;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+</style>
   </head>
   <body>
     <div id="controls">
@@ -271,6 +283,7 @@ function drawCircle(latLng) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
