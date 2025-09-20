@@ -100,23 +100,6 @@
         }
       }
 
-      function getPolygonCentroid(path) {
-        let area = 0, x = 0, y = 0;
-        const len = path.getLength();
-        for (let i = 0; i < len; i++) {
-          const p1 = path.getAt(i);
-          const p2 = path.getAt((i + 1) % len);
-          const f = p1.lat() * p2.lng() - p2.lat() * p1.lng();
-          area += f;
-          x += (p1.lat() + p2.lat()) * f;
-          y += (p1.lng() + p2.lng()) * f;
-        }
-        area *= 0.5;
-        x /= (6 * area);
-        y /= (6 * area);
-        return new google.maps.LatLng(x, y);
-      }
-
       function showSelectedCommunities() {
         const select = document.getElementById("communitySelect");
         const selected = Array.from(select.selectedOptions).map(opt => opt.value);
@@ -128,32 +111,30 @@
           if (!feature) return;
 
           const geometry = feature.getGeometry();
-          let center;
+          const bounds = new google.maps.LatLngBounds();
 
-          if (geometry.getType() === 'Polygon') {
-            center = getPolygonCentroid(geometry.getAt(0));
-          } else if (geometry.getType() === 'MultiPolygon') {
-            center = getPolygonCentroid(geometry.getAt(0).getAt(0));
-          }
+          geometry.forEachLatLng(function(latlng) {
+            bounds.extend(latlng);
+          });
 
-          if (center) {
-            const labelMarker = new google.maps.Marker({
-              position: center,
-              map: map,
-              label: {
-                text: name,
-                fontSize: "14px",
-                fontWeight: "bold",
-                color: "#FFFFFF",
-                className: "community-label"
-              },
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 0
-              }
-            });
-            labelMarkers[name] = labelMarker;
-          }
+          const center = bounds.getCenter();
+
+          const labelMarker = new google.maps.Marker({
+            position: center,
+            map: map,
+            label: {
+              text: name,
+              fontSize: "14px",
+              fontWeight: "bold",
+              color: "#FFFFFF",
+              className: "community-label"
+            },
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 0
+            }
+          });
+          labelMarkers[name] = labelMarker;
         });
       }
 
