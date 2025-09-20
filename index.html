@@ -11,7 +11,7 @@
         font-family: sans-serif;
       }
       #map {
-        height: calc(100vh - 100px);
+        height: calc(100vh - 120px);
         width: 100%;
       }
       #controls {
@@ -22,7 +22,7 @@
         gap: 10px;
         align-items: center;
       }
-      input, button {
+      input, button, label {
         padding: 5px;
         font-size: 16px;
       }
@@ -37,6 +37,7 @@
       <input type="number" id="radiusInput" value="1000" min="100" step="100">
       <label for="colorInput">สี:</label>
       <input type="color" id="colorInput" value="#FF0000">
+      <label><input type="checkbox" id="fillToggle" checked> เติมสีด้านใน</label>
       <button onclick="undoLast()">Undo</button>
       <button onclick="clearMap()">ล้างแผนที่</button>
       <label>ละติจูด:</label>
@@ -56,17 +57,18 @@
       function drawCircle(latLng) {
         const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
         const color = document.getElementById("colorInput").value;
+        const fillOpacity = document.getElementById("fillToggle").checked ? 0.35 : 0;
 
         const circle = new google.maps.Circle({
           strokeColor: color,
           strokeOpacity: 0.8,
           strokeWeight: 2,
           fillColor: color,
-          fillOpacity: 0.35,
+          fillOpacity: fillOpacity,
           map,
           center: latLng,
           radius: radius,
-          clickable: false // ✅ ป้องกันไม่ให้วงรัศมีบังการคลิก
+          clickable: false
         });
         circles.push(circle);
 
