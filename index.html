@@ -100,6 +100,17 @@
         }
       }
 
+      function getWeightedCentroid(geometry) {
+        let latSum = 0, lngSum = 0, count = 0;
+        geometry.forEachLatLng(function(latlng) {
+          latSum += latlng.lat();
+          lngSum += latlng.lng();
+          count++;
+        });
+        if (count === 0) return null;
+        return new google.maps.LatLng(latSum / count, lngSum / count);
+      }
+
       function showSelectedCommunities() {
         const select = document.getElementById("communitySelect");
         const selected = Array.from(select.selectedOptions).map(opt => opt.value);
@@ -111,30 +122,26 @@
           if (!feature) return;
 
           const geometry = feature.getGeometry();
-          const bounds = new google.maps.LatLngBounds();
+          const center = getWeightedCentroid(geometry);
 
-          geometry.forEachLatLng(function(latlng) {
-            bounds.extend(latlng);
-          });
-
-          const center = bounds.getCenter();
-
-          const labelMarker = new google.maps.Marker({
-            position: center,
-            map: map,
-            label: {
-              text: name,
-              fontSize: "14px",
-              fontWeight: "bold",
-              color: "#FFFFFF",
-              className: "community-label"
-            },
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 0
-            }
-          });
-          labelMarkers[name] = labelMarker;
+          if (center) {
+            const labelMarker = new google.maps.Marker({
+              position: center,
+              map: map,
+              label: {
+                text: name,
+                fontSize: "14px",
+                fontWeight: "bold",
+                color: "#FFFFFF",
+                className: "community-label"
+              },
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 0
+              }
+            });
+            labelMarkers[name] = labelMarker;
+          }
         });
       }
 
