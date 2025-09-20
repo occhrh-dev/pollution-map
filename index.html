@@ -65,54 +65,60 @@
       let communityFeatures = {};
       let labelMarkers = {};
       let radiusLabels = [];
+      let circleCountByLocation = {};
 
-      function drawCircle(latLng) {
-        const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
-        const color = document.getElementById("colorInput").value;
-        const fillOpacity = document.getElementById("fillToggle").checked ? 0.35 : 0;
+     function drawCircle(latLng) {
+  const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
+  const color = document.getElementById("colorInput").value;
+  const fillOpacity = document.getElementById("fillToggle").checked ? 0.35 : 0;
 
-        const circle = new google.maps.Circle({
-          strokeColor: color,
-          strokeOpacity: 0.8,
-          strokeWeight: 4, // เพิ่มความหนาเส้น
-          fillColor: color,
-          fillOpacity: fillOpacity,
-          map,
-          center: latLng,
-          radius: radius,
-          clickable: false
-        });
-        circles.push(circle);
+  const circle = new google.maps.Circle({
+    strokeColor: color,
+    strokeOpacity: 0.8,
+    strokeWeight: 4,
+    fillColor: color,
+    fillOpacity: fillOpacity,
+    map,
+    center: latLng,
+    radius: radius,
+    clickable: false
+  });
+  circles.push(circle);
 
-        const marker = new google.maps.Marker({
-          position: latLng,
-          map: map,
-        });
-        markers.push(marker);
+  const marker = new google.maps.Marker({
+    position: latLng,
+    map: map,
+  });
+  markers.push(marker);
 
-        // 🏷 Label ระยะรัศมี (ล่างซ้ายของวงกลม)
-        const kmText = Math.round(radius / 1000) + " กม.";
-        const offsetLat = latLng.lat() - 0.008;
-        const offsetLng = latLng.lng() - 0.007;
-        const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
+  // 🧠 นับจำนวนวงในจุดเดียวกัน
+  const key = latLng.lat().toFixed(6) + "," + latLng.lng().toFixed(6);
+  circleCountByLocation[key] = (circleCountByLocation[key] || 0) + 1;
+  const count = circleCountByLocation[key];
 
-        const radiusLabel = new google.maps.Marker({
-          position: offsetPosition,
-          map: map,
-          label: {
-            text: kmText,
-            fontSize: "14px",
-            fontWeight: "bold",
-            color: "#000000",
-            className: "radius-label"
-          },
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 0
-          }
-        });
-        radiusLabels.push(radiusLabel);
-      }
+  // 🏷 Label ระยะรัศมี (ล่างซ้ายแบบเลื่อนตามจำนวนวง)
+  const kmText = Math.round(radius / 1000) + " กม.";
+  const offsetLat = latLng.lat() - 0.008 * count;
+  const offsetLng = latLng.lng() - 0.007 * count;
+  const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
+
+  const radiusLabel = new google.maps.Marker({
+    position: offsetPosition,
+    map: map,
+    label: {
+      text: kmText,
+      fontSize: "14px",
+      fontWeight: "bold",
+      color: "#000000",
+      className: "radius-label"
+    },
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 0
+    }
+  });
+  radiusLabels.push(radiusLabel);
+}
 
       function addPointFromInput() {
         const lat = parseFloat(document.getElementById("latInput").value);
@@ -252,6 +258,7 @@
         markers = [];
         labelMarkers = {};
         radiusLabels = [];
+        circleCountByLocation = {};
       }
 
       function undoLast() {
@@ -266,6 +273,7 @@
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
