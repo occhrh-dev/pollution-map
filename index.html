@@ -30,9 +30,9 @@
     width: 100px;
   }
   #communitySelect {
-    min-width: 200px;
-    height: 80px;
-  }
+    width: 100%;
+    min-width: 400px; /* ปรับตามที่ต้องการ */
+}
   .gm-style .community-label {
     text-shadow: 1px 1px 2px #000;
   }
@@ -66,16 +66,26 @@
       width: 'resolve'
     });
 
-    // ✅ เพิ่มตรงนี้: ลบ label เมื่อชุมชนถูกลบออกจาก dropdown
+    // ลบ label เมื่อชุมชนถูกลบออกจาก dropdown
     $('#communitySelect').on('change', function () {
       const selected = $(this).val() || [];
 
       for (const name in labelMarkers) {
         if (!selected.includes(name)) {
-          labelMarkers[name].setMap(null); // ซ่อน label
-          delete labelMarkers[name];       // ลบออกจากตัวแปร
+          labelMarkers[name].setMap(null);
+          delete labelMarkers[name];
         }
       }
+    });
+
+    // ✅ เพิ่มตรงนี้: ปุ่มล้างทั้งหมด
+    $('#clearCommunities').on('click', function () {
+      $('#communitySelect').val(null).trigger('change');
+
+      for (const name in labelMarkers) {
+        labelMarkers[name].setMap(null);
+      }
+      labelMarkers = {};
     });
   });
 </script>
@@ -96,6 +106,7 @@
       <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
       <label for="communitySelect">เลือกชุมชน:</label>
       <select id="communitySelect" multiple onchange="showSelectedCommunities()">
+      <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
     </select>
   </div>
 
@@ -315,6 +326,7 @@ function drawCircle(latLng) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
