@@ -126,27 +126,34 @@ function drawCircle(latLng) {
   const color = document.getElementById("colorInput").value;
   const fillOpacity = document.getElementById("fillToggle").checked ? 0.35 : 0;
 
+  // 🟢 สร้างวงรัศมีด้วย Polygon
+  const circlePolygon = createCirclePolygon(latLng, radius);
+  circlePolygon.setOptions({
+    strokeColor: color,
+    fillColor: color,
+    fillOpacity: fillOpacity
+  });
+  circles.push(circlePolygon);
+
   // 🔵 สร้าง marker กลางจุด
-const starPath = "M 0,-15 L 4,-4 L 15,-4 L 6,2 L 9,12 L 0,6 -9,12 -6,2 -15,-4 -4,-4 Z";
+  const starPath = "M 0,-15 L 4,-4 L 15,-4 L 6,2 L 9,12 L 0,6 -9,12 -6,2 -15,-4 -4,-4 Z";
+  const marker = new google.maps.Marker({
+    position: latLng,
+    map: map,
+    icon: {
+      path: starPath,
+      scale: 1.5,
+      fillColor: "#FFD700",
+      fillOpacity: 1,
+      strokeWeight: 1,
+      strokeColor: "#333"
+    }
+  });
+  markers.push(marker);
 
-const marker = new google.maps.Marker({
-  position: latLng,
-  map: map,
-  icon: {
-    path: starPath,
-    scale: 1.5,
-    fillColor: "#FFD700",      // สีทอง
-    fillOpacity: 1,
-    strokeWeight: 1,
-    strokeColor: "#333"
-  }
-});
-
-markers.push(marker);
-
-  // 🏷 สร้าง label ระยะรัศมี (ขยับตามขนาดของวง)
+  // 🏷 สร้าง label ระยะรัศมี
   const kmText = Math.round(radius / 1000) + " กม.";
-  const offsetFactor = radius / 140000; // แปลงเมตรเป็นองศาโดยประมาณ
+  const offsetFactor = radius / 140000;
   const offsetLat = latLng.lat() - offsetFactor;
   const offsetLng = latLng.lng() - offsetFactor;
   const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
@@ -168,20 +175,6 @@ markers.push(marker);
   });
   radiusLabels.push(radiusLabel);
 }
-  
-  // 🟢 สร้างวงรัศมี
-  const circle = new google.maps.Circle({
-    strokeColor: color,
-    strokeOpacity: 0.8,
-    strokeWeight: 4,
-    fillColor: color,
-    fillOpacity: fillOpacity,
-    map,
-    center: latLng,
-    radius: radius,
-    clickable: false
-  });
-  circles.push(circle);
 
       function addPointFromInput() {
         const lat = parseFloat(document.getElementById("latInput").value);
@@ -336,6 +329,7 @@ markers.push(marker);
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
