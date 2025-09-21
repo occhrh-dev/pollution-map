@@ -267,55 +267,57 @@ markers.push(marker);
         });
       }
 
-      function initMap() {
-        map = new google.maps.Map(document.getElementById("map"), {
-          center: { lat: 12.738, lng: 101.185 },
-          zoom: 12,
-          styles: [
-            { featureType: "poi", stylers: [{ visibility: "off" }] },
-            { featureType: "transit", stylers: [{ visibility: "off" }] },
-            { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
-            { featureType: "administrative", elementType: "labels", stylers: [{ visibility: "off" }] }
-          ]
-        });
+     function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 12.738, lng: 101.185 },
+    zoom: 12,
+    styles: [
+      { featureType: "poi", stylers: [{ visibility: "off" }] },
+      { featureType: "transit", stylers: [{ visibility: "off" }] },
+      { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
+      { featureType: "administrative", elementType: "labels", stylers: [{ visibility: "off" }] }
+    ]
+  });
 
-        map.data.loadGeoJson('ผังโครงร่างเขตควบคุมมลพิษ.json');
+  map.data.loadGeoJson('ผังโครงร่างเขตควบคุมมลพิษ.json');
 
-        map.data.setStyle(feature => ({
-          fillColor: feature.getProperty('fill') || '#FF0000',
-          fillOpacity: feature.getProperty('fill-opacity') || 0.3,
-          strokeColor: feature.getProperty('stroke') || '#FF0000',
-          strokeWeight: feature.getProperty('stroke-width') || 2
-        }));
+  map.data.setStyle(feature => ({
+    fillColor: feature.getProperty('fill') || '#FF0000',
+    fillOpacity: feature.getProperty('fill-opacity') || 0.3,
+    strokeColor: feature.getProperty('stroke') || '#FF0000',
+    strokeWeight: feature.getProperty('stroke-width') || 2
+  }));
 
-       map.data.addListener("addfeature", function(event) {
-  const feature = event.feature;
-  const name = feature.getProperty("name");
-  if (name) {
-    communityFeatures[name] = feature;
+  map.data.addListener("addfeature", function(event) {
+    const feature = event.feature;
+    const name = feature.getProperty("name");
+    if (name) {
+      communityFeatures[name] = feature;
 
-    // ✅ ซ่อนไว้ก่อน
-    map.data.overrideStyle(feature, { visible: false });
+      // ✅ ซ่อนไว้ก่อน
+      map.data.overrideStyle(feature, { visible: false });
 
-    const option = document.createElement("option");
-    option.value = name;
-    option.textContent = name;
-    document.getElementById("communitySelect").appendChild(option);
-  }
-});
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      document.getElementById("communitySelect").appendChild(option);
+    }
+  });
 
-        map.data.addListener("click", (event) => {
-          if (event.latLng) {
-            drawCircle(event.latLng);
-          }
-        });
+  map.data.addListener("click", (event) => {
+    if (event.latLng) {
+      drawCircle(event.latLng);
+    }
+  });
 
-        map.addListener("click", (e) => {
-          drawCircle(e.latLng);
-        });
+  map.addListener("click", (e) => {
+    drawCircle(e.latLng);
+  });
 
-        map.addListener("zoom_changed", updateLabelSizes); // ปรับขนาด label ตาม zoom
-      }
+  map.addListener("zoom_changed", updateLabelSizes); // ปรับขนาด label ตาม zoom
+}
+
+// ✅ ฟังก์ชันนี้อยู่นอก initMap และปิดครบ
 function showSelectedLayouts() {
   const selected = $('#communitySelect').val() || [];
 
@@ -324,6 +326,7 @@ function showSelectedLayouts() {
     const shouldShow = selected.includes(name);
     map.data.overrideStyle(feature, { visible: shouldShow });
   }
+}
 
       function clearMap() {
         circles.forEach(c => c.setMap(null));
@@ -349,4 +352,5 @@ function showSelectedLayouts() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
