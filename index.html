@@ -329,12 +329,10 @@ markers.push(marker);
 
 // ✅ ฟังก์ชันนี้อยู่นอก initMap และปิดครบ
 function showSelectedLayouts() {
-  const selected = $('#communitySelect').val() || [];
-
+  // ✅ แสดง layout ของทุกชุมชนเสมอ
   for (const name in communityFeatures) {
     const feature = communityFeatures[name];
-    const shouldShow = selected.includes(name);
-    map.data.overrideStyle(feature, { visible: shouldShow });
+    map.data.overrideStyle(feature, { visible: true });
   }
 }
 function showAllCommunities() {
@@ -381,6 +379,7 @@ function showAllCommunities() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
