@@ -105,7 +105,7 @@
       <input type="number" id="lngInput" step="0.000001" placeholder="เช่น 101.185">
       <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
       <label for="communitySelect">เลือกชุมชน:</label>
-      <select id="communitySelect" multiple onchange="showSelectedCommunities()">
+      <select id="communitySelect" multiple onchange="showSelectedLayouts(); showSelectedCommunities();">
     </select>
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
   </div>
@@ -288,17 +288,21 @@ markers.push(marker);
           strokeWeight: feature.getProperty('stroke-width') || 2
         }));
 
-        map.data.addListener("addfeature", function(event) {
-          const feature = event.feature;
-          const name = feature.getProperty("name");
-          if (name) {
-            communityFeatures[name] = feature;
-            const option = document.createElement("option");
-            option.value = name;
-            option.textContent = name;
-            document.getElementById("communitySelect").appendChild(option);
-          }
-        });
+       map.data.addListener("addfeature", function(event) {
+  const feature = event.feature;
+  const name = feature.getProperty("name");
+  if (name) {
+    communityFeatures[name] = feature;
+
+    // ✅ ซ่อนไว้ก่อน
+    map.data.overrideStyle(feature, { visible: false });
+
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    document.getElementById("communitySelect").appendChild(option);
+  }
+});
 
         map.data.addListener("click", (event) => {
           if (event.latLng) {
@@ -312,6 +316,14 @@ markers.push(marker);
 
         map.addListener("zoom_changed", updateLabelSizes); // ปรับขนาด label ตาม zoom
       }
+function showSelectedLayouts() {
+  const selected = $('#communitySelect').val() || [];
+
+  for (const name in communityFeatures) {
+    const feature = communityFeatures[name];
+    const shouldShow = selected.includes(name);
+    map.data.overrideStyle(feature, { visible: shouldShow });
+  }
 
       function clearMap() {
         circles.forEach(c => c.setMap(null));
@@ -337,3 +349,4 @@ markers.push(marker);
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
