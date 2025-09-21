@@ -110,6 +110,7 @@
       <button onclick="showAllCommunities()">แสดงทั้งหมด</button>
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
       <button onclick="showAllLayoutsOnly()">แสดงเฉพาะ layout ทั้งหมด</button>
+      <button onclick="clearAllLayouts()">ล้าง layout ทั้งหมด</button>
   </div>
 
     <div id="map"></div>
@@ -304,11 +305,14 @@ map.data.addListener("addfeature", function(event) {
   if (name) {
     communityFeatures[name] = feature;
 
-    // ✅ ซ่อนไว้ก่อน
+    // ซ่อนไว้ก่อน
     map.data.overrideStyle(feature, { visible: false });
 
-    // ✅ ไม่ต้องเพิ่ม dropdown ถ้าไม่อยากให้แสดงชื่อ
-    // ถ้าอยากให้ dropdown มีชื่อไว้เลือก label ก็ใส่ได้
+    // ✅ เพิ่มชื่อเข้า dropdown
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    document.getElementById("communitySelect").appendChild(option);
   }
 });
 
@@ -331,6 +335,12 @@ function showSelectedLayouts() {
   for (const name in communityFeatures) {
     const feature = communityFeatures[name];
     map.data.overrideStyle(feature, { visible: true });
+  }
+}
+      function clearAllLayouts() {
+  for (const name in communityFeatures) {
+    const feature = communityFeatures[name];
+    map.data.overrideStyle(feature, { visible: false });
   }
 }
 function showAllCommunities() {
@@ -377,6 +387,7 @@ function showAllCommunities() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
