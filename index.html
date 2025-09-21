@@ -127,8 +127,8 @@ $(document).ready(function() {
     </select>
       <button onclick="showAllCommunities()">แสดงทั้งหมด</button>
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
-      <label><input type="checkbox" id="showAllLayoutsToggle"> แสดง layout ทั้งหมด</label>
-      <label><input type="checkbox" id="showPolygonToggle" checked> แสดง polygon ด้วย</label>
+      <label><input type="checkbox" id="showAllLayoutsToggle"> แสดงผังชุมชนทั้ง</label>
+      <label><input type="checkbox" id="showPolygonToggle" checked> แสดงขอบเขตชุมชนเมื่อเลือก</label>
   </div>
 
     <div id="map"></div>
@@ -394,6 +394,7 @@ function showAllCommunities() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
