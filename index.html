@@ -106,6 +106,7 @@
       <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
       <label for="communitySelect">เลือกชุมชน:</label>
       <select id="communitySelect" multiple onchange="showSelectedLayouts(); showSelectedCommunities();">
+      <button onclick="showAllCommunities()">แสดงทั้งหมด</button>
     </select>
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
   </div>
@@ -327,6 +328,11 @@ function showSelectedLayouts() {
     map.data.overrideStyle(feature, { visible: shouldShow });
   }
 }
+function showAllCommunities() {
+  const select = document.getElementById("communitySelect");
+  const allValues = Array.from(select.options).map(opt => opt.value);
+  $('#communitySelect').val(allValues).trigger('change');
+}
 
       function clearMap() {
         circles.forEach(c => c.setMap(null));
@@ -352,5 +358,6 @@ function showSelectedLayouts() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
