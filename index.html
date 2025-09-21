@@ -345,6 +345,8 @@ markers.push(marker);
   });
 
   map.addListener("zoom_changed", updateLabelSizes); // ปรับขนาด label ตาม zoom
+       // ✅ เพิ่มตรงนี้: แสดงลูกศรลมจาก Open-Meteo
+showWindArrows(12.738, 101.185);
 }
 
 // ✅ ฟังก์ชันนี้อยู่นอก initMap และปิดครบ
@@ -365,6 +367,28 @@ function showSelectedLayouts() {
     }
     map.data.overrideStyle(feature, { visible: shouldShow });
   }
+}
+      function showWindArrows(lat, lng) {
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_direction_10m`)
+    .then(response => response.json())
+    .then(data => {
+      const wind = data.current;
+      const speed = wind.wind_speed_10m;
+      const direction = wind.wind_direction_10m;
+
+      new google.maps.Marker({
+        position: { lat, lng },
+        map: map,
+        icon: {
+          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+          scale: Math.max(2, speed),
+          rotation: direction,
+          strokeColor: "#00BFFF",
+          strokeWeight: 2
+        },
+        title: `ลม ${speed} m/s ทิศ ${direction}°`
+      });
+    });
 }
 function showAllCommunities() {
   const select = document.getElementById("communitySelect");
@@ -395,6 +419,7 @@ function showAllCommunities() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
