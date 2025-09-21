@@ -121,68 +121,46 @@
       let radiusLabels = [];
       let communityLabels = {};
 
-// ✅ 1. ประกาศฟังก์ชันสร้างวงกลมด้วย Polygon
-function createCirclePolygon(center, radiusMeters, points = 60) {
-  const coords = [];
-  const earthRadius = 6378137;
-  const lat = center.lat() * Math.PI / 180;
-  const lng = center.lng() * Math.PI / 180;
-
-  for (let i = 0; i < points; i++) {
-    const angle = (i / points) * 2 * Math.PI;
-    const dx = radiusMeters * Math.cos(angle);
-    const dy = radiusMeters * Math.sin(angle);
-
-    const latOffset = dy / earthRadius;
-    const lngOffset = dx / (earthRadius * Math.cos(lat));
-
-    coords.push({
-      lat: (lat + latOffset) * 180 / Math.PI,
-      lng: (lng + lngOffset) * 180 / Math.PI
-    });
-  }
-
-  return new google.maps.Polygon({
-    paths: coords,
-    map: map // ✅ ใส่ map ตรงนี้เลย
-  });
-}
-
-////////////////////////////////////////////////////
-
-// ✅ 2. ฟังก์ชัน drawCircle ที่เรียกใช้ createCirclePolygon
 function drawCircle(latLng) {
   const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
   const color = document.getElementById("colorInput").value;
   const fillOpacity = document.getElementById("fillToggle").checked ? 0.35 : 0;
 
-  const circlePolygon = createCirclePolygon(latLng, radius);
-  circlePolygon.setOptions({
+  // 🟢 สร้างวงรัศมี
+  const circle = new google.maps.Circle({
     strokeColor: color,
+    strokeOpacity: 0.8,
+    strokeWeight: 4,
     fillColor: color,
-    fillOpacity: fillOpacity
+    fillOpacity: fillOpacity,
+    map,
+    center: latLng,
+    radius: radius,
+    clickable: false
   });
-  circles.push(circlePolygon);
+  circles.push(circle);
 
-  // 🔵 สร้าง marker กลางจุด
-  const starPath = "M 0,-15 L 4,-4 L 15,-4 L 6,2 L 9,12 L 0,6 -9,12 -6,2 -15,-4 -4,-4 Z";
-  const marker = new google.maps.Marker({
-    position: latLng,
-    map: map,
-    icon: {
-      path: starPath,
-      scale: 1.5,
-      fillColor: "#FFD700",
-      fillOpacity: 1,
-      strokeWeight: 1,
-      strokeColor: "#333"
-    }
-  });
-  markers.push(marker);
+// 🔵 สร้าง marker กลางจุด
+const starPath = "M 0,-15 L 4,-4 L 15,-4 L 6,2 L 9,12 L 0,6 -9,12 -6,2 -15,-4 -4,-4 Z";
 
-  // 🏷 สร้าง label ระยะรัศมี
+const marker = new google.maps.Marker({
+  position: latLng,
+  map: map,
+  icon: {
+    path: starPath,
+    scale: 1.5,
+    fillColor: "#FFD700",      // สีทอง
+    fillOpacity: 1,
+    strokeWeight: 1,
+    strokeColor: "#333"
+  }
+});
+
+markers.push(marker);
+
+  // 🏷 สร้าง label ระยะรัศมี (ขยับตามขนาดของวง)
   const kmText = Math.round(radius / 1000) + " กม.";
-  const offsetFactor = radius / 140000;
+  const offsetFactor = radius / 140000; // แปลงเมตรเป็นองศาโดยประมาณ
   const offsetLat = latLng.lat() - offsetFactor;
   const offsetLng = latLng.lng() - offsetFactor;
   const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
@@ -204,6 +182,7 @@ function drawCircle(latLng) {
   });
   radiusLabels.push(radiusLabel);
 }
+
 
       function addPointFromInput() {
         const lat = parseFloat(document.getElementById("latInput").value);
@@ -358,9 +337,3 @@ function drawCircle(latLng) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
-
-
-
-
-
-
