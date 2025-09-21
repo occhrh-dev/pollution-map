@@ -109,6 +109,7 @@
     </select>
       <button onclick="showAllCommunities()">แสดงทั้งหมด</button>
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
+      <button onclick="hideAllCommunities()">ซ่อนทั้งหมด</button>
   </div>
 
     <div id="map"></div>
@@ -333,6 +334,9 @@ function showAllCommunities() {
   const allValues = Array.from(select.options).map(opt => opt.value);
   $('#communitySelect').val(allValues).trigger('change');
 }
+      function hideAllCommunities() {
+  $('#communitySelect').val(null).trigger('change');
+}
 
       function clearMap() {
         circles.forEach(c => c.setMap(null));
@@ -358,6 +362,7 @@ function showAllCommunities() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
