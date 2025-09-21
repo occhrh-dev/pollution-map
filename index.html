@@ -59,35 +59,53 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   </head>
  <script>
-  $(document).ready(function() {
-    // เปิดใช้งาน Select2
-    $('#communitySelect').select2({
-      placeholder: "ค้นหาชุมชน...",
-      width: 'resolve'
-    });
-
-    // ลบ label เมื่อชุมชนถูกลบออกจาก dropdown
-    $('#communitySelect').on('change', function () {
-      const selected = $(this).val() || [];
-
-      for (const name in labelMarkers) {
-        if (!selected.includes(name)) {
-          labelMarkers[name].setMap(null);
-          delete labelMarkers[name];
-        }
-      }
-    });
-
-    // ✅ เพิ่มตรงนี้: ปุ่มล้างทั้งหมด
-    $('#clearCommunities').on('click', function () {
-      $('#communitySelect').val(null).trigger('change');
-
-      for (const name in labelMarkers) {
-        labelMarkers[name].setMap(null);
-      }
-      labelMarkers = {};
-    });
+$(document).ready(function() {
+  // เปิดใช้งาน Select2
+  $('#communitySelect').select2({
+    placeholder: "ค้นหาชุมชน...",
+    width: 'resolve'
   });
+
+  // ✅ Checkbox: แสดง layout ทั้งหมด
+  $('#showAllLayoutsToggle').on('change', function () {
+    const checked = $(this).is(':checked');
+    for (const name in communityFeatures) {
+      const feature = communityFeatures[name];
+      map.data.overrideStyle(feature, { visible: checked });
+    }
+  });
+
+  // ✅ Dropdown: ลบ label เมื่อชุมชนถูกลบออก
+  $('#communitySelect').on('change', function () {
+    const selected = $(this).val() || [];
+
+    // ลบ label ที่ไม่ได้เลือก
+    for (const name in labelMarkers) {
+      if (!selected.includes(name)) {
+        labelMarkers[name].setMap(null);
+        delete labelMarkers[name];
+      }
+    }
+
+    // ✅ แสดง layout เฉพาะที่เลือก ถ้า checkbox “แสดง polygon ด้วย” ถูกติ๊ก
+    const showPolygon = $('#showPolygonToggle').is(':checked');
+    for (const name in communityFeatures) {
+      const feature = communityFeatures[name];
+      const shouldShow = selected.includes(name) && showPolygon;
+      map.data.overrideStyle(feature, { visible: shouldShow });
+    }
+  });
+
+  // ✅ ปุ่มล้าง dropdown
+  $('#clearCommunities').on('click', function () {
+    $('#communitySelect').val(null).trigger('change');
+
+    for (const name in labelMarkers) {
+      labelMarkers[name].setMap(null);
+    }
+    labelMarkers = {};
+  });
+});
 </script>
 
   <body>
@@ -109,8 +127,8 @@
     </select>
       <button onclick="showAllCommunities()">แสดงทั้งหมด</button>
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
-      <button onclick="showAllLayoutsOnly()">แสดงเฉพาะ layout ทั้งหมด</button>
-      <button onclick="clearAllLayouts()">ล้าง layout ทั้งหมด</button>
+      <label><input type="checkbox" id="showAllLayoutsToggle"> แสดง layout ทั้งหมด</label>
+      <label><input type="checkbox" id="showPolygonToggle" checked> แสดง polygon ด้วย</label>
   </div>
 
     <div id="map"></div>
@@ -331,18 +349,12 @@ markers.push(marker);
 // ✅ ฟังก์ชันนี้อยู่นอก initMap และปิดครบ
 function showSelectedLayouts() {
   const selected = $('#communitySelect').val() || [];
+  const showPolygon = $('#showPolygonToggle').is(':checked');
 
   for (const name in communityFeatures) {
     const feature = communityFeatures[name];
-    const shouldShow = selected.includes(name);
+    const shouldShow = selected.includes(name) && showPolygon;
     map.data.overrideStyle(feature, { visible: shouldShow });
-  }
-}
-
-      function clearAllLayouts() {
-  for (const name in communityFeatures) {
-    const feature = communityFeatures[name];
-    map.data.overrideStyle(feature, { visible: false });
   }
 }
 function showAllCommunities() {
@@ -350,12 +362,6 @@ function showAllCommunities() {
   const allValues = Array.from(select.options).map(opt => opt.value);
   $('#communitySelect').val(allValues).trigger('change');
 }
- function showAllLayoutsOnly() {
-  for (const name in communityFeatures) {
-    const feature = communityFeatures[name];
-    map.data.overrideStyle(feature, { visible: true });
-  }
-
   // ✅ ลบ label ทั้งหมด
   for (const name in labelMarkers) {
     labelMarkers[name].setMap(null);
@@ -386,6 +392,7 @@ function showAllCommunities() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
