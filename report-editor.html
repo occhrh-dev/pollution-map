@@ -29,9 +29,9 @@
     #editorTools {
       margin-top: 10px;
     }
-    #editorTools button, #editorTools input[type="file"] {
+    #editorTools input, #editorTools button {
       margin-right: 10px;
-      padding: 8px 16px;
+      padding: 8px;
       font-size: 16px;
     }
   </style>
@@ -48,9 +48,13 @@
   <canvas id="reportCanvas" width="800" height="600"></canvas>
 
   <div id="editorTools">
-    <button onclick="addText()">เพิ่มข้อความ</button>
-    <button onclick="drawNorthArrow()">เพิ่มสัญลักษณ์ทิศเหนือ</button>
-    <button onclick="drawWindArrow(100, 100, 'ลมตะวันตกเฉียงใต้')">เพิ่มลูกศรทิศทางลม</button>
+    <label>ทิศทางลม:</label>
+    <input type="text" id="windDirection" placeholder="เช่น ตะวันตกเฉียงใต้">
+    <label>ความเร็ว (กม./ชม.):</label>
+    <input type="number" id="windSpeed" placeholder="เช่น 12">
+    <label>หมุนลูกศร (องศา):</label>
+    <input type="number" id="windAngle" value="0">
+    <button onclick="drawWindArrow()">เพิ่มลูกศรทิศทางลม</button>
     <button onclick="undoLast()">Undo</button>
     <button onclick="exportReport()">บันทึกภาพรายงาน</button>
   </div>
@@ -96,7 +100,10 @@
       reader.onload = function(e) {
         const img = new Image();
         img.onload = function() {
-          ctx.drawImage(img, canvas.width - 100, canvas.height - 100, 80, 80);
+          ctx.drawImage(img, canvas.width - 100, 20, 80, 80);
+          ctx.font = "16px Arial";
+          ctx.fillStyle = "black";
+          ctx.fillText("กลุ่มงานอาชีวเวชกรรม", canvas.width - 190, 115);
           saveState();
         };
         img.src = e.target.result;
@@ -104,42 +111,43 @@
       reader.readAsDataURL(file);
     });
 
-    function addText() {
-      const text = prompt("ใส่ข้อความที่ต้องการ");
-      if (text) {
-        ctx.font = "20px Arial";
-        ctx.fillStyle = "red";
-        ctx.fillText(text, 50, 50);
-        saveState();
-      }
-    }
-
     function drawNorthArrow() {
       ctx.font = "bold 24px Arial";
       ctx.fillStyle = "black";
-      ctx.fillText("N", canvas.width - 30, 40);
+      ctx.fillText("N", 30, 40);
       ctx.beginPath();
-      ctx.moveTo(canvas.width - 30, 60);
-      ctx.lineTo(canvas.width - 40, 80);
-      ctx.lineTo(canvas.width - 20, 80);
+      ctx.moveTo(30, 60);
+      ctx.lineTo(20, 80);
+      ctx.lineTo(40, 80);
       ctx.closePath();
       ctx.fill();
-      saveState();
     }
 
-    function drawWindArrow(x, y, directionText = "ลม") {
+    function drawWindArrow() {
+      const direction = document.getElementById("windDirection").value || "ลม";
+      const speed = document.getElementById("windSpeed").value || "";
+      const angle = parseFloat(document.getElementById("windAngle").value) || 0;
+
+      const x = 100, y = 150;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle * Math.PI / 180);
+
       ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + 60, y);
-      ctx.lineTo(x + 50, y - 10);
-      ctx.moveTo(x + 60, y);
-      ctx.lineTo(x + 50, y + 10);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(60, 0);
+      ctx.lineTo(50, -10);
+      ctx.moveTo(60, 0);
+      ctx.lineTo(50, 10);
       ctx.strokeStyle = "blue";
       ctx.lineWidth = 3;
       ctx.stroke();
+
+      ctx.restore();
+
       ctx.font = "16px Arial";
       ctx.fillStyle = "blue";
-      ctx.fillText(directionText, x, y - 15);
+      ctx.fillText(`${direction} (${speed} กม./ชม.)`, x, y + 25);
       saveState();
     }
 
@@ -150,6 +158,7 @@
         ctx.fillStyle = "black";
         ctx.fillText(title, 20, 40);
       }
+      drawNorthArrow(); // ✅ วาดทิศเหนือทุกครั้ง
       const link = document.createElement("a");
       link.download = "report.png";
       link.href = canvas.toDataURL("image/png");
