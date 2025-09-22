@@ -191,17 +191,14 @@ function undoLast() {
   drawCanvas();
   const elements = container.querySelectorAll(".draggable");
   elements.forEach(el => {
-    const rect = el.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
-    const x = rect.left - canvasRect.left;
-    const y = rect.top - canvasRect.top;
+    const x = parseFloat(el.style.left) || 0;
+    const y = parseFloat(el.style.top) || 0;
     const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
 
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rotation * Math.PI / 180);
 
-    // ✅ แก้ตรงนี้: ดึงขนาด font จาก style แล้วใช้กับ canvas
     const fontSize = parseInt(el.style.fontSize) || 48;
     ctx.font = `${fontSize}px Arial`;
 
@@ -228,4 +225,5 @@ function undoLast() {
 
 </body>
 </html>
+
 
