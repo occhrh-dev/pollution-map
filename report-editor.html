@@ -47,13 +47,13 @@
 
   <input type="file" id="imageUpload" accept="image/*">
   <input type="file" id="logoUpload" accept="image/*">
+  <input type="file" id="arrowUpload" accept="image/*">
 
   <div id="canvasContainer">
     <canvas id="reportCanvas" width="800" height="600"></canvas>
   </div>
 
   <div id="editorTools">
-    <button onclick="addArrow()">เพิ่มลูกศร</button>
     <button onclick="addTextBox()">เพิ่มข้อความ</button>
     <label>หมุนลูกศร (องศา):</label>
     <input type="range" id="arrowRotation" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
@@ -116,6 +116,34 @@
       reader.readAsDataURL(file);
     });
 
+    document.getElementById("arrowUpload").addEventListener("change", function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = document.createElement("img");
+        img.src = e.target.result;
+        img.className = "draggable";
+        img.style.position = "absolute";
+        img.style.left = "100px";
+        img.style.top = "100px";
+        img.style.width = "60px";
+        img.style.transform = "rotate(0deg)";
+        img.onclick = () => selectedArrow = img;
+        container.appendChild(img);
+        makeDraggable(img);
+        selectedArrow = img;
+        saveState();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function rotateSelectedArrow(deg) {
+      if (selectedArrow) {
+        selectedArrow.style.transform = `rotate(${deg}deg)`;
+      }
+    }
+
     function drawCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (backgroundImage) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
@@ -146,27 +174,6 @@
       ctx.fill();
     }
 
-    function addArrow() {
-      const arrow = document.createElement("div");
-      arrow.className = "draggable";
-      arrow.innerHTML = "➤";
-      arrow.style.left = "100px";
-      arrow.style.top = "100px";
-      arrow.style.fontSize = "32px";
-      arrow.style.transform = "rotate(0deg)";
-      arrow.onclick = () => selectedArrow = arrow;
-      container.appendChild(arrow);
-      makeDraggable(arrow);
-      selectedArrow = arrow;
-      saveState();
-    }
-
-    function rotateSelectedArrow(deg) {
-      if (selectedArrow) {
-        selectedArrow.style.transform = `rotate(${deg}deg)`;
-      }
-    }
-
     function addTextBox() {
       const box = document.createElement("div");
       box.className = "draggable";
@@ -174,9 +181,12 @@
       box.innerText = "ข้อความ";
       box.style.left = "150px";
       box.style.top = "150px";
-      box.style.background = "#ffffcc";
-      box.style.padding = "4px";
-      box.style.border = "1px solid #999";
+      box.style.color = "white";
+      box.style.textShadow = "0 0 2px black";
+      box.style.fontWeight = "bold";
+      box.style.fontSize = "18px";
+      box.style.background = "transparent";
+      box.style.border = "none";
       container.appendChild(box);
       makeDraggable(box);
       saveState();
@@ -212,18 +222,20 @@
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(rotation * Math.PI / 180);
-        ctx.font = el.style.fontSize || "16px Arial";
-        ctx.fillStyle = "blue";
-        ctx.fillText(el.innerText.trim(), 0, 0);
+
+        if (el.tagName === "IMG") {
+          ctx.drawImage(el, -el.width / 2, -el.height / 2, el.width, el.height);
+        } else {
+          ctx.font = el.style.fontSize || "16px Arial";
+          ctx.fillStyle = "white";
+          ctx.strokeStyle = "black";
+          ctx.lineWidth = 2;
+          ctx.strokeText(el.innerText.trim(), 0, 0);
+          ctx.fillText(el.innerText.trim(), 0, 0);
+        }
+
         ctx.restore();
       });
 
       const link = document.createElement("a");
-      link.download = "report.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    }
-  </script>
-
-</body>
-</html>
+      link.download
