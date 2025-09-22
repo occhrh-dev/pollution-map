@@ -188,16 +188,26 @@ function undoLast() {
     }
 
  function exportReport() {
+  // วาดพื้นหลัง + หัวเรื่องใหม่ก่อน
   drawCanvas();
 
+  // คำนวณสเกล (กรณี canvas ถูกย่อใน DOM)
+  const containerRect = container.getBoundingClientRect();
   const canvasRect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / canvasRect.width;
+  const scaleY = canvas.height / canvasRect.height;
 
   const elements = container.querySelectorAll(".draggable");
   elements.forEach(el => {
+    // หาพิกัดของ element ภายใน container
     const elRect = el.getBoundingClientRect();
-    const x = elRect.left - canvasRect.left;
-    const y = elRect.top - canvasRect.top;
-    const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
+    const x = (elRect.left - containerRect.left) * scaleX;
+    const y = (elRect.top  - containerRect.top ) * scaleY;
+
+    // อ่านมุมหมุน
+    const rotation = parseFloat(
+      el.style.transform.replace("rotate(", "").replace("deg)", "")
+    ) || 0;
 
     ctx.save();
     ctx.translate(x, y);
@@ -220,6 +230,7 @@ function undoLast() {
     ctx.restore();
   });
 
+  // ดาวน์โหลดเป็นภาพ
   const link = document.createElement("a");
   link.download = "report.png";
   link.href = canvas.toDataURL("image/png");
@@ -228,4 +239,5 @@ function undoLast() {
   </script>
 </body>
 </html>
+
 
