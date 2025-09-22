@@ -53,7 +53,7 @@
   </div>
 
   <div id="editorTools">
-    <button onclick="addArrow()">เพิ่มลูกศร ➔</button>
+    <button onclick="addArrow()">เพิ่มลูกศร ⟹</button>
     <button onclick="addTextBox()">เพิ่มข้อความ</button>
     <label>หมุนลูกศร (องศา):</label>
     <input type="range" id="arrowRotation" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
@@ -149,10 +149,10 @@
     function addArrow() {
       const arrow = document.createElement("div");
       arrow.className = "draggable";
-      arrow.innerHTML = "➔";
+      arrow.innerHTML = "⟹";
       arrow.style.left = "100px";
       arrow.style.top = "100px";
-      arrow.style.fontSize = "40px";
+      arrow.style.fontSize = "50px";
       arrow.style.color = "#87CEFA";
       arrow.style.transform = "rotate(0deg)";
       arrow.onclick = () => selectedArrow = arrow;
@@ -218,9 +218,9 @@
         ctx.rotate(rotation * Math.PI / 180);
 
         ctx.font = el.style.fontSize || "16px Arial";
-        if (el.innerText.trim() === "➔") {
+        if (el.innerText.trim() === "⟹") {
           ctx.fillStyle = "#87CEFA";
-          ctx.fillText("➔", 0, 0);
+          ctx.fillText("⟹", 0, 0);
         } else {
           ctx.fillStyle = "white";
           ctx.strokeStyle = "black";
@@ -241,4 +241,5 @@
 
 </body>
 </html>
+
 
