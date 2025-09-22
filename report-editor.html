@@ -278,7 +278,18 @@ logoImage.onload = function() {
 
   // วาดโลโก้
 if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
-  exportCtx.drawImage(logoImage, 20, 20, 100, 100);
+  const logoWidth = logoImage.naturalWidth;
+  const logoHeight = logoImage.naturalHeight;
+  const scale = 0.3; // ปรับขนาดตามต้องการ
+
+  exportCtx.drawImage(
+    logoImage,
+    exportCanvas.width - logoWidth * scale - 20, // มุมขวาบน
+    20,
+    logoWidth * scale,
+    logoHeight * scale
+  );
+
   console.log("🌼 วาดโลโก้แล้ว");
 } else {
   console.warn("⚠️ โลโก้ยังโหลดไม่เสร็จ");
@@ -358,6 +369,7 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
 
 
 
