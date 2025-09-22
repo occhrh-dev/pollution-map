@@ -73,13 +73,14 @@
       drawHistory.push(snapshot);
     }
 
-    function undoLast() {
-      if (drawHistory.length > 1) {
-        drawHistory.pop();
-        container.innerHTML = drawHistory[drawHistory.length - 1];
-        restoreDraggables();
-      }
-    }
+function undoLast() {
+  if (drawHistory.length > 1) {
+    drawHistory.pop();
+    container.innerHTML = drawHistory[drawHistory.length - 1];
+    restoreDraggables();
+    drawCanvas(); // ✅ วาดภาพแผนที่ใหม่
+  }
+}
 
     function restoreDraggables() {
       const elements = container.querySelectorAll(".draggable");
@@ -186,41 +187,45 @@
       };
     }
 
-    function exportReport() {
-      drawCanvas();
-      const elements = container.querySelectorAll(".draggable");
-      elements.forEach(el => {
-        const rect = el.getBoundingClientRect();
-        const canvasRect = canvas.getBoundingClientRect();
-        const x = rect.left - canvasRect.left;
-        const y = rect.top - canvasRect.top;
-        const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
+   function exportReport() {
+  drawCanvas();
+  const elements = container.querySelectorAll(".draggable");
+  elements.forEach(el => {
+    const rect = el.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    const x = rect.left - canvasRect.left;
+    const y = rect.top - canvasRect.top;
+    const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
 
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rotation * Math.PI / 180);
-        ctx.font = el.style.fontSize || "120px Arial";
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation * Math.PI / 180);
 
-        if (el.innerText.trim() === "⟹") {
-          ctx.fillStyle = "#87CEFA";
-          ctx.fillText("⟹", 0, 0);
-        } else {
-          ctx.fillStyle = "white";
-          ctx.strokeStyle = "black";
-          ctx.lineWidth = 2;
-          ctx.strokeText(el.innerText.trim(), 0, 0);
-          ctx.fillText(el.innerText.trim(), 0, 0);
-        }
+    // ✅ แก้ตรงนี้: ดึงขนาด font จาก style แล้วใช้กับ canvas
+    const fontSize = parseInt(el.style.fontSize) || 48;
+    ctx.font = `${fontSize}px Arial`;
 
-        ctx.restore();
-      });
-
-      const link = document.createElement("a");
-      link.download = "report.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+    if (el.innerText.trim() === "⟹") {
+      ctx.fillStyle = "#87CEFA";
+      ctx.fillText("⟹", 0, 0);
+    } else {
+      ctx.fillStyle = "white";
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      ctx.strokeText(el.innerText.trim(), 0, 0);
+      ctx.fillText(el.innerText.trim(), 0, 0);
     }
+
+    ctx.restore();
+  });
+
+  const link = document.createElement("a");
+  link.download = "report.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
   </script>
 
 </body>
 </html>
+
