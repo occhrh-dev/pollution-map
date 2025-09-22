@@ -56,7 +56,7 @@
     <label>ปรับทิศทางลม (องศา):</label>
     <input type="range" id="arrowRotation" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
     <button onclick="undoLast()">Undo</button>
-    <button onclick="exportReport()">บันทึกรายงาน</button>
+    <button onclick="drawCanvas(); exportReport()">บันทึกรายงาน</button>
   </div>
 
   <script>
@@ -258,61 +258,55 @@
   }
 
     function exportReport() {
-    drawCanvas();
+  const scaleX = canvas.width / container.offsetWidth;
+  const scaleY = canvas.height / container.offsetHeight;
 
-    const scaleX = canvas.width / container.offsetWidth;
-    const scaleY = canvas.height / container.offsetHeight;
+  const elements = container.querySelectorAll(".draggable");
+  elements.forEach(el => {
+    const x = el.offsetLeft * scaleX;
+    const y = el.offsetTop  * scaleY;
+    const w = el.offsetWidth  * scaleX;
+    const h = el.offsetHeight * scaleY;
 
-    // ✅ วาดโลโก้ด้านบนซ้าย
-    if (logoImage.complete) {
-      ctx.drawImage(logoImage, 20, 20, 100, 100);
-    }
+    const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
+    const fontSize = (parseInt(el.style.fontSize) || 48) * scaleY;
 
-    const elements = container.querySelectorAll(".draggable");
-    elements.forEach(el => {
-      const x = el.offsetLeft * scaleX;
-      const y = el.offsetTop  * scaleY;
-      const w = el.offsetWidth  * scaleX;
-      const h = el.offsetHeight * scaleY;
+    ctx.save();
+    ctx.translate(x + w/2, y + h/2);
+    ctx.rotate(rotation * Math.PI / 180);
+    ctx.font = `${fontSize}px Arial`;
+    ctx.textAlign = "center";
 
-      const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
-      const fontSize = (parseInt(el.style.fontSize) || 48) * scaleY;
+    const lines = el.innerText.trim().split("\n");
+    const lineHeight = fontSize + 4;
+    const totalHeight = lines.length * lineHeight;
+    const startY = -totalHeight / 2 + lineHeight / 2;
 
-      ctx.save();
-      ctx.translate(x + w/2, y + h/2);
-      ctx.rotate(rotation * Math.PI / 180);
-      ctx.font = `${fontSize}px Arial`;
-      ctx.textAlign = "center";
+    lines.forEach((line, i) => {
+      const yOffset = startY + i * lineHeight;
 
-      const lines = el.innerText.trim().split("\n");
-      const lineHeight = fontSize + 4;
-      const totalHeight = lines.length * lineHeight;
-      const startY = -totalHeight / 2 + lineHeight / 2;
-
-      lines.forEach((line, i) => {
-        const yOffset = startY + i * lineHeight;
-
-        if (line.trim() === "⟹") {
-          ctx.fillStyle = "#87CEFA";
-          ctx.fillText("⟹", 0, yOffset);
-        } else {
-          ctx.fillStyle = "white";
-          ctx.strokeStyle = "black";
-          ctx.lineWidth = 2;
-          ctx.strokeText(line, 0, yOffset);
-          ctx.fillText(line, 0, yOffset);
-        }
-      });
-
-      ctx.restore();
+      if (line.trim() === "⟹") {
+        ctx.fillStyle = "#87CEFA";
+        ctx.fillText("⟹", 0, yOffset);
+      } else {
+        ctx.fillStyle = "white";
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.strokeText(line, 0, yOffset);
+        ctx.fillText(line, 0, yOffset);
+      }
     });
 
-    const link = document.createElement("a");
-    link.download = "report.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  }
+    ctx.restore();
+  });
+
+  const link = document.createElement("a");
+  link.download = "report.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
 </script>
 </body>
 </html>
+
 
