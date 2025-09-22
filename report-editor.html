@@ -60,183 +60,186 @@
   </div>
 
   <script>
-    const canvas = document.getElementById("reportCanvas");
-    const ctx = canvas.getContext("2d");
-    const container = document.getElementById("canvasContainer");
+  const canvas = document.getElementById("reportCanvas");
+  const ctx = canvas.getContext("2d");
+  const container = document.getElementById("canvasContainer");
 
-    let backgroundImage = null;
-    let selectedArrow = null;
-    let drawHistory = [];
+  let backgroundImage = null;
+  let selectedArrow = null;
+  let drawHistory = [];
 
-    function saveState() {
-      const snapshot = container.innerHTML;
-      drawHistory.push(snapshot);
-    }
-
-function undoLast() {
-  if (drawHistory.length > 1) {
-    drawHistory.pop();
-    container.innerHTML = drawHistory[drawHistory.length - 1];
-    restoreDraggables();
-    drawCanvas(); // ✅ วาดภาพแผนที่ใหม่
+  function saveState() {
+    const snapshot = container.innerHTML;
+    drawHistory.push(snapshot);
   }
-}
 
-    function restoreDraggables() {
-      const elements = container.querySelectorAll(".draggable");
-      elements.forEach(el => {
-        makeDraggable(el);
-        el.onclick = () => selectedArrow = el;
-      });
+  function undoLast() {
+    if (drawHistory.length > 1) {
+      drawHistory.pop();
+      container.innerHTML = drawHistory[drawHistory.length - 1];
+      restoreDraggables();
+      drawCanvas(); // ✅ วาดภาพพื้นหลังใหม่
     }
+  }
 
-    document.getElementById("imageUpload").addEventListener("change", function(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        backgroundImage = new Image();
-        backgroundImage.onload = function() {
-          drawCanvas();
-          saveState();
-        };
-        backgroundImage.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
+  function restoreDraggables() {
+    const elements = container.querySelectorAll(".draggable");
+    elements.forEach(el => {
+      makeDraggable(el);
+      el.onclick = () => selectedArrow = el;
     });
+  }
 
-    function drawCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (backgroundImage) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-      drawNorthArrow();
-      const title = document.getElementById("reportTitle").value;
-      if (title) {
-        ctx.font = "bold 24px Arial";
-        ctx.fillStyle = "black";
-        ctx.fillText(title, 20, 40);
-      }
-    }
-
-    function drawNorthArrow() {
-      ctx.font = "bold 24px Arial";
-      ctx.fillStyle = "black";
-      ctx.fillText("N", 30, 40);
-      ctx.beginPath();
-      ctx.moveTo(30, 60);
-      ctx.lineTo(20, 80);
-      ctx.lineTo(40, 80);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    function addArrow() {
-      const arrow = document.createElement("div");
-      arrow.className = "draggable";
-      arrow.innerHTML = "⟹";
-      arrow.style.left = "100px";
-      arrow.style.top = "100px";
-      arrow.style.fontSize = "48px";
-      arrow.style.color = "#87CEFA";
-      arrow.style.fontWeight = "bold";
-      arrow.style.fontFamily = "Arial Black, sans-serif";
-      arrow.style.transform = "rotate(0deg)";
-      arrow.onclick = () => selectedArrow = arrow;
-      container.appendChild(arrow);
-      makeDraggable(arrow);
-      selectedArrow = arrow;
-      saveState();
-    }
-
-    function rotateSelectedArrow(deg) {
-      if (selectedArrow) {
-        selectedArrow.style.transform = `rotate(${deg}deg)`;
-      }
-    }
-
-    function addTextBox() {
-      const box = document.createElement("div");
-      box.className = "draggable";
-      box.contentEditable = true;
-      box.innerText = "ข้อความ";
-      box.style.left = "150px";
-      box.style.top = "150px";
-      box.style.color = "white";
-      box.style.textShadow = "0 0 2px black";
-      box.style.fontWeight = "bold";
-      box.style.fontSize = "18px";
-      box.style.background = "transparent";
-      box.style.border = "none";
-      container.appendChild(box);
-      makeDraggable(box);
-      saveState();
-    }
-
-    function makeDraggable(el) {
-      let offsetX, offsetY;
-      el.onmousedown = function(e) {
-        offsetX = e.clientX - el.offsetLeft;
-        offsetY = e.clientY - el.offsetTop;
-        document.onmousemove = function(e) {
-          el.style.left = (e.clientX - offsetX) + "px";
-          el.style.top = (e.clientY - offsetY) + "px";
-        };
-        document.onmouseup = function() {
-          document.onmousemove = null;
-          document.onmouseup = null;
-        };
+  document.getElementById("imageUpload").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      backgroundImage = new Image();
+      backgroundImage.onload = function() {
+        drawCanvas(); // ✅ วาดภาพพื้นหลัง
+        // ❌ ไม่ต้อง saveState เพราะไม่อยากให้ undo ลบภาพ
       };
-    }
-
- function exportReport() {
-  drawCanvas();
-
-  const scaleX = canvas.width  / container.offsetWidth;
-  const scaleY = canvas.height / container.offsetHeight;
-
-  const elements = container.querySelectorAll(".draggable");
-  elements.forEach(el => {
-    const x = el.offsetLeft * scaleX;
-    const y = el.offsetTop  * scaleY;
-    const w = el.offsetWidth  * scaleX;
-    const h = el.offsetHeight * scaleY;
-
-    const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
-    const fontSize = (parseInt(el.style.fontSize) || 48) * scaleY;
-
-    ctx.save();
-    ctx.translate(x + w/2, y + h/2);
-    ctx.rotate(rotation * Math.PI / 180);
-    ctx.font = `${fontSize}px Arial`;
-    ctx.textAlign = "center"; // ✅ จัดกลางแนวนอน
-
-    const lines = el.innerText.trim().split("\n");
-    const lineHeight = fontSize + 4;
-    const totalHeight = lines.length * lineHeight;
-    const startY = -totalHeight / 2 + lineHeight / 2; // ✅ เริ่มจากกึ่งกลางแนวตั้ง
-
-    lines.forEach((line, i) => {
-      const yOffset = startY + i * lineHeight;
-
-      if (line.trim() === "⟹") {
-        ctx.fillStyle = "#87CEFA";
-        ctx.fillText("⟹", 0, yOffset);
-      } else {
-        ctx.fillStyle = "white";
-        ctx.strokeStyle = "black";
-        ctx.lineWidth = 2;
-        ctx.strokeText(line, 0, yOffset);
-        ctx.fillText(line, 0, yOffset);
-      }
-    });
-
-    ctx.restore();
+      backgroundImage.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
   });
 
-  const link = document.createElement("a");
-  link.download = "report.png";
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-}
-  </script>
+  function drawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (backgroundImage) {
+      ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+    }
+    drawNorthArrow();
+    const title = document.getElementById("reportTitle").value;
+    if (title) {
+      ctx.font = "bold 24px Arial";
+      ctx.fillStyle = "black";
+      ctx.fillText(title, 20, 40);
+    }
+  }
+
+  function drawNorthArrow() {
+    ctx.font = "bold 24px Arial";
+    ctx.fillStyle = "black";
+    ctx.fillText("N", 30, 40);
+    ctx.beginPath();
+    ctx.moveTo(30, 60);
+    ctx.lineTo(20, 80);
+    ctx.lineTo(40, 80);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function addArrow() {
+    const arrow = document.createElement("div");
+    arrow.className = "draggable";
+    arrow.innerHTML = "⟹";
+    arrow.style.left = "100px";
+    arrow.style.top = "100px";
+    arrow.style.fontSize = "48px";
+    arrow.style.color = "#87CEFA";
+    arrow.style.fontWeight = "bold";
+    arrow.style.fontFamily = "Arial Black, sans-serif";
+    arrow.style.transform = "rotate(0deg)";
+    arrow.onclick = () => selectedArrow = arrow;
+    container.appendChild(arrow);
+    makeDraggable(arrow);
+    selectedArrow = arrow;
+    saveState();
+  }
+
+  function rotateSelectedArrow(deg) {
+    if (selectedArrow) {
+      selectedArrow.style.transform = `rotate(${deg}deg)`;
+    }
+  }
+
+  function addTextBox() {
+    const box = document.createElement("div");
+    box.className = "draggable";
+    box.contentEditable = true;
+    box.innerText = "ข้อความ";
+    box.style.left = "150px";
+    box.style.top = "150px";
+    box.style.color = "white";
+    box.style.textShadow = "0 0 2px black";
+    box.style.fontWeight = "bold";
+    box.style.fontSize = "18px";
+    box.style.background = "transparent";
+    box.style.border = "none";
+    container.appendChild(box);
+    makeDraggable(box);
+    saveState();
+  }
+
+  function makeDraggable(el) {
+    let offsetX, offsetY;
+    el.onmousedown = function(e) {
+      offsetX = e.clientX - el.offsetLeft;
+      offsetY = e.clientY - el.offsetTop;
+      document.onmousemove = function(e) {
+        el.style.left = (e.clientX - offsetX) + "px";
+        el.style.top = (e.clientY - offsetY) + "px";
+      };
+      document.onmouseup = function() {
+        document.onmousemove = null;
+        document.onmouseup = null;
+      };
+    };
+  }
+
+  function exportReport() {
+    drawCanvas();
+
+    const scaleX = canvas.width  / container.offsetWidth;
+    const scaleY = canvas.height / container.offsetHeight;
+
+    const elements = container.querySelectorAll(".draggable");
+    elements.forEach(el => {
+      const x = el.offsetLeft * scaleX;
+      const y = el.offsetTop  * scaleY;
+      const w = el.offsetWidth  * scaleX;
+      const h = el.offsetHeight * scaleY;
+
+      const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
+      const fontSize = (parseInt(el.style.fontSize) || 48) * scaleY;
+
+      ctx.save();
+      ctx.translate(x + w/2, y + h/2);
+      ctx.rotate(rotation * Math.PI / 180);
+      ctx.font = `${fontSize}px Arial`;
+      ctx.textAlign = "center";
+
+      const lines = el.innerText.trim().split("\n");
+      const lineHeight = fontSize + 4;
+      const totalHeight = lines.length * lineHeight;
+      const startY = -totalHeight / 2 + lineHeight / 2;
+
+      lines.forEach((line, i) => {
+        const yOffset = startY + i * lineHeight;
+
+        if (line.trim() === "⟹") {
+          ctx.fillStyle = "#87CEFA";
+          ctx.fillText("⟹", 0, yOffset);
+        } else {
+          ctx.fillStyle = "white";
+          ctx.strokeStyle = "black";
+          ctx.lineWidth = 2;
+          ctx.strokeText(line, 0, yOffset);
+          ctx.fillText(line, 0, yOffset);
+        }
+      });
+
+      ctx.restore();
+    });
+
+    const link = document.createElement("a");
+    link.download = "report.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }
+</script>
 </body>
 </html>
+
