@@ -194,33 +194,43 @@ function undoLast() {
   const scaleY = canvas.height / container.offsetHeight;
 
   const elements = container.querySelectorAll(".draggable");
-  elements.forEach(el => {
-    const x = el.offsetLeft * scaleX;
-    const y = el.offsetTop  * scaleY;
-    const w = el.offsetWidth  * scaleX;
-    const h = el.offsetHeight * scaleY;
+ elements.forEach(el => {
+  const x = el.offsetLeft * scaleX;
+  const y = el.offsetTop  * scaleY;
+  const w = el.offsetWidth  * scaleX;
+  const h = el.offsetHeight * scaleY;
 
-    const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
-    const fontSize = (parseInt(el.style.fontSize) || 48) * scaleY;
+  const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
+  const fontSize = (parseInt(el.style.fontSize) || 48) * scaleY;
 
-    ctx.save();
-    ctx.translate(x + w/2, y + h/2);
-    ctx.rotate(rotation * Math.PI / 180);
-    ctx.font = `${fontSize}px Arial`;
+  ctx.save();
+  ctx.translate(x + w/2, y + h/2);
+  ctx.rotate(rotation * Math.PI / 180);
+  ctx.font = `${fontSize}px Arial`;
+  ctx.textAlign = "center"; // ✅ จัดกลางแนวนอน
 
-    if (el.innerText.trim() === "⟹") {
+  const lines = el.innerText.trim().split("\n");
+  const lineHeight = fontSize + 4;
+  const totalHeight = lines.length * lineHeight;
+  const startY = -totalHeight / 2 + lineHeight / 2; // ✅ เริ่มจากกึ่งกลางแนวตั้ง
+
+  lines.forEach((line, i) => {
+    const yOffset = startY + i * lineHeight;
+
+    if (line.trim() === "⟹") {
       ctx.fillStyle = "#87CEFA";
-      ctx.fillText("⟹", -w/2, h/2);
+      ctx.fillText("⟹", 0, yOffset);
     } else {
       ctx.fillStyle = "white";
       ctx.strokeStyle = "black";
       ctx.lineWidth = 2;
-      ctx.strokeText(el.innerText.trim(), -w/2, h/2);
-      ctx.fillText(el.innerText.trim(), -w/2, h/2);
+      ctx.strokeText(line, 0, yOffset);
+      ctx.fillText(line, 0, yOffset);
     }
-    ctx.restore();
   });
 
+  ctx.restore();
+});
   const link = document.createElement("a");
   link.download = "report.png";
   link.href = canvas.toDataURL("image/png");
@@ -230,3 +240,4 @@ function undoLast() {
   </script>
 </body>
 </html>
+
