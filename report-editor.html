@@ -188,56 +188,45 @@ function undoLast() {
     }
 
  function exportReport() {
-  // วาดพื้นหลัง + หัวเรื่องใหม่ก่อน
   drawCanvas();
 
-  // คำนวณสเกล (กรณี canvas ถูกย่อใน DOM)
-  const containerRect = container.getBoundingClientRect();
-  const canvasRect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / canvasRect.width;
-  const scaleY = canvas.height / canvasRect.height;
+  const scaleX = canvas.width  / container.offsetWidth;
+  const scaleY = canvas.height / container.offsetHeight;
 
   const elements = container.querySelectorAll(".draggable");
   elements.forEach(el => {
-    // หาพิกัดของ element ภายใน container
-    const elRect = el.getBoundingClientRect();
-    const x = (elRect.left - containerRect.left) * scaleX;
-    const y = (elRect.top  - containerRect.top ) * scaleY;
+    const x = el.offsetLeft * scaleX;
+    const y = el.offsetTop  * scaleY;
+    const w = el.offsetWidth  * scaleX;
+    const h = el.offsetHeight * scaleY;
 
-    // อ่านมุมหมุน
-    const rotation = parseFloat(
-      el.style.transform.replace("rotate(", "").replace("deg)", "")
-    ) || 0;
+    const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
+    const fontSize = (parseInt(el.style.fontSize) || 48) * scaleY;
 
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(x + w/2, y + h/2);
     ctx.rotate(rotation * Math.PI / 180);
-
-    const fontSize = parseInt(el.style.fontSize) || 48;
     ctx.font = `${fontSize}px Arial`;
 
     if (el.innerText.trim() === "⟹") {
       ctx.fillStyle = "#87CEFA";
-      ctx.fillText("⟹", 0, 0);
+      ctx.fillText("⟹", -w/2, h/2);
     } else {
       ctx.fillStyle = "white";
       ctx.strokeStyle = "black";
       ctx.lineWidth = 2;
-      ctx.strokeText(el.innerText.trim(), 0, 0);
-      ctx.fillText(el.innerText.trim(), 0, 0);
+      ctx.strokeText(el.innerText.trim(), -w/2, h/2);
+      ctx.fillText(el.innerText.trim(), -w/2, h/2);
     }
-
     ctx.restore();
   });
 
-  // ดาวน์โหลดเป็นภาพ
   const link = document.createElement("a");
   link.download = "report.png";
   link.href = canvas.toDataURL("image/png");
   link.click();
 }
+
   </script>
 </body>
 </html>
-
-
