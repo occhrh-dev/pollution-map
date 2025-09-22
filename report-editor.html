@@ -167,23 +167,28 @@ function rotateSelectedArrow(deg) {
   });
 }
 
-  function addTextBox() {
-    const box = document.createElement("div");
-    box.className = "draggable";
-    box.contentEditable = true;
-    box.innerText = "ข้อความ";
-    box.style.left = "150px";
-    box.style.top = "150px";
-    box.style.color = "white";
-    box.style.textShadow = "0 0 2px black";
-    box.style.fontWeight = "bold";
-    box.style.fontSize = "18px";
-    box.style.background = "transparent";
-    box.style.border = "none";
-    container.appendChild(box);
-    makeDraggable(box);
-    saveState();
-  }
+function addTextBox() {
+  const box = document.createElement("div");
+  box.className = "draggable";
+  box.contentEditable = true;
+  box.innerText = "ข้อความ";
+  box.style.left = "150px";
+  box.style.top = "150px";
+  box.style.color = "white";
+  box.style.textShadow = "0 0 2px black";
+  box.style.fontWeight = "bold";
+  box.style.fontSize = "18px";
+  box.style.background = "transparent";
+  box.style.border = "none";
+
+  box.onmousedown = function(e) {
+    e.preventDefault(); // ✅ ป้องกันการเข้าโหมดพิมพ์
+  };
+
+  container.appendChild(box);
+  makeDraggable(box); // ✅ ผูกการลาก
+  saveState();
+}
 
 function makeDraggableGroup(el) {
   let offsetX, offsetY;
@@ -269,7 +274,3 @@ function makeDraggableGroup(el) {
 </script>
 </body>
 </html>
-
-
-
-
