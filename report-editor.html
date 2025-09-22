@@ -187,12 +187,16 @@ function undoLast() {
       };
     }
 
-   function exportReport() {
+  function exportReport() {
   drawCanvas();
+
+  const canvasOffsetX = canvas.offsetLeft;
+  const canvasOffsetY = canvas.offsetTop;
+
   const elements = container.querySelectorAll(".draggable");
   elements.forEach(el => {
-    const x = parseFloat(el.style.left) || 0;
-    const y = parseFloat(el.style.top) || 0;
+    const x = parseFloat(el.style.left) - canvasOffsetX;
+    const y = parseFloat(el.style.top) - canvasOffsetY;
     const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
 
     ctx.save();
@@ -225,5 +229,3 @@ function undoLast() {
 
 </body>
 </html>
-
-
