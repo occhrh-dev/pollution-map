@@ -296,17 +296,6 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
   console.warn("⚠️ โลโก้ยังโหลดไม่เสร็จ");
 }
 
-  // วาดลูกศร N
-  exportCtx.font = "bold 24px Arial";
-  exportCtx.fillStyle = "black";
-  exportCtx.fillText("N", 30, 40);
-  exportCtx.beginPath();
-  exportCtx.moveTo(30, 60);
-  exportCtx.lineTo(20, 80);
-  exportCtx.lineTo(40, 80);
-  exportCtx.closePath();
-  exportCtx.fill();
-
   // วาดหัวเรื่อง
   const title = document.getElementById("reportTitle").value;
   if (title) {
@@ -370,6 +359,7 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
 
 
 
