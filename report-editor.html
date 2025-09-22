@@ -256,8 +256,8 @@ logoImage.onload = function() {
 
   // วาดโลโก้
 if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
-  const maxWidth  = canvas.width * 0.2;   // กว้างไม่เกิน 20% ของ canvas
-  const maxHeight = canvas.height * 0.2;  // สูงไม่เกิน 20% ของ canvas
+  const maxWidth  = exportCanvas.width * 0.2;
+  const maxHeight = exportCanvas.height * 0.2;
 
   const scale = Math.min(
     maxWidth  / logoImage.naturalWidth,
@@ -267,10 +267,10 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
   const logoWidth  = logoImage.naturalWidth  * scale;
   const logoHeight = logoImage.naturalHeight * scale;
 
-  const x = (canvas.width  - logoWidth)  / 2; // กึ่งกลางแนวนอน
-  const y = 20;                               // ระยะห่างจากขอบบน
+  const x = (exportCanvas.width - logoWidth) / 2;
+  const y = 20;
 
-  ctx.drawImage(logoImage, x, y, logoWidth, logoHeight);
+  exportCtx.drawImage(logoImage, x, y, logoWidth, logoHeight);
 }
 
   // วาดลูกศรและข้อความ
@@ -327,3 +327,4 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
