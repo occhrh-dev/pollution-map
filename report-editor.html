@@ -53,12 +53,12 @@
   </div>
 
   <div id="editorTools">
-    <button onclick="addArrow()">เพิ่มลูกศร ⟹</button>
-    <button onclick="addTextBox()">เพิ่มข้อความ</button>
-    <label>หมุนลูกศร (องศา):</label>
+    <button onclick="addArrow()">เพิ่มทิศทางลม ⟹</button>
+    <button onclick="addTextBox()">ใส่หัวเรื่อง</button>
+    <label>ปรับทิศทางลม (องศา):</label>
     <input type="range" id="arrowRotation" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
     <button onclick="undoLast()">Undo</button>
-    <button onclick="exportReport()">บันทึกภาพรายงาน</button>
+    <button onclick="exportReport()">บันทึกรายงาน</button>
   </div>
 
   <script>
@@ -241,5 +241,6 @@
 
 </body>
 </html>
+
 
 
