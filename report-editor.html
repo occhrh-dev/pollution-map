@@ -125,8 +125,6 @@ logoImage.onload = function() {
     if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
   ctx.drawImage(logoImage, 20, 20, 100, 100);
 }
-
-    drawNorthArrow();
     const title = document.getElementById("reportTitle").value;
     if (title) {
       ctx.font = "bold 24px Arial";
@@ -134,7 +132,6 @@ logoImage.onload = function() {
       ctx.fillText(title, 140, 40); // ✅ ขยับให้ไม่ทับโลโก้
     }
   }
-
   function addArrow() {
     selectedArrows = [];
 
@@ -346,16 +343,3 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
