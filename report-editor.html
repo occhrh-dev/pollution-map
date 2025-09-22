@@ -218,6 +218,34 @@ function makeDraggableGroup(el) {
     };
   };
 }
+function makeDraggableGroupText(el) {
+  el.onmousedown = function(e) {
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    const initialPositions = selectedTextBoxes.map(box => ({
+      el: box,
+      left: box.offsetLeft,
+      top: box.offsetTop
+    }));
+
+    document.onmousemove = function(e) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      initialPositions.forEach(pos => {
+        pos.el.style.left = (pos.left + dx) + "px";
+        pos.el.style.top  = (pos.top  + dy) + "px";
+      });
+    };
+
+    document.onmouseup = function() {
+      document.onmousemove = null;
+      document.onmouseup = null;
+      saveState();
+    };
+  };
+}
 
   function exportReport() {
     drawCanvas();
@@ -272,5 +300,3 @@ function makeDraggableGroup(el) {
 </script>
 </body>
 </html>
-
-
