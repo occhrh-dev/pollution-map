@@ -185,21 +185,36 @@ function rotateSelectedArrow(deg) {
     saveState();
   }
 
-  function makeDraggable(el) {
-    let offsetX, offsetY;
-    el.onmousedown = function(e) {
-      offsetX = e.clientX - el.offsetLeft;
-      offsetY = e.clientY - el.offsetTop;
-      document.onmousemove = function(e) {
-        el.style.left = (e.clientX - offsetX) + "px";
-        el.style.top = (e.clientY - offsetY) + "px";
-      };
-      document.onmouseup = function() {
-        document.onmousemove = null;
-        document.onmouseup = null;
-      };
+  function makeDraggableGroup(el) {
+  let offsetX, offsetY;
+  el.onmousedown = function(e) {
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    // เก็บตำแหน่งเริ่มต้นของแต่ละลูกศรในกลุ่ม
+    const initialPositions = selectedArrows.map(arrow => ({
+      el: arrow,
+      left: arrow.offsetLeft,
+      top: arrow.offsetTop
+    }));
+
+    document.onmousemove = function(e) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      initialPositions.forEach(pos => {
+        pos.el.style.left = (pos.left + dx) + "px";
+        pos.el.style.top  = (pos.top  + dy) + "px";
+      });
     };
-  }
+
+    document.onmouseup = function() {
+      document.onmousemove = null;
+      document.onmouseup = null;
+      saveState(); // ✅ บันทึกหลังลาก
+    };
+  };
+}
 
   function exportReport() {
     drawCanvas();
@@ -254,5 +269,6 @@ function rotateSelectedArrow(deg) {
 </script>
 </body>
 </html>
+
 
 
