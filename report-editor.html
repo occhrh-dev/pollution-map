@@ -68,6 +68,7 @@
   let selectedArrow = null;
   let selectedArrows = [];
   let drawHistory = [];
+  let selectedTextBoxes = [];
 
   function saveState() {
     const snapshot = container.innerHTML;
@@ -180,26 +181,24 @@ function addTextBox() {
   box.style.fontSize = "18px";
   box.style.background = "transparent";
   box.style.border = "none";
-
-  box.onmousedown = function(e) {
-    e.preventDefault(); // ✅ ป้องกันการเข้าโหมดพิมพ์
-  };
+  box.style.padding = "4px";
 
   container.appendChild(box);
-  makeDraggable(box); // ✅ ผูกการลาก
+
+  selectedTextBoxes = [box]; // ✅ ใส่กล่องเข้า array
+  makeDraggableGroupText(box); // ✅ ผูกลากกลุ่ม
   saveState();
 }
 
-function makeDraggableGroup(el) {
-  let offsetX, offsetY;
+function makeDraggableGroupText(el) {
   el.onmousedown = function(e) {
     const startX = e.clientX;
     const startY = e.clientY;
 
-    const initialPositions = selectedArrows.map(arrow => ({
-      el: arrow,
-      left: arrow.offsetLeft,
-      top: arrow.offsetTop
+    const initialPositions = selectedTextBoxes.map(box => ({
+      el: box,
+      left: box.offsetLeft,
+      top: box.offsetTop
     }));
 
     document.onmousemove = function(e) {
@@ -219,7 +218,6 @@ function makeDraggableGroup(el) {
     };
   };
 }
-
 
   function exportReport() {
     drawCanvas();
@@ -274,3 +272,4 @@ function makeDraggableGroup(el) {
 </script>
 </body>
 </html>
+
