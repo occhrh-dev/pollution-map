@@ -267,11 +267,17 @@
   // วาดพื้นหลัง
   if (backgroundImage) {
     exportCtx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+    console.log("🖼️ วาดพื้นหลังแล้ว");
+  } else {
+    console.warn("⚠️ ไม่มีภาพพื้นหลัง");
   }
 
   // วาดโลโก้
   if (logoImage.complete) {
     exportCtx.drawImage(logoImage, 20, 20, 100, 100);
+    console.log("🌼 วาดโลโก้แล้ว");
+  } else {
+    console.warn("⚠️ โลโก้ยังโหลดไม่เสร็จ");
   }
 
   // วาดลูกศร N
@@ -291,6 +297,7 @@
     exportCtx.font = "bold 24px Arial";
     exportCtx.fillStyle = "black";
     exportCtx.fillText(title, 140, 40);
+    console.log("📝 วาดหัวเรื่อง:", title);
   }
 
   // วาดลูกศรและข้อความ
@@ -340,10 +347,10 @@
   const link = document.createElement('a');
   link.download = (document.getElementById('reportTitle').value || 'report') + '.png';
   link.href = exportCanvas.toDataURL('image/png');
+  console.log("📦 dataURL พร้อมดาวน์โหลด:", link.href);
   link.click();
 }
 
 </script>
 </body>
 </html>
-
