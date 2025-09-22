@@ -190,16 +190,13 @@ function undoLast() {
  function exportReport() {
   drawCanvas();
 
-  const canvasRect = canvas.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-
-  const offsetX = containerRect.left - canvasRect.left;
-  const offsetY = containerRect.top - canvasRect.top;
+  const canvasOffsetX = canvas.offsetLeft;
+  const canvasOffsetY = canvas.offsetTop;
 
   const elements = container.querySelectorAll(".draggable");
   elements.forEach(el => {
-    const x = el.offsetLeft - offsetX;
-    const y = el.offsetTop - offsetY;
+    const x = el.offsetLeft - canvasOffsetX;
+    const y = el.offsetTop - canvasOffsetY;
     const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
 
     ctx.save();
@@ -231,5 +228,3 @@ function undoLast() {
   </script>
 </body>
 </html>
-
-
