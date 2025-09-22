@@ -280,7 +280,7 @@ logoImage.onload = function() {
 if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
   const logoWidth = logoImage.naturalWidth;
   const logoHeight = logoImage.naturalHeight;
-  const scale = 0.3; // ปรับขนาดตามต้องการ
+  const scale = exportCanvas.width < 800 ? 0.3 : 0.5; // ปรับขนาดตามต้องการ
 
   exportCtx.drawImage(
     logoImage,
@@ -369,6 +369,7 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
 
 
 
