@@ -338,7 +338,7 @@
   // สร้างลิงก์ดาวน์โหลด
   const link = document.createElement('a');
   link.download = (document.getElementById('reportTitle').value || 'report') + '.png';
-  link.href = canvas.toDataURL('image/png');
+  link.href = exportCanvas.toDataURL('image/png');
   link.click();
 }
 
