@@ -56,7 +56,7 @@
     <label>ปรับทิศทางลม (องศา):</label>
     <input type="range" id="arrowRotation" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
     <button onclick="undoLast()">Undo</button>
-    <button onclick="drawCanvas(); exportReport()">บันทึกรายงาน</button>
+    <button onclick="exportReport()">บันทึกรายงาน</button>
   </div>
 
   <script>
@@ -257,7 +257,42 @@
     };
   }
 
-    function exportReport() {
+  function exportReport() {
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+  const exportCtx = exportCanvas.getContext("2d");
+
+  // วาดพื้นหลัง
+  if (backgroundImage) {
+    exportCtx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  }
+
+  // วาดโลโก้
+  if (logoImage.complete) {
+    exportCtx.drawImage(logoImage, 20, 20, 100, 100);
+  }
+
+  // วาดลูกศร N
+  exportCtx.font = "bold 24px Arial";
+  exportCtx.fillStyle = "black";
+  exportCtx.fillText("N", 30, 40);
+  exportCtx.beginPath();
+  exportCtx.moveTo(30, 60);
+  exportCtx.lineTo(20, 80);
+  exportCtx.lineTo(40, 80);
+  exportCtx.closePath();
+  exportCtx.fill();
+
+  // วาดหัวเรื่อง
+  const title = document.getElementById("reportTitle").value;
+  if (title) {
+    exportCtx.font = "bold 24px Arial";
+    exportCtx.fillStyle = "black";
+    exportCtx.fillText(title, 140, 40);
+  }
+
+  // วาดลูกศรและข้อความ
   const scaleX = canvas.width / container.offsetWidth;
   const scaleY = canvas.height / container.offsetHeight;
 
@@ -271,11 +306,11 @@
     const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
     const fontSize = (parseInt(el.style.fontSize) || 48) * scaleY;
 
-    ctx.save();
-    ctx.translate(x + w/2, y + h/2);
-    ctx.rotate(rotation * Math.PI / 180);
-    ctx.font = `${fontSize}px Arial`;
-    ctx.textAlign = "center";
+    exportCtx.save();
+    exportCtx.translate(x + w/2, y + h/2);
+    exportCtx.rotate(rotation * Math.PI / 180);
+    exportCtx.font = `${fontSize}px Arial`;
+    exportCtx.textAlign = "center";
 
     const lines = el.innerText.trim().split("\n");
     const lineHeight = fontSize + 4;
@@ -286,27 +321,30 @@
       const yOffset = startY + i * lineHeight;
 
       if (line.trim() === "⟹") {
-        ctx.fillStyle = "#87CEFA";
-        ctx.fillText("⟹", 0, yOffset);
+        exportCtx.fillStyle = "#87CEFA";
+        exportCtx.fillText("⟹", 0, yOffset);
       } else {
-        ctx.fillStyle = "white";
-        ctx.strokeStyle = "black";
-        ctx.lineWidth = 2;
-        ctx.strokeText(line, 0, yOffset);
-        ctx.fillText(line, 0, yOffset);
+        exportCtx.fillStyle = "white";
+        exportCtx.strokeStyle = "black";
+        exportCtx.lineWidth = 2;
+        exportCtx.strokeText(line, 0, yOffset);
+        exportCtx.fillText(line, 0, yOffset);
       }
     });
 
-    ctx.restore();
+    exportCtx.restore();
   });
 
+  // สร้างลิงก์ดาวน์โหลด
   const link = document.createElement("a");
   link.download = "report.png";
-  link.href = canvas.toDataURL("image/png");
+  link.href = exportCanvas.toDataURL("image/png");
   link.click();
 }
+
 </script>
 </body>
 </html>
+
 
 
