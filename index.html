@@ -367,7 +367,7 @@ function showSelectedLayouts() {
     map.data.overrideStyle(feature, { visible: shouldShow });
   }
 }
- function toggleMapView() {
+function toggleMapView() {
   const controls = document.getElementById("controls");
   const mapContainer = document.getElementById("map");
   const toggleBtn = document.getElementById("toggleMapBtn");
@@ -376,7 +376,7 @@ function showSelectedLayouts() {
 
   if (isHidden) {
     controls.style.display = "block";
-    mapContainer.style.height = "calc(100vh - 120px)"; // หรือความสูงเดิมของคุณ
+    mapContainer.style.height = "calc(100vh - 120px)";
     toggleBtn.textContent = "ยุบเมนู / ขยายแผนที่";
   } else {
     controls.style.display = "none";
@@ -407,25 +407,20 @@ function showAllCommunities() {
           radiusLabels.pop().setMap(null);
         }
       }
+      document.addEventListener("keydown", function(event) {
+  if (event.key === "Escape") {
+    const controls = document.getElementById("controls");
+    const mapContainer = document.getElementById("map");
+    const toggleBtn = document.getElementById("toggleMapBtn");
+
+    controls.style.display = "block";
+    mapContainer.style.height = "calc(100vh - 120px)";
+    toggleBtn.textContent = "ยุบเมนู / ขยายแผนที่";
+  }
+});
     </script>
 
     <script async
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
