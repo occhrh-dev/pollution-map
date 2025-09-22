@@ -53,8 +53,11 @@
   </div>
 
   <div id="editorTools">
-    <button onclick="addWindArrow()">เพิ่มลูกศรทิศทางลม</button>
+    <button onclick="addArrow()">เพิ่มลูกศร</button>
     <button onclick="addTextBox()">เพิ่มข้อความ</button>
+    <label>หมุนลูกศร (องศา):</label>
+    <input type="range" id="arrowRotation" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
+    <button onclick="undoLast()">Undo</button>
     <button onclick="exportReport()">บันทึกภาพรายงาน</button>
   </div>
 
@@ -65,8 +68,30 @@
 
     let backgroundImage = null;
     let logoImage = null;
+    let selectedArrow = null;
+    let drawHistory = [];
 
-    // โหลดภาพแผนที่
+    function saveState() {
+      const snapshot = container.innerHTML;
+      drawHistory.push(snapshot);
+    }
+
+    function undoLast() {
+      if (drawHistory.length > 1) {
+        drawHistory.pop();
+        container.innerHTML = drawHistory[drawHistory.length - 1];
+        restoreDraggables();
+      }
+    }
+
+    function restoreDraggables() {
+      const elements = container.querySelectorAll(".draggable");
+      elements.forEach(el => {
+        makeDraggable(el);
+        el.onclick = () => selectedArrow = el;
+      });
+    }
+
     document.getElementById("imageUpload").addEventListener("change", function(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -79,7 +104,6 @@
       reader.readAsDataURL(file);
     });
 
-    // โหลดโลโก้
     document.getElementById("logoUpload").addEventListener("change", function(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -92,7 +116,6 @@
       reader.readAsDataURL(file);
     });
 
-    // วาด canvas
     function drawCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (backgroundImage) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
@@ -111,7 +134,6 @@
       }
     }
 
-    // สัญลักษณ์ทิศเหนือ
     function drawNorthArrow() {
       ctx.font = "bold 24px Arial";
       ctx.fillStyle = "black";
@@ -124,18 +146,27 @@
       ctx.fill();
     }
 
-    // เพิ่มลูกศรทิศทางลมแบบลากได้
-    function addWindArrow() {
+    function addArrow() {
       const arrow = document.createElement("div");
       arrow.className = "draggable";
-      arrow.innerHTML = "➤<br><small>ลม 7 กม./ชม.</small>";
+      arrow.innerHTML = "➤";
       arrow.style.left = "100px";
       arrow.style.top = "100px";
+      arrow.style.fontSize = "32px";
+      arrow.style.transform = "rotate(0deg)";
+      arrow.onclick = () => selectedArrow = arrow;
       container.appendChild(arrow);
       makeDraggable(arrow);
+      selectedArrow = arrow;
+      saveState();
     }
 
-    // เพิ่ม text box แบบลากได้
+    function rotateSelectedArrow(deg) {
+      if (selectedArrow) {
+        selectedArrow.style.transform = `rotate(${deg}deg)`;
+      }
+    }
+
     function addTextBox() {
       const box = document.createElement("div");
       box.className = "draggable";
@@ -148,9 +179,9 @@
       box.style.border = "1px solid #999";
       container.appendChild(box);
       makeDraggable(box);
+      saveState();
     }
 
-    // ทำให้ลากได้
     function makeDraggable(el) {
       let offsetX, offsetY;
       el.onmousedown = function(e) {
@@ -167,21 +198,24 @@
       };
     }
 
-    // export เป็นภาพ
     function exportReport() {
-      drawCanvas(); // วาดพื้นหลัง + หัวเรื่อง + โลโก้ + ทิศเหนือ
+      drawCanvas();
 
-      // วาดองค์ประกอบลากวางลง canvas
       const elements = container.querySelectorAll(".draggable");
       elements.forEach(el => {
         const rect = el.getBoundingClientRect();
         const canvasRect = canvas.getBoundingClientRect();
         const x = rect.left - canvasRect.left;
         const y = rect.top - canvasRect.top;
+        const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
 
-        ctx.font = "16px Arial";
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.font = el.style.fontSize || "16px Arial";
         ctx.fillStyle = "blue";
-        ctx.fillText(el.innerText.trim(), x, y);
+        ctx.fillText(el.innerText.trim(), 0, 0);
+        ctx.restore();
       });
 
       const link = document.createElement("a");
