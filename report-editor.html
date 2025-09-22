@@ -281,17 +281,16 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
   const logoNaturalWidth = logoImage.naturalWidth;
   const logoNaturalHeight = logoImage.naturalHeight;
 
-  // กำหนดความกว้างสูงเป้าหมาย (เช่น 15% ของ canvas)
-  const targetWidth = exportCanvas.width * 0.15;
-  const aspectRatio = logoNaturalHeight / logoNaturalWidth;
-  const targetHeight = targetWidth * aspectRatio;
+  const scale = 0.3; // ปรับขนาดตามต้องการ
+  const logoWidth = logoNaturalWidth * scale;
+  const logoHeight = logoNaturalHeight * scale;
 
-  // วางไว้มุมขวาบน โดยเว้นขอบ 20px
-  const x = exportCanvas.width - targetWidth - 20;
-  const y = 20;
+  // ✅ วางตรงกลางด้านบน
+  const x = (exportCanvas.width - logoWidth) / 2;
+  const y = 20; // เว้นขอบด้านบน
 
-  exportCtx.drawImage(logoImage, x, y, targetWidth, targetHeight);
-  console.log("🌼 วาดโลโก้แล้ว (คงสัดส่วน)");
+  exportCtx.drawImage(logoImage, x, y, logoWidth, logoHeight);
+  console.log("🌼 วาดโลโก้ตรงกลางแล้ว");
 } else {
   console.warn("⚠️ โลโก้ยังโหลดไม่เสร็จ");
 }
@@ -359,6 +358,7 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
 
 
 
