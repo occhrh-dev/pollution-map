@@ -270,14 +270,11 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
   const logoWidth = logoNaturalWidth * scale;
   const logoHeight = logoNaturalHeight * scale;
 
-  // ✅ วางตรงกลางด้านบน
-  const x = (exportCanvas.width - logoWidth) / 2;
-  const y = 20; // เว้นขอบด้านบน
+  const x = (canvas.width - logoWidth) / 2; // ✅ กึ่งกลางแนวนอน
+  const y = 20; // ✅ เว้นขอบด้านบน
 
-  exportCtx.drawImage(logoImage, x, y, logoWidth, logoHeight);
-  console.log("🌼 วาดโลโก้ตรงกลางแล้ว");
-} else {
-  console.warn("⚠️ โลโก้ยังโหลดไม่เสร็จ");
+  ctx.drawImage(logoImage, x, y, logoWidth, logoHeight);
+  console.log("🌼 วาดโลโก้ตรงกลางแล้ว (drawCanvas)");
 }
 
   // วาดหัวเรื่อง
@@ -343,3 +340,4 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
