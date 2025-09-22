@@ -190,10 +190,13 @@ function undoLast() {
  function exportReport() {
   drawCanvas();
 
+  const canvasRect = canvas.getBoundingClientRect();
+
   const elements = container.querySelectorAll(".draggable");
   elements.forEach(el => {
-    const x = el.offsetLeft - canvas.offsetLeft;
-    const y = el.offsetTop - canvas.offsetTop;
+    const elRect = el.getBoundingClientRect();
+    const x = elRect.left - canvasRect.left;
+    const y = elRect.top - canvasRect.top;
     const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
 
     ctx.save();
@@ -213,8 +216,10 @@ function undoLast() {
       ctx.strokeText(el.innerText.trim(), 0, 0);
       ctx.fillText(el.innerText.trim(), 0, 0);
     }
+
     ctx.restore();
   });
+
   const link = document.createElement("a");
   link.download = "report.png";
   link.href = canvas.toDataURL("image/png");
@@ -223,3 +228,4 @@ function undoLast() {
   </script>
 </body>
 </html>
+
