@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ตกแต่งภาพเพื่อรายงาน</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    #reportCanvas {
+      border: 1px solid #ccc;
+      display: block;
+      margin-bottom: 10px;
+    }
+    #editorTools {
+      margin-top: 10px;
+    }
+    #editorTools button, #editorTools input[type="file"] {
+      margin-right: 10px;
+      padding: 8px 16px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ตกแต่งภาพเพื่อรายงาน</h1>
+
+  <input type="file" id="imageUpload" accept="image/*">
+
+  <canvas id="reportCanvas" width="640" height="640"></canvas>
+
+  <div id="editorTools">
+    <button onclick="addText()">เพิ่มข้อความ</button>
+    <button onclick="exportReport()">บันทึกภาพรายงาน</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("reportCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // ✅ โหลดภาพจากการอัปโหลด
+    document.getElementById("imageUpload").addEventListener("change", function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ✅ เพิ่มข้อความ
+    function addText() {
+      const text = prompt("ใส่ข้อความที่ต้องการ");
+      if (text) {
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "red";
+        ctx.fillText(text, 50, 50);
+      }
+    }
+
+    // ✅ บันทึกภาพ
+    function exportReport() {
+      const link = document.createElement("a");
+      link.download = "report.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+  </script>
+
+</body>
+</html>
