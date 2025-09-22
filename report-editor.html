@@ -43,7 +43,6 @@
 <body>
 
   <h2>ตกแต่งภาพรายงาน</h2>
-  <input type="text" id="reportTitle" placeholder="หัวเรื่องรายงาน">
   <input type="file" id="imageUpload" accept="image/*">
 
   <div id="canvasContainer">
@@ -125,13 +124,7 @@ logoImage.onload = function() {
     if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
   ctx.drawImage(logoImage, 20, 20, 100, 100);
 }
-    const title = document.getElementById("reportTitle").value;
-    if (title) {
-      ctx.font = "bold 24px Arial";
-      ctx.fillStyle = "black";
-      ctx.fillText(title, 140, 40); // ✅ ขยับให้ไม่ทับโลโก้
-    }
-  }
+
   function addArrow() {
     selectedArrows = [];
 
@@ -280,15 +273,6 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
   ctx.drawImage(logoImage, x, y, logoWidth, logoHeight);
 }
 
-  // วาดหัวเรื่อง
-  const title = document.getElementById("reportTitle").value;
-  if (title) {
-    exportCtx.font = "bold 24px Arial";
-    exportCtx.fillStyle = "black";
-    exportCtx.fillText(title, 140, 40);
-    console.log("📝 วาดหัวเรื่อง:", title);
-  }
-
   // วาดลูกศรและข้อความ
   const scaleX = canvas.width / container.offsetWidth;
   const scaleY = canvas.height / container.offsetHeight;
@@ -343,6 +327,7 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
 
 
 
