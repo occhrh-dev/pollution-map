@@ -57,8 +57,6 @@
 
 <!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <!-- html2canvas สำหรับบันทึกภาพ -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   </head>
  <script>
 $(document).ready(function() {
@@ -131,7 +129,7 @@ $(document).ready(function() {
       <label><input type="checkbox" id="showPolygonToggle" checked> แสดงขอบเขตชุมชนเมื่อเลือก</label>
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
       <label><input type="checkbox" id="showAllLayoutsToggle"> แสดงผังชุมชนทั้งหมด</label>
-      <button onclick="captureMap()">บันทึกภาพแผนที่</button>
+      <button onclick="downloadStaticMap()">บันทึกภาพแผนที่</button>
       
   </div>
 
@@ -403,12 +401,26 @@ function showAllCommunities() {
           radiusLabels.pop().setMap(null);
         }
       }
+      function downloadStaticMap() {
+  const lat = map.getCenter().lat();
+  const lng = map.getCenter().lng();
+  const zoom = map.getZoom();
+  const apiKey = "AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c"; // 🔑 ใส่ API Key ของคุณตรงนี้
+
+  const url = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=640x640&maptype=satellite&key=${apiKey}`;
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "satellite_map.png";
+  link.click();
+}
     </script>
 
     <script async
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
