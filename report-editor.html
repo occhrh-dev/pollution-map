@@ -278,19 +278,20 @@ logoImage.onload = function() {
 
   // วาดโลโก้
 if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
-  const logoWidth = logoImage.naturalWidth;
-  const logoHeight = logoImage.naturalHeight;
-  const scale = exportCanvas.width < 800 ? 0.3 : 0.5; // ปรับขนาดตามต้องการ
+  const logoNaturalWidth = logoImage.naturalWidth;
+  const logoNaturalHeight = logoImage.naturalHeight;
 
-  exportCtx.drawImage(
-    logoImage,
-    exportCanvas.width - logoWidth * scale - 20, // มุมขวาบน
-    20,
-    logoWidth * scale,
-    logoHeight * scale
-  );
+  // กำหนดความกว้างสูงเป้าหมาย (เช่น 15% ของ canvas)
+  const targetWidth = exportCanvas.width * 0.15;
+  const aspectRatio = logoNaturalHeight / logoNaturalWidth;
+  const targetHeight = targetWidth * aspectRatio;
 
-  console.log("🌼 วาดโลโก้แล้ว");
+  // วางไว้มุมขวาบน โดยเว้นขอบ 20px
+  const x = exportCanvas.width - targetWidth - 20;
+  const y = 20;
+
+  exportCtx.drawImage(logoImage, x, y, targetWidth, targetHeight);
+  console.log("🌼 วาดโลโก้แล้ว (คงสัดส่วน)");
 } else {
   console.warn("⚠️ โลโก้ยังโหลดไม่เสร็จ");
 }
@@ -369,6 +370,7 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
 
 
 
