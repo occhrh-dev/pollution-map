@@ -44,9 +44,7 @@
 
   <h2>ตกแต่งภาพรายงาน</h2>
   <input type="text" id="reportTitle" placeholder="หัวเรื่องรายงาน">
-
   <input type="file" id="imageUpload" accept="image/*">
-  <input type="file" id="logoUpload" accept="image/*">
 
   <div id="canvasContainer">
     <canvas id="reportCanvas" width="800" height="600"></canvas>
@@ -67,7 +65,6 @@
     const container = document.getElementById("canvasContainer");
 
     let backgroundImage = null;
-    let logoImage = null;
     let selectedArrow = null;
     let drawHistory = [];
 
@@ -98,20 +95,11 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         backgroundImage = new Image();
-        backgroundImage.onload = drawCanvas;
+        backgroundImage.onload = function() {
+          drawCanvas();
+          saveState();
+        };
         backgroundImage.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    document.getElementById("logoUpload").addEventListener("change", function(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        logoImage = new Image();
-        logoImage.onload = drawCanvas;
-        logoImage.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
@@ -120,12 +108,6 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (backgroundImage) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
       drawNorthArrow();
-      if (logoImage) {
-        ctx.drawImage(logoImage, canvas.width - 100, 20, 80, 80);
-        ctx.font = "16px Arial";
-        ctx.fillStyle = "black";
-        ctx.fillText("กลุ่มงานอาชีวเวชกรรม", canvas.width - 190, 115);
-      }
       const title = document.getElementById("reportTitle").value;
       if (title) {
         ctx.font = "bold 24px Arial";
@@ -146,23 +128,24 @@
       ctx.fill();
     }
 
-   function addArrow() {
-  const arrow = document.createElement("div");
-  arrow.className = "draggable";
-  arrow.innerHTML = "⟹";
-  arrow.style.left = "100px";
-  arrow.style.top = "100px";
-  arrow.style.fontSize = "48px";
-  arrow.style.color = "#87CEFA"; // สีฟ้าสดใส
-  arrow.style.fontWeight = "bold";
-  arrow.style.fontFamily = "Arial Black, sans-serif";
-  arrow.style.transform = "rotate(0deg)";
-  arrow.onclick = () => selectedArrow = arrow;
-  container.appendChild(arrow);
-  makeDraggable(arrow);
-  selectedArrow = arrow;
-  saveState();
-}
+    function addArrow() {
+      const arrow = document.createElement("div");
+      arrow.className = "draggable";
+      arrow.innerHTML = "⟹";
+      arrow.style.left = "100px";
+      arrow.style.top = "100px";
+      arrow.style.fontSize = "48px";
+      arrow.style.color = "#87CEFA";
+      arrow.style.fontWeight = "bold";
+      arrow.style.fontFamily = "Arial Black, sans-serif";
+      arrow.style.transform = "rotate(0deg)";
+      arrow.onclick = () => selectedArrow = arrow;
+      container.appendChild(arrow);
+      makeDraggable(arrow);
+      selectedArrow = arrow;
+      saveState();
+    }
+
     function rotateSelectedArrow(deg) {
       if (selectedArrow) {
         selectedArrow.style.transform = `rotate(${deg}deg)`;
@@ -205,7 +188,6 @@
 
     function exportReport() {
       drawCanvas();
-
       const elements = container.querySelectorAll(".draggable");
       elements.forEach(el => {
         const rect = el.getBoundingClientRect();
@@ -217,8 +199,8 @@
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(rotation * Math.PI / 180);
+        ctx.font = el.style.fontSize || "120px Arial";
 
-        ctx.font = el.style.fontSize || "48px Arial";
         if (el.innerText.trim() === "⟹") {
           ctx.fillStyle = "#87CEFA";
           ctx.fillText("⟹", 0, 0);
@@ -242,8 +224,3 @@
 
 </body>
 </html>
-
-
-
-
-
