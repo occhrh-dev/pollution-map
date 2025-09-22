@@ -276,7 +276,7 @@ logoImage.onload = function() {
 
   // วาดโลโก้
   if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
-  ctx.drawImage(logoImage, 20, 20, 100, 100);
+  exportCtx.drawImage(logoImage, 20, 20, 100, 100);
     console.log("🌼 วาดโลโก้แล้ว");
   } else {
     console.warn("⚠️ โลโก้ยังโหลดไม่เสร็จ");
@@ -356,4 +356,5 @@ logoImage.onload = function() {
 </script>
 </body>
 </html>
+
 
