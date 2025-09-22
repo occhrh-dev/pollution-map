@@ -133,7 +133,7 @@
   }
 
 function addArrow() {
-  selectedArrows = []; // เคลียร์ก่อนเพิ่มใหม่
+  selectedArrows = []; // เคลียร์กลุ่มก่อนเพิ่มใหม่
 
   const baseLeft = 300;
   const baseTop = 200;
@@ -153,11 +153,11 @@ function addArrow() {
     arrow.style.transform = `rotate(${rotationDeg}deg)`;
     arrow.onclick = () => selectedArrow = arrow;
     container.appendChild(arrow);
-    makeDraggable(arrow);
-    selectedArrows.push(arrow); // ✅ เก็บไว้ในกลุ่ม
+    makeDraggableGroup(arrow); // ✅ ลากทั้งกลุ่ม
+    selectedArrows.push(arrow);
   }
 
-  selectedArrow = selectedArrows[0]; // เลือกตัวแรกไว้เผื่อใช้เดี่ยว
+  selectedArrow = selectedArrows[0];
   saveState();
 }
 
@@ -185,13 +185,12 @@ function rotateSelectedArrow(deg) {
     saveState();
   }
 
-  function makeDraggableGroup(el) {
+function makeDraggableGroup(el) {
   let offsetX, offsetY;
   el.onmousedown = function(e) {
     const startX = e.clientX;
     const startY = e.clientY;
 
-    // เก็บตำแหน่งเริ่มต้นของแต่ละลูกศรในกลุ่ม
     const initialPositions = selectedArrows.map(arrow => ({
       el: arrow,
       left: arrow.offsetLeft,
@@ -211,10 +210,11 @@ function rotateSelectedArrow(deg) {
     document.onmouseup = function() {
       document.onmousemove = null;
       document.onmouseup = null;
-      saveState(); // ✅ บันทึกหลังลาก
+      saveState();
     };
   };
 }
+
 
   function exportReport() {
     drawCanvas();
@@ -269,6 +269,7 @@ function rotateSelectedArrow(deg) {
 </script>
 </body>
 </html>
+
 
 
 
