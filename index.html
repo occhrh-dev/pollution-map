@@ -401,18 +401,16 @@ function showAllCommunities() {
           radiusLabels.pop().setMap(null);
         }
       }
-      function downloadStaticMap() {
+    function downloadStaticMap() {
   const lat = map.getCenter().lat();
   const lng = map.getCenter().lng();
   const zoom = map.getZoom();
-  const apiKey = "AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c"; // 🔑 ใส่ API Key ของคุณตรงนี้
+  const apiKey = "AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c"; // 🔑 API Key ของคุณ
 
   const url = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=640x640&maptype=satellite&key=${apiKey}`;
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "satellite_map.png";
-  link.click();
+  // ✅ เปิดภาพในแท็บใหม่ แทนการดาวน์โหลดทันที
+  window.open(url, "_blank");
 }
     </script>
 
@@ -420,6 +418,7 @@ function showAllCommunities() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
