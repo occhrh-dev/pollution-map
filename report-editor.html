@@ -14,10 +14,17 @@
     h1 {
       margin-bottom: 10px;
     }
+    #reportTitle {
+      width: 100%;
+      font-size: 20px;
+      margin-bottom: 10px;
+      padding: 8px;
+    }
     #reportCanvas {
       border: 1px solid #ccc;
       display: block;
       margin-bottom: 10px;
+      background: white;
     }
     #editorTools {
       margin-top: 10px;
@@ -33,20 +40,37 @@
 
   <h1>ตกแต่งภาพเพื่อรายงาน</h1>
 
-  <input type="file" id="imageUpload" accept="image/*">
+  <input type="text" id="reportTitle" placeholder="หัวเรื่องรายงาน">
 
-  <canvas id="reportCanvas" width="640" height="640"></canvas>
+  <input type="file" id="imageUpload" accept="image/*">
+  <input type="file" id="logoUpload" accept="image/*">
+
+  <canvas id="reportCanvas" width="800" height="600"></canvas>
 
   <div id="editorTools">
     <button onclick="addText()">เพิ่มข้อความ</button>
+    <button onclick="drawNorthArrow()">เพิ่มสัญลักษณ์ทิศเหนือ</button>
+    <button onclick="drawWindArrow(100, 100, 'ลมตะวันตกเฉียงใต้')">เพิ่มลูกศรทิศทางลม</button>
+    <button onclick="undoLast()">Undo</button>
     <button onclick="exportReport()">บันทึกภาพรายงาน</button>
   </div>
 
   <script>
     const canvas = document.getElementById("reportCanvas");
     const ctx = canvas.getContext("2d");
+    let drawHistory = [];
 
-    // ✅ โหลดภาพจากการอัปโหลด
+    function saveState() {
+      drawHistory.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    }
+
+    function undoLast() {
+      if (drawHistory.length > 1) {
+        drawHistory.pop();
+        ctx.putImageData(drawHistory[drawHistory.length - 1], 0, 0);
+      }
+    }
+
     document.getElementById("imageUpload").addEventListener("change", function(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -57,24 +81,75 @@
         img.onload = function() {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          saveState();
         };
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
 
-    // ✅ เพิ่มข้อความ
+    document.getElementById("logoUpload").addEventListener("change", function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          ctx.drawImage(img, canvas.width - 100, canvas.height - 100, 80, 80);
+          saveState();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
     function addText() {
       const text = prompt("ใส่ข้อความที่ต้องการ");
       if (text) {
         ctx.font = "20px Arial";
         ctx.fillStyle = "red";
         ctx.fillText(text, 50, 50);
+        saveState();
       }
     }
 
-    // ✅ บันทึกภาพ
+    function drawNorthArrow() {
+      ctx.font = "bold 24px Arial";
+      ctx.fillStyle = "black";
+      ctx.fillText("N", canvas.width - 30, 40);
+      ctx.beginPath();
+      ctx.moveTo(canvas.width - 30, 60);
+      ctx.lineTo(canvas.width - 40, 80);
+      ctx.lineTo(canvas.width - 20, 80);
+      ctx.closePath();
+      ctx.fill();
+      saveState();
+    }
+
+    function drawWindArrow(x, y, directionText = "ลม") {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 60, y);
+      ctx.lineTo(x + 50, y - 10);
+      ctx.moveTo(x + 60, y);
+      ctx.lineTo(x + 50, y + 10);
+      ctx.strokeStyle = "blue";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "blue";
+      ctx.fillText(directionText, x, y - 15);
+      saveState();
+    }
+
     function exportReport() {
+      const title = document.getElementById("reportTitle").value;
+      if (title) {
+        ctx.font = "bold 24px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText(title, 20, 40);
+      }
       const link = document.createElement("a");
       link.download = "report.png";
       link.href = canvas.toDataURL("image/png");
