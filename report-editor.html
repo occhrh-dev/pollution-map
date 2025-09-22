@@ -66,6 +66,7 @@
 
   let backgroundImage = null;
   let selectedArrow = null;
+  let selectedArrows = [];
   let drawHistory = [];
 
   function saveState() {
@@ -131,29 +132,40 @@
     ctx.fill();
   }
 
-  function addArrow() {
+function addArrow() {
+  selectedArrows = []; // เคลียร์ก่อนเพิ่มใหม่
+
+  const baseLeft = 300;
+  const baseTop = 200;
+  const spacing = 60;
+  const rotationDeg = 0;
+
+  for (let i = 0; i < 2; i++) {
     const arrow = document.createElement("div");
     arrow.className = "draggable";
     arrow.innerHTML = "⟹";
-    arrow.style.left = "100px";
-    arrow.style.top = "100px";
+    arrow.style.left = `${baseLeft}px`;
+    arrow.style.top = `${baseTop + i * spacing}px`;
     arrow.style.fontSize = "48px";
     arrow.style.color = "#87CEFA";
     arrow.style.fontWeight = "bold";
     arrow.style.fontFamily = "Arial Black, sans-serif";
-    arrow.style.transform = "rotate(0deg)";
+    arrow.style.transform = `rotate(${rotationDeg}deg)`;
     arrow.onclick = () => selectedArrow = arrow;
     container.appendChild(arrow);
     makeDraggable(arrow);
-    selectedArrow = arrow;
-    saveState();
+    selectedArrows.push(arrow); // ✅ เก็บไว้ในกลุ่ม
   }
 
-  function rotateSelectedArrow(deg) {
-    if (selectedArrow) {
-      selectedArrow.style.transform = `rotate(${deg}deg)`;
-    }
-  }
+  selectedArrow = selectedArrows[0]; // เลือกตัวแรกไว้เผื่อใช้เดี่ยว
+  saveState();
+}
+
+function rotateSelectedArrow(deg) {
+  selectedArrows.forEach(arrow => {
+    arrow.style.transform = `rotate(${deg}deg)`;
+  });
+}
 
   function addTextBox() {
     const box = document.createElement("div");
@@ -242,4 +254,5 @@
 </script>
 </body>
 </html>
+
 
