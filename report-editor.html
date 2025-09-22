@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>ตกแต่งภาพเพื่อรายงาน</title>
+  <title>ตกแต่งภาพรายงาน</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -11,20 +11,24 @@
       padding: 20px;
       background: #f9f9f9;
     }
-    h1 {
-      margin-bottom: 10px;
-    }
     #reportTitle {
       width: 100%;
       font-size: 20px;
       margin-bottom: 10px;
       padding: 8px;
     }
+    #canvasContainer {
+      position: relative;
+      display: inline-block;
+    }
     #reportCanvas {
       border: 1px solid #ccc;
-      display: block;
-      margin-bottom: 10px;
       background: white;
+    }
+    .draggable {
+      position: absolute;
+      cursor: move;
+      user-select: none;
     }
     #editorTools {
       margin-top: 10px;
@@ -38,79 +42,76 @@
 </head>
 <body>
 
-  <h1>ตกแต่งภาพเพื่อรายงาน</h1>
-
+  <h2>ตกแต่งภาพรายงาน</h2>
   <input type="text" id="reportTitle" placeholder="หัวเรื่องรายงาน">
 
   <input type="file" id="imageUpload" accept="image/*">
   <input type="file" id="logoUpload" accept="image/*">
 
-  <canvas id="reportCanvas" width="800" height="600"></canvas>
+  <div id="canvasContainer">
+    <canvas id="reportCanvas" width="800" height="600"></canvas>
+  </div>
 
   <div id="editorTools">
-    <label>ทิศทางลม:</label>
-    <input type="text" id="windDirection" placeholder="เช่น ตะวันตกเฉียงใต้">
-    <label>ความเร็ว (กม./ชม.):</label>
-    <input type="number" id="windSpeed" placeholder="เช่น 12">
-    <label>หมุนลูกศร (องศา):</label>
-    <input type="number" id="windAngle" value="0">
-    <button onclick="drawWindArrow()">เพิ่มลูกศรทิศทางลม</button>
-    <button onclick="undoLast()">Undo</button>
+    <button onclick="addWindArrow()">เพิ่มลูกศรทิศทางลม</button>
+    <button onclick="addTextBox()">เพิ่มข้อความ</button>
     <button onclick="exportReport()">บันทึกภาพรายงาน</button>
   </div>
 
   <script>
     const canvas = document.getElementById("reportCanvas");
     const ctx = canvas.getContext("2d");
-    let drawHistory = [];
+    const container = document.getElementById("canvasContainer");
 
-    function saveState() {
-      drawHistory.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-    }
+    let backgroundImage = null;
+    let logoImage = null;
 
-    function undoLast() {
-      if (drawHistory.length > 1) {
-        drawHistory.pop();
-        ctx.putImageData(drawHistory[drawHistory.length - 1], 0, 0);
-      }
-    }
-
+    // โหลดภาพแผนที่
     document.getElementById("imageUpload").addEventListener("change", function(event) {
       const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          saveState();
-        };
-        img.src = e.target.result;
+        backgroundImage = new Image();
+        backgroundImage.onload = drawCanvas;
+        backgroundImage.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
 
+    // โหลดโลโก้
     document.getElementById("logoUpload").addEventListener("change", function(event) {
       const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          ctx.drawImage(img, canvas.width - 100, 20, 80, 80);
-          ctx.font = "16px Arial";
-          ctx.fillStyle = "black";
-          ctx.fillText("กลุ่มงานอาชีวเวชกรรม", canvas.width - 190, 115);
-          saveState();
-        };
-        img.src = e.target.result;
+        logoImage = new Image();
+        logoImage.onload = drawCanvas;
+        logoImage.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
 
+    // วาด canvas
+    function drawCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (backgroundImage) ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      drawNorthArrow();
+      if (logoImage) {
+        ctx.drawImage(logoImage, canvas.width - 100, 20, 80, 80);
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText("กลุ่มงานอาชีวเวชกรรม", canvas.width - 190, 115);
+      }
+      const title = document.getElementById("reportTitle").value;
+      if (title) {
+        ctx.font = "bold 24px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText(title, 20, 40);
+      }
+    }
+
+    // สัญลักษณ์ทิศเหนือ
     function drawNorthArrow() {
       ctx.font = "bold 24px Arial";
       ctx.fillStyle = "black";
@@ -123,42 +124,66 @@
       ctx.fill();
     }
 
-    function drawWindArrow() {
-      const direction = document.getElementById("windDirection").value || "ลม";
-      const speed = document.getElementById("windSpeed").value || "";
-      const angle = parseFloat(document.getElementById("windAngle").value) || 0;
-
-      const x = 100, y = 150;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(angle * Math.PI / 180);
-
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(60, 0);
-      ctx.lineTo(50, -10);
-      ctx.moveTo(60, 0);
-      ctx.lineTo(50, 10);
-      ctx.strokeStyle = "blue";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      ctx.restore();
-
-      ctx.font = "16px Arial";
-      ctx.fillStyle = "blue";
-      ctx.fillText(`${direction} (${speed} กม./ชม.)`, x, y + 25);
-      saveState();
+    // เพิ่มลูกศรทิศทางลมแบบลากได้
+    function addWindArrow() {
+      const arrow = document.createElement("div");
+      arrow.className = "draggable";
+      arrow.innerHTML = "➤<br><small>ลม 7 กม./ชม.</small>";
+      arrow.style.left = "100px";
+      arrow.style.top = "100px";
+      container.appendChild(arrow);
+      makeDraggable(arrow);
     }
 
+    // เพิ่ม text box แบบลากได้
+    function addTextBox() {
+      const box = document.createElement("div");
+      box.className = "draggable";
+      box.contentEditable = true;
+      box.innerText = "ข้อความ";
+      box.style.left = "150px";
+      box.style.top = "150px";
+      box.style.background = "#ffffcc";
+      box.style.padding = "4px";
+      box.style.border = "1px solid #999";
+      container.appendChild(box);
+      makeDraggable(box);
+    }
+
+    // ทำให้ลากได้
+    function makeDraggable(el) {
+      let offsetX, offsetY;
+      el.onmousedown = function(e) {
+        offsetX = e.clientX - el.offsetLeft;
+        offsetY = e.clientY - el.offsetTop;
+        document.onmousemove = function(e) {
+          el.style.left = (e.clientX - offsetX) + "px";
+          el.style.top = (e.clientY - offsetY) + "px";
+        };
+        document.onmouseup = function() {
+          document.onmousemove = null;
+          document.onmouseup = null;
+        };
+      };
+    }
+
+    // export เป็นภาพ
     function exportReport() {
-      const title = document.getElementById("reportTitle").value;
-      if (title) {
-        ctx.font = "bold 24px Arial";
-        ctx.fillStyle = "black";
-        ctx.fillText(title, 20, 40);
-      }
-      drawNorthArrow(); // ✅ วาดทิศเหนือทุกครั้ง
+      drawCanvas(); // วาดพื้นหลัง + หัวเรื่อง + โลโก้ + ทิศเหนือ
+
+      // วาดองค์ประกอบลากวางลง canvas
+      const elements = container.querySelectorAll(".draggable");
+      elements.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        const x = rect.left - canvasRect.left;
+        const y = rect.top - canvasRect.top;
+
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "blue";
+        ctx.fillText(el.innerText.trim(), x, y);
+      });
+
       const link = document.createElement("a");
       link.download = "report.png";
       link.href = canvas.toDataURL("image/png");
