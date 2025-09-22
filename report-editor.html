@@ -71,11 +71,13 @@
   let selectedTextBoxes = [];
 
   // ✅ ฝังโลโก้ด้วย url
- let logoImage = new Image();
-logoImage.src = "https://raw.githubusercontent.com/occhrh-dev/pollution-map/main/logo.png"; // ✅ ใช้ลิงก์แบบ direct view    
+let logoImage = new Image();
+logoImage.crossOrigin = "anonymous"; // ✅ ต้องมาก่อน src
+logoImage.src = "https://raw.githubusercontent.com/occhrh-dev/pollution-map/main/logo.png";
+
 logoImage.onload = function() {
   console.log("🌼 โลโก้โหลดเสร็จแล้ว");
-  drawCanvas(); // ✅ วาดใหม่เมื่อโลโก้พร้อม
+  drawCanvas(); // วาดใหม่เมื่อโลโก้พร้อม
 };
 
   function saveState() {
@@ -275,12 +277,12 @@ logoImage.onload = function() {
   }
 
   // วาดโลโก้
-  if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
+if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
   exportCtx.drawImage(logoImage, 20, 20, 100, 100);
-    console.log("🌼 วาดโลโก้แล้ว");
-  } else {
-    console.warn("⚠️ โลโก้ยังโหลดไม่เสร็จ");
-  }
+  console.log("🌼 วาดโลโก้แล้ว");
+} else {
+  console.warn("⚠️ โลโก้ยังโหลดไม่เสร็จ");
+}
 
   // วาดลูกศร N
   exportCtx.font = "bold 24px Arial";
@@ -356,6 +358,7 @@ logoImage.onload = function() {
 </script>
 </body>
 </html>
+
 
 
 
