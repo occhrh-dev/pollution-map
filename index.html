@@ -134,16 +134,6 @@ $(document).ready(function() {
   </div>
 
     <div id="map"></div>
-<!-- ✅ เพิ่มตรงนี้ -->
-<div id="reportEditor" style="padding:10px; background:#f9f9f9;">
-  <h3>ตกแต่งภาพเพื่อรายงาน</h3>
-  <canvas id="reportCanvas" width="640" height="640" style="border:1px solid #ccc;"></canvas>
-  <div id="editorTools" style="margin-top:10px;">
-    <button onclick="loadMapToCanvas()">โหลดภาพแผนที่</button>
-    <button onclick="addText()">เพิ่มข้อความ</button>
-    <button onclick="exportReport()">บันทึกภาพรายงาน</button>
-  </div>
-</div>
     <script>
       let map;
       let circles = [];
@@ -427,36 +417,10 @@ function showAllCommunities() {
     toggleBtn.textContent = "ยุบเมนู / ขยายแผนที่";
   }
 });
-      const canvas = document.getElementById("reportCanvas");
-const ctx = canvas.getContext("2d");
-
-function loadMapToCanvas() {
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.src = "https://maps.googleapis.com/maps/api/staticmap?center=12.738,101.185&zoom=13&size=640x640&maptype=satellite&key=YOUR_API_KEY";
-  img.onload = () => {
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  };
-}
-
-function addText() {
-  const text = prompt("ใส่ข้อความที่ต้องการ");
-  if (text) {
-    ctx.font = "20px Arial";
-    ctx.fillStyle = "red";
-    ctx.fillText(text, 50, 50);
-  }
-}
-
-function exportReport() {
-  const link = document.createElement("a");
-  link.download = "map_report.png";
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-}
     </script>
 
     <script async
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
