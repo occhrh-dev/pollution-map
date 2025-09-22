@@ -153,7 +153,7 @@
       arrow.style.left = "100px";
       arrow.style.top = "100px";
       arrow.style.fontSize = "40px";
-      arrow.style.color = "blue";
+      arrow.style.color = "#87CEFA";
       arrow.style.transform = "rotate(0deg)";
       arrow.onclick = () => selectedArrow = arrow;
       container.appendChild(arrow);
@@ -219,7 +219,7 @@
 
         ctx.font = el.style.fontSize || "16px Arial";
         if (el.innerText.trim() === "➔") {
-          ctx.fillStyle = "blue";
+          ctx.fillStyle = "#87CEFA";
           ctx.fillText("➔", 0, 0);
         } else {
           ctx.fillStyle = "white";
@@ -241,3 +241,4 @@
 
 </body>
 </html>
+
