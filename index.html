@@ -129,7 +129,6 @@ $(document).ready(function() {
       <label><input type="checkbox" id="showPolygonToggle" checked> แสดงขอบเขตชุมชนเมื่อเลือก</label>
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
       <label><input type="checkbox" id="showAllLayoutsToggle"> แสดงผังชุมชนทั้งหมด</label>
-      <button onclick="downloadStaticMap()">บันทึกภาพแผนที่</button>
       
   </div>
 
@@ -401,23 +400,13 @@ function showAllCommunities() {
           radiusLabels.pop().setMap(null);
         }
       }
-    function downloadStaticMap() {
-  const lat = map.getCenter().lat();
-  const lng = map.getCenter().lng();
-  const zoom = map.getZoom();
-  const apiKey = "AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c"; // 🔑 API Key ของคุณ
-
-  const url = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=640x640&maptype=satellite&key=${apiKey}`;
-
-  // ✅ เปิดภาพในแท็บใหม่ แทนการดาวน์โหลดทันที
-  window.open(url, "_blank");
-}
     </script>
 
     <script async
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
