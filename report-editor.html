@@ -187,16 +187,20 @@ function undoLast() {
       };
     }
 
-  function exportReport() {
+ function exportReport() {
   drawCanvas();
 
-  const canvasOffsetX = canvas.offsetLeft;
-  const canvasOffsetY = canvas.offsetTop;
+  const canvasRect = canvas.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
 
   const elements = container.querySelectorAll(".draggable");
   elements.forEach(el => {
-    const x = parseFloat(el.style.left) - canvasOffsetX;
-    const y = parseFloat(el.style.top) - canvasOffsetY;
+    const left = parseFloat(el.style.left) || 0;
+    const top = parseFloat(el.style.top) || 0;
+
+    const x = left + (containerRect.left - canvasRect.left);
+    const y = top + (containerRect.top - canvasRect.top);
+
     const rotation = parseFloat(el.style.transform.replace("rotate(", "").replace("deg)", "")) || 0;
 
     ctx.save();
@@ -226,6 +230,5 @@ function undoLast() {
   link.click();
 }
   </script>
-
 </body>
 </html>
