@@ -263,18 +263,21 @@ logoImage.onload = function() {
 
   // วาดโลโก้
 if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
-  const logoNaturalWidth = logoImage.naturalWidth;
-  const logoNaturalHeight = logoImage.naturalHeight;
+  const maxWidth  = canvas.width * 0.2;   // กว้างไม่เกิน 20% ของ canvas
+  const maxHeight = canvas.height * 0.2;  // สูงไม่เกิน 20% ของ canvas
 
-  const scale = 1.0; // ปรับขนาดตามต้องการ
-  const logoWidth = logoNaturalWidth * scale;
-  const logoHeight = logoNaturalHeight * scale;
+  const scale = Math.min(
+    maxWidth  / logoImage.naturalWidth,
+    maxHeight / logoImage.naturalHeight
+  );
 
-  const x = (canvas.width - logoWidth) / 2; // ✅ กึ่งกลางแนวนอน
-  const y = 20; // ✅ เว้นขอบด้านบน
+  const logoWidth  = logoImage.naturalWidth  * scale;
+  const logoHeight = logoImage.naturalHeight * scale;
+
+  const x = (canvas.width  - logoWidth)  / 2; // กึ่งกลางแนวนอน
+  const y = 20;                               // ระยะห่างจากขอบบน
 
   ctx.drawImage(logoImage, x, y, logoWidth, logoHeight);
-  console.log("🌼 วาดโลโก้ตรงกลางแล้ว (drawCanvas)");
 }
 
   // วาดหัวเรื่อง
@@ -340,5 +343,6 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
 
 
