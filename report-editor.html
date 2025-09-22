@@ -135,18 +135,6 @@ logoImage.onload = function() {
     }
   }
 
-  function drawNorthArrow() {
-    ctx.font = "bold 24px Arial";
-    ctx.fillStyle = "black";
-    ctx.fillText("N", 30, 40);
-    ctx.beginPath();
-    ctx.moveTo(30, 60);
-    ctx.lineTo(20, 80);
-    ctx.lineTo(40, 80);
-    ctx.closePath();
-    ctx.fill();
-  }
-
   function addArrow() {
     selectedArrows = [];
 
@@ -358,6 +346,7 @@ if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
 </script>
 </body>
 </html>
+
 
 
 
