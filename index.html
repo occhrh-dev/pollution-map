@@ -48,6 +48,12 @@
     font-size: 18px;
     white-space: nowrap;
   }
+    .draggable {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    z-index: 10;
+  }
 </style>
     <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -130,10 +136,16 @@ $(document).ready(function() {
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
       <label><input type="checkbox" id="showAllLayoutsToggle"> แสดงผังชุมชนทั้งหมด</label>
       <button onclick="toggleMapView()">แสดงแผนที่เต็มจอ / ยุบเมนู</button>
-      
+      <button onclick="addArrow()">เพิ่มลูกศร ⟵</button>
+      <label>หมุนลูกศร:</label>
+      <input type="range" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
+      <button onclick="addTextBox()">เพิ่มข้อความ</button>
   </div>
+<!-- ✅ ใหม่: ห่อด้วย container -->
+<div id="mapContainer" style="position: relative; width: 100%; height: 600px;">
+  <div id="map" style="width: 100%; height: 100%;"></div>
+</div>
 
-    <div id="map"></div>
     <script>
       let map;
       let circles = [];
@@ -296,7 +308,6 @@ markers.push(marker);
     }
   });
 }
-
      function initMap() {
   map = new google.maps.Map(document.getElementById("map"), {
     center: { lat: 12.738, lng: 101.185 },
@@ -406,6 +417,95 @@ function showAllCommunities() {
           radiusLabels.pop().setMap(null);
         }
       }
+    let selectedArrows = [];
+    function addArrow() {
+  selectedArrows = [];
+
+  const arrow = document.createElement("div");
+  arrow.className = "draggable";
+  arrow.innerHTML = "⟵";
+  arrow.style.left = "300px";
+  arrow.style.top = "200px";
+  arrow.style.fontSize = "48px";
+  arrow.style.color = "#FF6347";
+  arrow.style.fontWeight = "bold";
+  arrow.style.fontFamily = "Arial Black, sans-serif";
+  arrow.style.transform = "rotate(0deg)";
+  arrow.onclick = () => selectedArrows = [arrow];
+
+  document.getElementById("mapContainer").appendChild(arrow);
+  makeDraggableGroup(arrow);
+  selectedArrows.push(arrow);
+}
+
+function rotateSelectedArrow(deg) {
+  selectedArrows.forEach(arrow => {
+    arrow.style.transform = `rotate(${deg}deg)`;
+  });
+}
+
+function makeDraggableGroup(el) {
+  el.onmousedown = function(e) {
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origLeft = el.offsetLeft;
+    const origTop = el.offsetTop;
+
+    document.onmousemove = function(e) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      el.style.left = origLeft + dx + "px";
+      el.style.top = origTop + dy + "px";
+    };
+
+    document.onmouseup = function() {
+      document.onmousemove = null;
+      document.onmouseup = null;
+    };
+  };
+}
+      let selectedTextBoxes = [];
+
+function addTextBox() {
+  const box = document.createElement("div");
+  box.className = "draggable";
+  box.contentEditable = true;
+  box.innerText = "ข้อความ";
+  box.style.left = "150px";
+  box.style.top = "150px";
+  box.style.color = "white";
+  box.style.textShadow = "0 0 2px black";
+  box.style.fontWeight = "bold";
+  box.style.fontSize = "18px";
+  box.style.background = "transparent";
+  box.style.border = "none";
+  box.style.padding = "4px";
+
+  document.getElementById("mapContainer").appendChild(box);
+  selectedTextBoxes = [box];
+  makeDraggableGroupText(box);
+}
+
+function makeDraggableGroupText(el) {
+  el.onmousedown = function(e) {
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origLeft = el.offsetLeft;
+    const origTop = el.offsetTop;
+
+    document.onmousemove = function(e) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      el.style.left = origLeft + dx + "px";
+      el.style.top = origTop + dy + "px";
+    };
+
+    document.onmouseup = function() {
+      document.onmousemove = null;
+      document.onmouseup = null;
+    };
+  };
+}
       document.addEventListener("keydown", function(event) {
   if (event.key === "Escape") {
     const controls = document.getElementById("controls");
@@ -423,3 +523,4 @@ function showAllCommunities() {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
