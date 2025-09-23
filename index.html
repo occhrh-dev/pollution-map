@@ -226,11 +226,11 @@ function drawCircle(latLng) {
     const projection = overlay.getProjection();
     const center = projection.fromLatLngToDivPixel(latLng);
 
-    const scale = radius / 1000 * 2.5;
-    overlay.div.style.width = `${scale * 100}px`;
-    overlay.div.style.height = `${scale * 100}px`;
-    overlay.div.style.left = `${center.x - scale * 50}px`;
-    overlay.div.style.top = `${center.y - scale * 50}px`;
+const pixelSize = 200; // ✅ ขนาดคงที่ในพิกเซล
+overlay.div.style.width = `${pixelSize}px`;
+overlay.div.style.height = `${pixelSize}px`;
+overlay.div.style.left = `${center.x - pixelSize / 2}px`;
+overlay.div.style.top = `${center.y - pixelSize / 2}px`;
   };
 
   overlay.onRemove = function () {
@@ -554,3 +554,4 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
