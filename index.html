@@ -222,17 +222,23 @@ function drawCircle(latLng) {
     overlay.getPanes().overlayMouseTarget.appendChild(layer);
   };
 
-  overlay.draw = function () {
-    const projection = overlay.getProjection();
-    const center = projection.fromLatLngToDivPixel(latLng);
+overlay.draw = function () {
+  const projection = overlay.getProjection();
+  const center = projection.fromLatLngToDivPixel(latLng);
 
-const pixelSize = 200; // ✅ ขนาดคงที่ในพิกเซล
-overlay.div.style.width = `${pixelSize}px`;
-overlay.div.style.height = `${pixelSize}px`;
-overlay.div.style.left = `${center.x - pixelSize / 2}px`;
-overlay.div.style.top = `${center.y - pixelSize / 2}px`;
-  };
+  // ✅ คำนวณตำแหน่งปลายรัศมี (เหนือจุดกลาง)
+  const offsetLat = latLng.lat() + (radius / 111320); // 1° ≈ 111.32 km
+  const edgeLatLng = new google.maps.LatLng(offsetLat, latLng.lng());
+  const edgePixel = projection.fromLatLngToDivPixel(edgeLatLng);
 
+  // ✅ คำนวณระยะพิกเซลจากจุดกลางถึงขอบ
+  const pixelRadius = Math.abs(edgePixel.y - center.y);
+
+  overlay.div.style.width = `${pixelRadius * 2}px`;
+  overlay.div.style.height = `${pixelRadius * 2}px`;
+  overlay.div.style.left = `${center.x - pixelRadius}px`;
+  overlay.div.style.top = `${center.y - pixelRadius}px`;
+};
   overlay.onRemove = function () {
     if (overlay.div) {
       overlay.div.parentNode.removeChild(overlay.div);
@@ -554,4 +560,5 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
