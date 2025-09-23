@@ -54,9 +54,6 @@
     user-select: none;
     z-index: 10;
   }
-    .overlay-circle {
-  pointer-events: none; /* ไม่รบกวนการคลิก */
-}
 </style>
     <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -163,29 +160,41 @@ function drawCircle(latLng) {
   const color = document.getElementById("colorInput").value;
   const fillOpacity = document.getElementById("fillToggle").checked ? 0.35 : 0;
 
-  // ✅ เปลี่ยนจาก Circle เป็น OverlayView
-  addOverlayCircle(latLng, radius, color, fillOpacity);
-
-  // 🔵 สร้าง marker กลางจุด
-  const starPath = "M 0,-15 L 4,-4 L 15,-4 L 6,2 L 9,12 L 0,6 -9,12 -6,2 -15,-4 -4,-4 Z";
-  const marker = new google.maps.Marker({
-    position: latLng,
-    map: map,
-icon: {
-  path: starPath,
-  fillColor: "#FFD700",
-  fillOpacity: 1,
-  strokeWeight: 1,
-  strokeColor: "#333",
-  anchor: new google.maps.Point(15, 15), // ✅ จุดศูนย์กลางของ icon
-  scaledSize: new google.maps.Size(30, 30) // ✅ ขนาดคงที่ 30x30 px
-}
+  // 🟢 สร้างวงรัศมี
+  const circle = new google.maps.Circle({
+    strokeColor: color,
+    strokeOpacity: 0.8,
+    strokeWeight: 4,
+    fillColor: color,
+    fillOpacity: fillOpacity,
+    map,
+    center: latLng,
+    radius: radius,
+    clickable: false
   });
-  markers.push(marker);
+  circles.push(circle);
 
-  // 🏷 สร้าง label ระยะรัศมี
+// 🔵 สร้าง marker กลางจุด
+const starPath = "M 0,-15 L 4,-4 L 15,-4 L 6,2 L 9,12 L 0,6 -9,12 -6,2 -15,-4 -4,-4 Z";
+
+const marker = new google.maps.Marker({
+  position: latLng,
+  map: map,
+  icon: {
+    path: starPath,
+    scale: 1.5,
+    fillColor: "#FFD700",      // สีทอง
+    fillOpacity: 1,
+    strokeWeight: 1,
+    strokeColor: "#333"
+  }
+});
+
+markers.push(marker);
+
+  // 🏷 สร้าง label ระยะรัศมี (ขยับตามขนาดของวง)
   const kmText = Math.round(radius / 1000) + " กม.";
-  const offsetFactor = radius / 140000;
+  const offsetFactor = radius / 140000; // แปลงเมตรเป็นองศาโดยประมาณ
   const offsetLat = latLng.lat() - offsetFactor;
   const offsetLng = latLng.lng() - offsetFactor;
   const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
@@ -207,48 +216,8 @@ icon: {
   });
   radiusLabels.push(radiusLabel);
 }
-      function addOverlayCircle(latLng, radius, color, fillOpacity) {
-  const overlay = new google.maps.OverlayView();
 
-  overlay.onAdd = function () {
-    const layer = document.createElement("div");
-    layer.className = "overlay-circle";
-    layer.style.position = "absolute";
-    layer.style.border = `2px solid ${color}`;
-    layer.style.borderRadius = "50%";
-    layer.style.backgroundColor = fillOpacity > 0 ? color + "55" : "transparent"; // ✅ โปร่งใส
-    layer.style.zIndex = "9999";
 
-    overlay.div = layer;
-    overlay.getPanes().overlayMouseTarget.appendChild(layer);
-  };
-
-overlay.draw = function () {
-  const projection = overlay.getProjection();
-  const center = projection.fromLatLngToDivPixel(latLng);
-
-  // ✅ คำนวณตำแหน่งปลายรัศมี (เหนือจุดกลาง)
-  const offsetLat = latLng.lat() + (radius / 111320); // 1° ≈ 111.32 km
-  const edgeLatLng = new google.maps.LatLng(offsetLat, latLng.lng());
-  const edgePixel = projection.fromLatLngToDivPixel(edgeLatLng);
-
-  // ✅ คำนวณระยะพิกเซลจากจุดกลางถึงขอบ
-  const pixelRadius = Math.abs(edgePixel.y - center.y);
-
-  overlay.div.style.width = `${pixelRadius * 2}px`;
-  overlay.div.style.height = `${pixelRadius * 2}px`;
-  overlay.div.style.left = `${center.x - pixelRadius}px`;
-  overlay.div.style.top = `${center.y - pixelRadius}px`;
-};
-  overlay.onRemove = function () {
-    if (overlay.div) {
-      overlay.div.parentNode.removeChild(overlay.div);
-      overlay.div = null;
-    }
-  };
-
-  overlay.setMap(map);
-}
       function addPointFromInput() {
         const lat = parseFloat(document.getElementById("latInput").value);
         const lng = parseFloat(document.getElementById("lngInput").value);
@@ -385,6 +354,8 @@ overlay.draw = function () {
   map.addListener("click", (e) => {
     drawCircle(e.latLng);
   });
+
+  map.addListener("zoom_changed", updateLabelSizes); // ปรับขนาด label ตาม zoom
 }
 
 // ✅ ฟังก์ชันนี้อยู่นอก initMap และปิดครบ
@@ -559,5 +530,3 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
-
-
