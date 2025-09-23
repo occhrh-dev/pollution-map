@@ -385,8 +385,6 @@ overlay.draw = function () {
   map.addListener("click", (e) => {
     drawCircle(e.latLng);
   });
-
-  //map.addListener("zoom_changed", updateLabelSizes); // ปรับขนาด label ตาม zoom
 }
 
 // ✅ ฟังก์ชันนี้อยู่นอก initMap และปิดครบ
@@ -561,4 +559,5 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
