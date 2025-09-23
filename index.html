@@ -353,9 +353,7 @@ markers.push(marker);
 
   map.addListener("click", (e) => {
     drawCircle(e.latLng);
-  });
-
-  map.addListener("zoom_changed", updateLabelSizes); // ปรับขนาด label ตาม zoom
+  });
 }
 
 // ✅ ฟังก์ชันนี้อยู่นอก initMap และปิดครบ
