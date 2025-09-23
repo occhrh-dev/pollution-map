@@ -130,7 +130,10 @@ $(document).ready(function() {
       <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
       <label><input type="checkbox" id="showAllLayoutsToggle"> แสดงผังชุมชนทั้งหมด</label>
       <button onclick="toggleMapView()">แสดงแผนที่เต็มจอ / ยุบเมนู</button>
-      
+      <button onclick="addArrow()">เพิ่มลูกศร ⟹</button>
+      <button onclick="addTextBox()">เพิ่มข้อความ</button>
+      <input type="range" min="0" max="360" oninput="rotateSelectedArrow(this.value)">
+
   </div>
 
     <div id="map"></div>
@@ -142,7 +145,10 @@ $(document).ready(function() {
       let labelMarkers = {};
       let radiusLabels = [];
       let communityLabels = {};
-
+      let selectedArrow = null;
+      let selectedArrows = [];
+      let selectedTextBoxes = [];
+      
 function drawCircle(latLng) {
   const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
   const color = document.getElementById("colorInput").value;
@@ -417,10 +423,127 @@ function showAllCommunities() {
     toggleBtn.textContent = "ยุบเมนู / ขยายแผนที่";
   }
 });
+
+  // ✅ ใส่ฟังก์ชัน addArrow() ตรงนี้
+  function addArrow() {
+    selectedArrows = [];
+
+    const baseLeft = 300;
+    const baseTop = 200;
+    const spacing = 60;
+    const rotationDeg = 0;
+
+    for (let i = 0; i < 2; i++) {
+      const arrow = document.createElement("div");
+      arrow.className = "draggable";
+      arrow.innerHTML = "⟹";
+      arrow.style.left = `${baseLeft}px`;
+      arrow.style.top = `${baseTop + i * spacing}px`;
+      arrow.style.fontSize = "48px";
+      arrow.style.color = "#87CEFA";
+      arrow.style.fontWeight = "bold";
+      arrow.style.fontFamily = "Arial Black, sans-serif";
+      arrow.style.transform = `rotate(${rotationDeg}deg)`;
+      arrow.onclick = () => selectedArrow = arrow;
+      container.appendChild(arrow);
+      makeDraggableGroup(arrow);
+      selectedArrows.push(arrow);
+    }
+
+    selectedArrow = selectedArrows[0];
+    saveState();
+  }
+
+  // ✅ ใส่ฟังก์ชัน rotateSelectedArrow(deg) ตรงนี้
+  function rotateSelectedArrow(deg) {
+    selectedArrows.forEach(arrow => {
+      arrow.style.transform = `rotate(${deg}deg)`;
+    });
+  function makeDraggableGroup(el) {
+    el.onmousedown = function(e) {
+      const startX = e.clientX;
+      const startY = e.clientY;
+
+      const initialPositions = selectedArrows.map(arrow => ({
+        el: arrow,
+        left: arrow.offsetLeft,
+        top: arrow.offsetTop
+      }));
+
+      document.onmousemove = function(e) {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        initialPositions.forEach(pos => {
+          pos.el.style.left = (pos.left + dx) + "px";
+          pos.el.style.top  = (pos.top  + dy) + "px";
+        });
+      };
+
+      document.onmouseup = function() {
+        document.onmousemove = null;
+        document.onmouseup = null;
+        saveState();
+      };
+    };
+  }
+  // ✅ ฟังก์ชัน addTextBox() สำหรับสร้างกล่องข้อความ
+  function addTextBox() {
+    const box = document.createElement("div");
+    box.className = "draggable";
+    box.contentEditable = true;
+    box.innerText = "ข้อความ";
+    box.style.left = "150px";
+    box.style.top = "150px";
+    box.style.color = "white";
+    box.style.textShadow = "0 0 2px black";
+    box.style.fontWeight = "bold";
+    box.style.fontSize = "18px";
+    box.style.background = "transparent";
+    box.style.border = "none";
+    box.style.padding = "4px";
+
+    container.appendChild(box);
+    selectedTextBoxes = [box];
+    makeDraggableGroupText(box);
+    saveState();
+  }
+
+  // ✅ ฟังก์ชัน makeDraggableGroupText(el) สำหรับลากกล่องข้อความ
+  function makeDraggableGroupText(el) {
+    el.onmousedown = function(e) {
+      const startX = e.clientX;
+      const startY = e.clientY;
+
+      const initialPositions = selectedTextBoxes.map(box => ({
+        el: box,
+        left: box.offsetLeft,
+        top: box.offsetTop
+      }));
+
+      document.onmousemove = function(e) {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        initialPositions.forEach(pos => {
+          pos.el.style.left = (pos.left + dx) + "px";
+          pos.el.style.top  = (pos.top  + dy) + "px";
+        });
+      };
+
+      document.onmouseup = function() {
+        document.onmousemove = null;
+        document.onmouseup = null;
+        saveState();
+      };
+    };
+  }
+
     </script>
 
     <script async
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
