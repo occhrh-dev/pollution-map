@@ -426,8 +426,8 @@ function showAllCommunities() {
   arrow.innerHTML = "⟵";
   arrow.style.left = "300px";
   arrow.style.top = "200px";
-  arrow.style.fontSize = "48px";
-  arrow.style.color = "#FF6347";
+  arrow.style.fontSize = "86px";
+  arrow.style.color = "#87CEFA";
   arrow.style.fontWeight = "bold";
   arrow.style.fontFamily = "Arial Black, sans-serif";
   arrow.style.transform = "rotate(0deg)";
@@ -464,8 +464,7 @@ function makeDraggableGroup(el) {
     };
   };
 }
-      let selectedTextBoxes = [];
-
+let selectedTextBoxes = [];
 function addTextBox() {
   const box = document.createElement("div");
   box.className = "draggable";
@@ -481,11 +480,19 @@ function addTextBox() {
   box.style.border = "none";
   box.style.padding = "4px";
 
+  // ✅ จัดข้อความหลายบรรทัดให้อยู่กึ่งกลาง
+  box.style.display = "flex";
+  box.style.flexDirection = "column";
+  box.style.justifyContent = "center";
+  box.style.alignItems = "center";
+  box.style.textAlign = "center";
+  box.style.whiteSpace = "pre-wrap";
+  box.style.wordBreak = "break-word";
+
   document.getElementById("mapContainer").appendChild(box);
   selectedTextBoxes = [box];
   makeDraggableGroupText(box);
 }
-
 function makeDraggableGroupText(el) {
   el.onmousedown = function(e) {
     const startX = e.clientX;
@@ -523,4 +530,5 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
