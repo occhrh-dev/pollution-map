@@ -147,6 +147,46 @@ $(document).ready(function() {
 </div>
 
     <script>
+      // ✅ เพิ่มคลาส StarOverlay ตรงนี้ก่อนประกาศตัวแปร
+  class StarOverlay extends google.maps.OverlayView {
+    constructor(position, map) {
+      super();
+      this.position = position;
+      this.map = map;
+      this.div = null;
+      this.setMap(map);
+    }
+
+    onAdd() {
+      this.div = document.createElement("div");
+      this.div.style.position = "absolute";
+      this.div.style.width = "24px";
+      this.div.style.height = "24px";
+      this.div.style.fontSize = "24px";
+      this.div.style.color = "#FFD700";
+      this.div.style.textShadow = "0 0 2px red";
+      this.div.style.pointerEvents = "none";
+      this.div.innerHTML = "⭐";
+      const panes = this.getPanes();
+      panes.overlayMouseTarget.appendChild(this.div);
+    }
+
+    draw() {
+      const projection = this.getProjection();
+      const point = projection.fromLatLngToDivPixel(this.position);
+      if (point && this.div) {
+        this.div.style.left = point.x - 12 + "px";
+        this.div.style.top = point.y - 12 + "px";
+      }
+    }
+
+    onRemove() {
+      if (this.div) {
+        this.div.remove();
+        this.div = null;
+      }
+    }
+  }
       let map;
       let circles = [];
       let markers = [];
@@ -173,24 +213,9 @@ function drawCircle(latLng) {
     clickable: false
   });
   circles.push(circle);
-
-// 🔵 สร้าง marker กลางจุด
-const starPath = "M 0,-15 L 4,-4 L 15,-4 L 6,2 L 9,12 L 0,6 -9,12 -6,2 -15,-4 -4,-4 Z";
-
-const marker = new google.maps.Marker({
-  position: latLng,
-  map: map,
-  icon: {
-    path: starPath,
-    scale: 1.5,
-    fillColor: "#FFD700",      // สีทอง
-    fillOpacity: 1,
-    strokeWeight: 1,
-    strokeColor: "#333"
-  }
-});
-
-markers.push(marker);
+  // ⭐ สร้างดาวกลางวงรัศมีแบบ OverlayView
+const star = new StarOverlay(latLng, map);
+markers.push(star); // ถ้าคุณใช้ markers เพื่อจัดการภายหลัง เช่น clear หรือ undo
 
   // 🏷 สร้าง label ระยะรัศมี (ขยับตามขนาดของวง)
   const kmText = Math.round(radius / 1000) + " กม.";
@@ -353,7 +378,8 @@ markers.push(marker);
 
   map.addListener("click", (e) => {
     drawCircle(e.latLng);
-  });
+  });
+
 }
 
 // ✅ ฟังก์ชันนี้อยู่นอก initMap และปิดครบ
@@ -398,23 +424,37 @@ function showAllCommunities() {
   $('#communitySelect').val(allValues).trigger('change');
 }
       function clearMap() {
-        circles.forEach(c => c.setMap(null));
-        markers.forEach(m => m.setMap(null));
-        Object.values(labelMarkers).forEach(m => m.setMap(null));
-        radiusLabels.forEach(l => l.setMap(null));
-        circles = [];
-        markers = [];
-        labelMarkers = {};
-        radiusLabels = [];
-      }
+  circles.forEach(c => c.setMap(null));
 
+  markers.forEach(m => {
+    if (typeof m.setMap === "function") {
+      m.setMap(null); // สำหรับ marker แบบเดิม
+    } else if (typeof m.onRemove === "function") {
+      m.onRemove();   // สำหรับ StarOverlay
+    }
+  });
+
+  Object.values(labelMarkers).forEach(m => m.setMap(null));
+  radiusLabels.forEach(l => l.setMap(null));
+  circles = [];
+  markers = [];
+  labelMarkers = {};
+  radiusLabels = [];
+}
       function undoLast() {
-        if (circles.length > 0) {
-          circles.pop().setMap(null);
-          markers.pop().setMap(null);
-          radiusLabels.pop().setMap(null);
-        }
-      }
+  if (circles.length > 0) {
+    circles.pop().setMap(null);
+
+    const lastMarker = markers.pop();
+    if (lastMarker.setMap) {
+      lastMarker.setMap(null);
+    } else if (lastMarker.onRemove) {
+      lastMarker.onRemove();
+    }
+
+    radiusLabels.pop().setMap(null);
+  }
+}
     let selectedArrows = [];
     function addArrow() {
   selectedArrows = [];
@@ -528,3 +568,4 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
