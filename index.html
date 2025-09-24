@@ -3,119 +3,73 @@
   <head>
     <title>แผนที่ควบคุมมลพิษแบบโต้ตอบ</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- ✅ CSS -->
     <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    font-family: sans-serif;
-  }
-  #map {
-    height: calc(100vh - 180px);
-    width: 100%;
-  }
-  #controls {
-    padding: 10px;
-    background: #f0f0f0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-  }
-  input, button, label, select {
-    padding: 5px;
-    font-size: 16px;
-  }
-  input[type="number"] {
-    width: 100px;
-  }
-  #communitySelect {
-    width: 100%;
-    min-width: 400px; /* ปรับตามที่ต้องการ */
-}
-  .gm-style .community-label {
-    text-shadow: 1px 1px 2px #000;
-  }
-
-  /* ✅ เพิ่มตรงนี้ */
-  .gm-style .radius-label {
-    background-color: white;
-    border-radius: 8px;
-    padding: 4px 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    color: black;
-    font-weight: bold;
-    font-size: 18px;
-    white-space: nowrap;
-  }
-    .draggable {
-    position: absolute;
-    cursor: move;
-    user-select: none;
-    z-index: 10;
-  }
-</style>
-    <!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<!-- Select2 CSS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
-<!-- Select2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  </head>
- <script>
-$(document).ready(function() {
-  // เปิดใช้งาน Select2
-  $('#communitySelect').select2({
-    placeholder: "ค้นหาชุมชน...",
-    width: 'resolve'
-  });
-
-  // ✅ Checkbox: แสดง layout ทั้งหมด
-  $('#showAllLayoutsToggle').on('change', function () {
-    const checked = $(this).is(':checked');
-    for (const name in communityFeatures) {
-      const feature = communityFeatures[name];
-      map.data.overrideStyle(feature, { visible: checked });
-    }
-  });
-
-  // ✅ Dropdown: ลบ label เมื่อชุมชนถูกลบออก
-  $('#communitySelect').on('change', function () {
-    const selected = $(this).val() || [];
-
-    // ลบ label ที่ไม่ได้เลือก
-    for (const name in labelMarkers) {
-      if (!selected.includes(name)) {
-        labelMarkers[name].setMap(null);
-        delete labelMarkers[name];
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: sans-serif;
       }
-    }
+      #map {
+        height: calc(100vh - 180px);
+        width: 100%;
+      }
+      #controls {
+        padding: 10px;
+        background: #f0f0f0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      input, button, label, select {
+        padding: 5px;
+        font-size: 16px;
+      }
+      input[type="number"] {
+        width: 100px;
+      }
+      #communitySelect {
+        width: 100%;
+        min-width: 400px;
+      }
+      .gm-style .community-label {
+        text-shadow: 1px 1px 2px #000;
+      }
+      .gm-style .radius-label {
+        background-color: white;
+        border-radius: 8px;
+        padding: 4px 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        color: black;
+        font-weight: bold;
+        font-size: 18px;
+        white-space: nowrap;
+      }
+      .draggable {
+        position: absolute;
+        cursor: move;
+        user-select: none;
+        z-index: 10;
+      }
+    </style>
 
-    // ✅ แสดง layout เฉพาะที่เลือก ถ้า checkbox “แสดง polygon ด้วย” ถูกติ๊ก
-    const showPolygon = $('#showPolygonToggle').is(':checked');
-    for (const name in communityFeatures) {
-      const feature = communityFeatures[name];
-      const shouldShow = selected.includes(name) && showPolygon;
-      map.data.overrideStyle(feature, { visible: shouldShow });
-    }
-  });
+    <!-- ✅ External Libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-  // ✅ ปุ่มล้าง dropdown
-  $('#clearCommunities').on('click', function () {
-    $('#communitySelect').val(null).trigger('change');
-
-    for (const name in labelMarkers) {
-      labelMarkers[name].setMap(null);
-    }
-    labelMarkers = {};
-  });
-});
-</script>
+    <!-- ✅ Google Maps API (โหลดก่อนโค้ดอื่น) -->
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
+    </script>
+  </head>
 
   <body>
-    <div id="controls">
+    <!-- ✅ UI Controls -->
+     <div id="controls">
       <label for="radiusInput">รัศมี (เมตร):</label>
       <input type="number" id="radiusInput" value="1000" min="100" step="100">
       <label for="colorInput">สี:</label>
@@ -141,10 +95,56 @@ $(document).ready(function() {
       <input type="range" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
       <button onclick="addTextBox()">เพิ่มข้อความ</button>
   </div>
-<!-- ✅ ใหม่: ห่อด้วย container -->
-<div id="mapContainer" style="position: relative; width: 100%; height: 600px;">
-  <div id="map" style="width: 100%; height: 100%;"></div>
-</div>
+    </div>
+
+    <!-- ✅ Map Container -->
+    <div id="mapContainer" style="position: relative; width: 100%; height: 600px;">
+      <div id="map" style="width: 100%; height: 100%;"></div>
+    </div>
+
+    <!-- ✅ สคริปต์หลักของคุณ -->
+    <script>
+      $(document).ready(function () {
+        $('#communitySelect').select2({
+          placeholder: "ค้นหาชุมชน...",
+          width: 'resolve'
+        });
+
+        $('#showAllLayoutsToggle').on('change', function () {
+          const checked = $(this).is(':checked');
+          for (const name in communityFeatures) {
+            const feature = communityFeatures[name];
+            map.data.overrideStyle(feature, { visible: checked });
+          }
+        });
+
+        $('#communitySelect').on('change', function () {
+          const selected = $(this).val() || [];
+          for (const name in labelMarkers) {
+            if (!selected.includes(name)) {
+              labelMarkers[name].setMap(null);
+              delete labelMarkers[name];
+            }
+          }
+          const showPolygon = $('#showPolygonToggle').is(':checked');
+          for (const name in communityFeatures) {
+            const feature = communityFeatures[name];
+            const shouldShow = selected.includes(name) && showPolygon;
+            map.data.overrideStyle(feature, { visible: shouldShow });
+          }
+        });
+
+        $('#clearCommunities').on('click', function () {
+          $('#communitySelect').val(null).trigger('change');
+          for (const name in labelMarkers) {
+            labelMarkers[name].setMap(null);
+          }
+          labelMarkers = {};
+        });
+      });
+    </script>
+  </body>
+</html>
 
     <script>
       // ✅ เพิ่มคลาส StarOverlay ตรงนี้ก่อนประกาศตัวแปร
@@ -563,9 +563,4 @@ function makeDraggableGroupText(el) {
   }
 });
     </script>
-
-    <script async
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
-    </script>
   </
-
