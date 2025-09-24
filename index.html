@@ -154,6 +154,8 @@ $(document).ready(function() {
       let labelMarkers = {};
       let radiusLabels = [];
       let communityLabels = {};
+      let arrows = [];
+      let textBoxes = [];
 
 function drawCircle(latLng) {
   const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
@@ -398,17 +400,30 @@ function showAllCommunities() {
   const allValues = Array.from(select.options).map(opt => opt.value);
   $('#communitySelect').val(allValues).trigger('change');
 }
-      function clearMap() {
-        circles.forEach(c => c.setMap(null));
-        markers.forEach(m => m.setMap(null));
-        Object.values(labelMarkers).forEach(m => m.setMap(null));
-        radiusLabels.forEach(l => l.setMap(null));
-        circles = [];
-        markers = [];
-        labelMarkers = {};
-        radiusLabels = [];
-      }
+function clearMap() {
+  // ลบวงรัศมี
+  circles.forEach(c => c.setMap(null));
+  circles = [];
 
+  // ลบ marker
+  markers.forEach(m => m.setMap(null));
+  markers = [];
+
+  // ลบ label
+  Object.values(labelMarkers).forEach(m => m.setMap(null));
+  labelMarkers = {};
+
+  radiusLabels.forEach(l => l.setMap(null));
+  radiusLabels = [];
+
+  // ✅ ลบลูกศร
+  arrows.forEach(a => a.remove());
+  arrows = [];
+
+  // ✅ ลบกล่องข้อความ
+  textBoxes.forEach(t => t.remove());
+  textBoxes = [];
+}
       function undoLast() {
         if (circles.length > 0) {
           circles.pop().setMap(null);
@@ -434,7 +449,8 @@ function showAllCommunities() {
 
   document.getElementById("mapContainer").appendChild(arrow);
   makeDraggableGroup(arrow);
-  selectedArrows.push(arrow);
+  selectedArrows.push(arrow); // ✅ สำหรับการเลือก
+  arrows.push(arrow);         // ✅ สำหรับการล้าง
 }
 
 function rotateSelectedArrow(deg) {
@@ -491,6 +507,7 @@ function addTextBox() {
   document.getElementById("mapContainer").appendChild(box);
   selectedTextBoxes = [box];
   makeDraggableGroupText(box);
+  textBoxes.push(textBox);
 }
 function makeDraggableGroupText(el) {
   el.onmousedown = function(e) {
@@ -529,5 +546,6 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
