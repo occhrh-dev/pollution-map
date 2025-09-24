@@ -445,6 +445,10 @@ function clearMap() {
   arrow.style.fontWeight = "bold";
   arrow.style.fontFamily = "Arial Black, sans-serif";
   arrow.style.transform = "rotate(0deg)";
+  arrow.style.textShadow = "0 0 3px white"; // เพิ่มขอบขาว
+  arrow.style.background = "rgba(255,255,255,0.6)";
+  arrow.style.borderRadius = "8px";
+  arrow.style.padding = "6px";
   arrow.onclick = () => selectedArrows = [arrow];
 
   document.getElementById("mapContainer").appendChild(arrow);
@@ -488,12 +492,13 @@ function addTextBox() {
   box.style.left = "150px";
   box.style.top = "150px";
   box.style.color = "white";
-  box.style.textShadow = "0 0 2px black";
   box.style.fontWeight = "bold";
   box.style.fontSize = "18px";
-  box.style.background = "transparent";
   box.style.border = "none";
-  box.style.padding = "4px";
+  box.style.textShadow = "0 0 4px black";
+  box.style.background = "rgba(0,0,0,0.5)";
+  box.style.borderRadius = "6px";
+  box.style.padding = "6px";
 
   // ✅ จัดข้อความหลายบรรทัดให้อยู่กึ่งกลาง
   box.style.display = "flex";
@@ -546,4 +551,5 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
