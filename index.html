@@ -437,6 +437,9 @@ function clearMap() {
   // ✅ ลบกล่องข้อความ
   textBoxes.forEach(t => t.remove());
   textBoxes = [];
+  // --- ✅ ล้างช่องพิกัดครับ ---
+  document.getElementById("latInput").value = "";
+  document.getElementById("lngInput").value = "";
 }
       function undoLast() {
         if (circles.length > 0) {
@@ -565,6 +568,7 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
