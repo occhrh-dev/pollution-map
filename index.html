@@ -347,13 +347,27 @@ markers.push(marker);
     }
   });
 
+// ---------------------------------------------------------
+  // แก้ไขส่วนนี้: เมื่อคลิกบน Layer ชุมชน (พื้นที่สีๆ)
+  // ---------------------------------------------------------
   map.data.addListener("click", (event) => {
     if (event.latLng) {
+      // ✅ เพิ่มบรรทัดนี้: อัปเดตค่าในช่อง Input
+      document.getElementById("latInput").value = event.latLng.lat().toFixed(6);
+      document.getElementById("lngInput").value = event.latLng.lng().toFixed(6);
+      
       drawCircle(event.latLng);
     }
   });
 
+  // ---------------------------------------------------------
+  // แก้ไขส่วนนี้: เมื่อคลิกบนแผนที่เปล่าๆ
+  // ---------------------------------------------------------
   map.addListener("click", (e) => {
+    // ✅ เพิ่มบรรทัดนี้: อัปเดตค่าในช่อง Input
+    document.getElementById("latInput").value = e.latLng.lat().toFixed(6);
+    document.getElementById("lngInput").value = e.latLng.lng().toFixed(6);
+
     drawCircle(e.latLng);
   });
 
@@ -551,6 +565,7 @@ function makeDraggableGroupText(el) {
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDuVjbyua3vpKU_05o6KSc3zUh7iMYVo4c&callback=initMap">
     </script>
   </
+
 
 
 
