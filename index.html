@@ -1,575 +1,405 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>แผนที่ควบคุมมลพิษแบบโต้ตอบ</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    font-family: sans-serif;
-  }
-  #map {
-    height: calc(100vh - 180px);
-    width: 100%;
-  }
-  #controls {
-    padding: 10px;
-    background: #f0f0f0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-  }
-  input, button, label, select {
-    padding: 5px;
-    font-size: 16px;
-  }
-  input[type="number"] {
-    width: 100px;
-  }
-  #communitySelect {
-    width: 100%;
-    min-width: 400px; /* ปรับตามที่ต้องการ */
-}
-  .gm-style .community-label {
-    text-shadow: 1px 1px 2px #000;
-  }
-
-  /* ✅ เพิ่มตรงนี้ */
-  .gm-style .radius-label {
-    background-color: white;
-    border-radius: 8px;
-    padding: 4px 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    color: black;
-    font-weight: bold;
-    font-size: 18px;
-    white-space: nowrap;
-  }
-    .draggable {
-    position: absolute;
-    cursor: move;
-    user-select: none;
-    z-index: 10;
-  }
-</style>
-    <!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<!-- Select2 CSS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
-<!-- Select2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  </head>
- <script>
-$(document).ready(function() {
-  // เปิดใช้งาน Select2
-  $('#communitySelect').select2({
-    placeholder: "ค้นหาชุมชน...",
-    width: 'resolve'
-  });
-
-  // ✅ Checkbox: แสดง layout ทั้งหมด
-  $('#showAllLayoutsToggle').on('change', function () {
-    const checked = $(this).is(':checked');
-    for (const name in communityFeatures) {
-      const feature = communityFeatures[name];
-      map.data.overrideStyle(feature, { visible: checked });
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แผนที่ควบคุมมลพิษแบบโต้ตอบ</title>
+  <meta name="theme-color" content="#16324a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #16324a;
+      --teal: #0e7c7b;
+      --paper: #f4f7f9;
+      --line: #d7e0e7;
+      --danger: #e8503b;
     }
-  });
-
-  // ✅ Dropdown: ลบ label เมื่อชุมชนถูกลบออก
-  $('#communitySelect').on('change', function () {
-    const selected = $(this).val() || [];
-
-    // ลบ label ที่ไม่ได้เลือก
-    for (const name in labelMarkers) {
-      if (!selected.includes(name)) {
-        labelMarkers[name].setMap(null);
-        delete labelMarkers[name];
-      }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%; margin: 0; overflow: hidden;
+      font-family: "Sarabun", sans-serif; color: #1e2f3d; background: var(--paper);
     }
-
-    // ✅ แสดง layout เฉพาะที่เลือก ถ้า checkbox “แสดง polygon ด้วย” ถูกติ๊ก
-    const showPolygon = $('#showPolygonToggle').is(':checked');
-    for (const name in communityFeatures) {
-      const feature = communityFeatures[name];
-      const shouldShow = selected.includes(name) && showPolygon;
-      map.data.overrideStyle(feature, { visible: shouldShow });
+    body { display: flex; flex-direction: column; }
+    header {
+      min-height: 58px; padding: 8px 14px; display: flex; align-items: center;
+      gap: 12px; flex-wrap: wrap; color: #fff; background: var(--navy);
+      box-shadow: 0 2px 8px rgba(0,0,0,.22); z-index: 20;
     }
-  });
-
-  // ✅ ปุ่มล้าง dropdown
-  $('#clearCommunities').on('click', function () {
-    $('#communitySelect').val(null).trigger('change');
-
-    for (const name in labelMarkers) {
-      labelMarkers[name].setMap(null);
+    .title-wrap { min-width: 210px; }
+    h1 { margin: 0; font-size: 19px; line-height: 1.15; }
+    .subtitle { margin-top: 2px; font-size: 11px; opacity: .78; }
+    .header-spacer { flex: 1; }
+    button, input, select { font: inherit; }
+    button {
+      border: 0; border-radius: 18px; padding: 7px 13px; cursor: pointer;
+      font-weight: 600; color: #fff; background: var(--teal);
+      transition: filter .15s ease, transform .15s ease;
     }
-    labelMarkers = {};
-  });
-});
-</script>
-
-  <body>
-    <div id="controls">
-      <label for="radiusInput">รัศมี (เมตร):</label>
+    button:hover { filter: brightness(1.08); }
+    button:active { transform: translateY(1px); }
+    button.secondary { color: var(--navy); background: #fff; }
+    button.danger { background: var(--danger); }
+    #controls {
+      padding: 9px 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      background: #fff; border-bottom: 1px solid var(--line); z-index: 15;
+    }
+    .control-group {
+      min-height: 38px; padding: 5px 8px; display: flex; align-items: center;
+      gap: 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper);
+    }
+    .control-group label { font-size: 13px; white-space: nowrap; }
+    .control-group input[type="number"] { width: 98px; }
+    .control-group input[type="color"] { width: 36px; height: 28px; padding: 1px; border: 0; }
+    input[type="number"] { padding: 6px 7px; border: 1px solid #bac8d2; border-radius: 6px; background: #fff; }
+    #communityBlock { flex: 1 1 420px; }
+    #communitySelect { width: 100%; }
+    .select2-container { min-width: 220px; flex: 1; }
+    .select2-container--default .select2-selection--multiple { min-height: 34px; border-color: #bac8d2; }
+    #mapwrap { position: relative; flex: 1; min-height: 0; }
+    #map { position: absolute; inset: 0; }
+    #hint {
+      position: absolute; left: 12px; bottom: 26px; max-width: 250px; padding: 7px 10px;
+      border-radius: 8px; color: #425766; background: rgba(255,255,255,.92);
+      box-shadow: 0 2px 9px rgba(0,0,0,.18); font-size: 11px; z-index: 5; pointer-events: none;
+    }
+    .map-star {
+      width: 34px; height: 34px; display: grid; place-items: center; color: #ffd700;
+      -webkit-text-stroke: 1.2px #333; font-size: 31px; line-height: 1;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,.42)); pointer-events: none;
+    }
+    .radius-label {
+      padding: 3px 8px; border: 1px solid rgba(22,50,74,.16); border-radius: 12px;
+      color: var(--navy); background: rgba(255,255,255,.94); box-shadow: 0 1px 4px rgba(0,0,0,.28);
+      font-weight: 700; font-size: 13px; white-space: nowrap; pointer-events: none;
+    }
+    .draggable { position: absolute; z-index: 10; cursor: move; user-select: none; touch-action: none; }
+    .arrow-overlay {
+      color: #87cefa; font: 700 86px/1 "Arial Black", sans-serif;
+      text-shadow: 0 0 3px #fff; background: transparent;
+    }
+    .text-overlay {
+      min-width: 70px; max-width: 320px; padding: 6px 9px; border-radius: 6px;
+      color: #fff; background: rgba(0,0,0,.55); text-align: center; white-space: pre-wrap;
+      word-break: break-word; font-weight: 700; text-shadow: 0 0 4px #000; user-select: text;
+    }
+    body.map-full #controls { display: none; }
+    @media (max-width: 760px) {
+      header { gap: 7px; }
+      h1 { font-size: 16px; }
+      .subtitle { display: none; }
+      header button { padding: 6px 10px; font-size: 12px; }
+      #controls { max-height: 42vh; overflow-y: auto; padding: 7px; }
+      .control-group { width: 100%; flex-wrap: wrap; }
+      #communityBlock { flex-basis: 100%; }
+      #hint { max-width: 190px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-wrap">
+      <h1>🗺️ แผนที่ควบคุมมลพิษ</h1>
+      <div class="subtitle">MapLibre · ข้อมูลขอบเขตชุมชนจังหวัดระยอง</div>
+    </div>
+    <div class="header-spacer"></div>
+    <button id="baseBtn" type="button" onclick="toggleBase()">🛰️ ดาวเทียม</button>
+    <button id="toggleMapBtn" type="button" class="secondary" onclick="toggleMapView()">ขยายแผนที่</button>
+  </header>
+  <section id="controls" aria-label="เครื่องมือแผนที่">
+    <div class="control-group">
+      <label for="radiusInput">รัศมี (เมตร)</label>
       <input type="number" id="radiusInput" value="1000" min="100" step="100">
-      <label for="colorInput">สี:</label>
-      <input type="color" id="colorInput" value="#FF0000">
-      <label><input type="checkbox" id="fillToggle" checked> เติมสีด้านใน</label>
-      <button onclick="undoLast()">Undo</button>
-      <button onclick="clearMap()">ล้างแผนที่</button>
-      <label>ละติจูด:</label>
-      <input type="number" id="latInput" step="0.000001" placeholder="เช่น 12.738">
-      <label>ลองจิจูด:</label>
-      <input type="number" id="lngInput" step="0.000001" placeholder="เช่น 101.185">
-      <button onclick="addPointFromInput()">ลงจุดจากพิกัด</button>
-      <label for="communitySelect">เลือกชุมชน:</label>
-      <select id="communitySelect" multiple onchange="showSelectedLayouts(); showSelectedCommunities();">
-    </select>
-      <button onclick="showAllCommunities()">แสดงชุมชนทั้งหมด</button>
-      <label><input type="checkbox" id="showPolygonToggle" checked> แสดงขอบเขตชุมชนเมื่อเลือก</label>
-      <button id="clearCommunities">ล้างชุมชนทั้งหมด</button>
-      <label><input type="checkbox" id="showAllLayoutsToggle"> แสดงผังชุมชนทั้งหมด</label>
-      <button onclick="toggleMapView()">แสดงแผนที่เต็มจอ / ยุบเมนู</button>
-      <button onclick="addArrow()">เพิ่มลูกศร ⟵</button>
-      <label>หมุนลูกศร:</label>
-      <input type="range" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
-      <button onclick="addTextBox()">เพิ่มข้อความ</button>
-  </div>
-<!-- ✅ ใหม่: ห่อด้วย container -->
-<div id="mapContainer" style="position: relative; width: 100%; height: 600px;">
-  <div id="map" style="width: 100%; height: 100%;"></div>
-</div>
+      <label for="colorInput">สี</label>
+      <input type="color" id="colorInput" value="#ff0000">
+      <label><input type="checkbox" id="fillToggle" checked> เติมสี</label>
+    </div>
+    <div class="control-group">
+      <label for="latInput">ละติจูด</label>
+      <input type="number" id="latInput" step="0.000001" placeholder="12.738">
+      <label for="lngInput">ลองจิจูด</label>
+      <input type="number" id="lngInput" step="0.000001" placeholder="101.185">
+      <button type="button" onclick="addPointFromInput()">ลงจุด</button>
+    </div>
+    <div class="control-group" id="communityBlock">
+      <label for="communitySelect">ชุมชน</label>
+      <select id="communitySelect" multiple></select>
+      <button type="button" onclick="showAllCommunities()">เลือกทั้งหมด</button>
+      <button type="button" id="clearCommunities">ล้าง</button>
+    </div>
+    <div class="control-group">
+      <label><input type="checkbox" id="showPolygonToggle" checked> แสดงขอบเขตที่เลือก</label>
+      <label><input type="checkbox" id="showAllLayoutsToggle"> แสดงทุกขอบเขต</label>
+    </div>
+    <div class="control-group">
+      <button type="button" onclick="undoLast()">↶ Undo</button>
+      <button type="button" class="danger" onclick="clearMap()">ล้างสิ่งที่วาด</button>
+      <button type="button" onclick="addArrow()">เพิ่มลูกศร ⟵</button>
+      <label for="arrowRotation">หมุน</label>
+      <input id="arrowRotation" type="range" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
+      <button type="button" onclick="addTextBox()">เพิ่มข้อความ</button>
+    </div>
+  </section>
+  <main id="mapwrap">
+    <div id="map" aria-label="แผนที่"></div>
+    <div id="hint">แตะบนแผนที่เพื่อวางจุดและสร้างวงรัศมี · เลือกชุมชนจากเมนูเพื่อแสดงขอบเขต</div>
+  </main>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+  <script>
+    const MAPTILER_KEY = 'XOw46Ht6gxyHhSCkLXPf';
+    const COMMUNITY_URL = 'ผังโครงร่างเขตควบคุมมลพิษ.json';
+    const STYLES = {
+      streets: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
+      satellite: `https://api.maptiler.com/maps/hybrid/style.json?key=${MAPTILER_KEY}`
+    };
+    let map;
+    let currentBase = 'streets';
+    let communityData = null;
+    let communityLabels = { type: 'FeatureCollection', features: [] };
+    let communityNames = [];
+    let circleFeatures = [];
+    let drawItems = [];
+    let arrows = [];
+    let textBoxes = [];
+    let selectedArrow = null;
 
-    <script>
-      let map;
-      let circles = [];
-      let markers = [];
-      let communityFeatures = {};
-      let labelMarkers = {};
-      let radiusLabels = [];
-      let communityLabels = {};
-      let arrows = [];
-      let textBoxes = [];
-
-function drawCircle(latLng) {
-  const radius = parseInt(document.getElementById("radiusInput").value) || 1000;
-  const color = document.getElementById("colorInput").value;
-  const fillOpacity = document.getElementById("fillToggle").checked ? 0.35 : 0;
-
-  // 🟢 สร้างวงรัศมี
-  const circle = new google.maps.Circle({
-    strokeColor: color,
-    strokeOpacity: 0.8,
-    strokeWeight: 4,
-    fillColor: color,
-    fillOpacity: fillOpacity,
-    map,
-    center: latLng,
-    radius: radius,
-    clickable: false
-  });
-  circles.push(circle);
-
-// 🔵 สร้าง marker กลางจุด
-const starPath = "M 0,-15 L 4,-4 L 15,-4 L 6,2 L 9,12 L 0,6 -9,12 -6,2 -15,-4 -4,-4 Z";
-
-const marker = new google.maps.Marker({
-  position: latLng,
-  map: map,
-  icon: {
-    path: starPath,
-    scale: 1.0,
-    fillColor: "#FFD700",      // สีทอง
-    fillOpacity: 1,
-    strokeWeight: 1,
-    strokeColor: "#333"
-  }
-});
-
-markers.push(marker);
-
-  // 🏷 สร้าง label ระยะรัศมี (ขยับตามขนาดของวง)
-  const kmText = Math.round(radius / 1000) + " กม.";
-  const offsetFactor = radius / 140000; // แปลงเมตรเป็นองศาโดยประมาณ
-  const offsetLat = latLng.lat() - offsetFactor;
-  const offsetLng = latLng.lng() - offsetFactor;
-  const offsetPosition = new google.maps.LatLng(offsetLat, offsetLng);
-
-  const radiusLabel = new google.maps.Marker({
-    position: offsetPosition,
-    map: map,
-    label: {
-      text: kmText,
-      fontSize: "14px",
-      fontWeight: "bold",
-      color: "#000000",
-      className: "radius-label"
-    },
-    icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: 0
+    function emptyFilter() { return ['==', ['get', 'name'], '__none__']; }
+    function nameFilter(names) {
+      return names.length ? ['in', ['get', 'name'], ['literal', names]] : emptyFilter();
     }
-  });
-  radiusLabels.push(radiusLabel);
-}
-
-
-      function addPointFromInput() {
-        const lat = parseFloat(document.getElementById("latInput").value);
-        const lng = parseFloat(document.getElementById("lngInput").value);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          drawCircle(new google.maps.LatLng(lat, lng));
-        } else {
-          alert("กรุณากรอกพิกัดให้ถูกต้อง");
-        }
-      }
-
-      function getPolygonCentroid(path) {
-        let area = 0, x = 0, y = 0;
-        const len = path.getLength();
-        for (let i = 0; i < len; i++) {
-          const p1 = path.getAt(i);
-          const p2 = path.getAt((i + 1) % len);
-          const f = p1.lat() * p2.lng() - p2.lat() * p1.lng();
-          area += f;
-          x += (p1.lat() + p2.lat()) * f;
-          y += (p1.lng() + p2.lng()) * f;
-        }
-        area *= 0.5;
-        x /= (6 * area);
-        y /= (6 * area);
-        return new google.maps.LatLng(x, y);
-      }
-
-      function updateLabelSizes() {
-        const zoom = map.getZoom();
-        const fontSize = Math.max(10, Math.min(zoom * 1.2, 24)) + "px";
-
-        Object.values(labelMarkers).forEach(marker => {
-          const label = marker.getLabel();
-          if (label) {
-            marker.setLabel({
-              ...label,
-              fontSize: fontSize
-            });
-          }
-        });
-      }
-
-    function showSelectedCommunities() {
-  const selected = $('#communitySelect').val() || [];
-
-  // ✅ ลบ label ที่ไม่ได้เลือก
-  for (const name in labelMarkers) {
-    if (!selected.includes(name)) {
-      labelMarkers[name].setMap(null);
-      delete labelMarkers[name];
-    }
-  }
-
-  // ✅ สร้าง label เฉพาะชุมชนที่เลือก
-  selected.forEach(name => {
-    if (labelMarkers[name]) return;
-
-    const feature = communityFeatures[name];
-    if (!feature) return;
-
-    const geometry = feature.getGeometry();
-    let center;
-
-    if (geometry.getType() === 'Polygon') {
-      center = getPolygonCentroid(geometry.getAt(0));
-    } else if (geometry.getType() === 'MultiPolygon') {
-      center = getPolygonCentroid(geometry.getAt(0).getAt(0));
-    }
-
-    if (center) {
-      const labelMarker = new google.maps.Marker({
-        position: center,
-        map: map,
-        label: {
-          text: name,
-          fontSize: "14px",
-          fontWeight: "bold",
-          color: "#FFFFFF",
-          className: "community-label"
-        },
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 0
+    function addCommunityLayers() {
+      if (!communityData || map.getSource('communities')) return;
+      map.addSource('communities', { type: 'geojson', data: communityData });
+      map.addLayer({
+        id: 'community-fill', type: 'fill', source: 'communities', filter: emptyFilter(),
+        paint: {
+          'fill-color': ['coalesce', ['get', 'fill'], '#3bb3f4'],
+          'fill-opacity': ['coalesce', ['get', 'fill-opacity'], 0.3]
         }
       });
-      labelMarkers[name] = labelMarker;
-      updateLabelSizes();
-    }
-  });
-}
-     function initMap() {
-  map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: 12.738, lng: 101.185 },
-    zoom: 12,
-    styles: [
-      { featureType: "poi", stylers: [{ visibility: "off" }] },
-      { featureType: "transit", stylers: [{ visibility: "off" }] },
-      { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
-      { featureType: "administrative", elementType: "labels", stylers: [{ visibility: "off" }] }
-    ]
-  });
-
-  map.data.loadGeoJson('ผังโครงร่างเขตควบคุมมลพิษ.json');
-
-  map.data.setStyle(feature => ({
-    fillColor: feature.getProperty('fill') || '#FF0000',
-    fillOpacity: feature.getProperty('fill-opacity') || 0.3,
-    strokeColor: feature.getProperty('stroke') || '#FF0000',
-    strokeWeight: feature.getProperty('stroke-width') || 2
-  }));
-
-  map.data.addListener("addfeature", function(event) {
-    const feature = event.feature;
-    const name = feature.getProperty("name");
-    if (name) {
-      communityFeatures[name] = feature;
-
-      // ✅ ซ่อนไว้ก่อน
-      map.data.overrideStyle(feature, { visible: false });
-
-      const option = document.createElement("option");
-      option.value = name;
-      option.textContent = name;
-      document.getElementById("communitySelect").appendChild(option);
-    }
-  });
-
-// ---------------------------------------------------------
-  // แก้ไขส่วนนี้: เมื่อคลิกบน Layer ชุมชน (พื้นที่สีๆ)
-  // ---------------------------------------------------------
-  map.data.addListener("click", (event) => {
-    if (event.latLng) {
-      // ✅ เพิ่มบรรทัดนี้: อัปเดตค่าในช่อง Input
-      document.getElementById("latInput").value = event.latLng.lat().toFixed(6);
-      document.getElementById("lngInput").value = event.latLng.lng().toFixed(6);
-      
-      drawCircle(event.latLng);
-    }
-  });
-
-  // ---------------------------------------------------------
-  // แก้ไขส่วนนี้: เมื่อคลิกบนแผนที่เปล่าๆ
-  // ---------------------------------------------------------
-  map.addListener("click", (e) => {
-    // ✅ เพิ่มบรรทัดนี้: อัปเดตค่าในช่อง Input
-    document.getElementById("latInput").value = e.latLng.lat().toFixed(6);
-    document.getElementById("lngInput").value = e.latLng.lng().toFixed(6);
-
-    drawCircle(e.latLng);
-  });
-
-}
-
-// ✅ ฟังก์ชันนี้อยู่นอก initMap และปิดครบ
-function showSelectedLayouts() {
-  const selected = $('#communitySelect').val() || [];
-  const showPolygon = $('#showPolygonToggle').is(':checked');
-  const showAllLayouts = $('#showAllLayoutsToggle').is(':checked');
-
-  for (const name in communityFeatures) {
-    const feature = communityFeatures[name];
-    let shouldShow = false;
-    if (showAllLayouts) {
-      // ✅ ถ้าติ๊ก “แสดง layout ทั้งหมด” → แสดงทุก layout โดยไม่สน dropdown
-      shouldShow = true;
-    } else if (selected.includes(name) && showPolygon) {
-      // ✅ ถ้าเลือก dropdown และติ๊ก “แสดง polygon ด้วย” → แสดงเฉพาะที่เลือก
-      shouldShow = true;
-    }
-    map.data.overrideStyle(feature, { visible: shouldShow });
-  }
-}
-function toggleMapView() {
-  const controls = document.getElementById("controls");
-  const mapContainer = document.getElementById("map");
-  const toggleBtn = document.getElementById("toggleMapBtn");
-
-  const isHidden = controls.style.display === "none";
-
-  if (isHidden) {
-    controls.style.display = "block";
-    mapContainer.style.height = "calc(100vh - 120px)";
-    toggleBtn.textContent = "ยุบเมนู / ขยายแผนที่";
-  } else {
-    controls.style.display = "none";
-    mapContainer.style.height = "100vh";
-    toggleBtn.textContent = "แสดงเมนู / กลับสู่โหมดปกติ";
-  }
-}
-function showAllCommunities() {
-  const select = document.getElementById("communitySelect");
-  const allValues = Array.from(select.options).map(opt => opt.value);
-  $('#communitySelect').val(allValues).trigger('change');
-}
-function clearMap() {
-  // ลบวงรัศมี
-  circles.forEach(c => c.setMap(null));
-  circles = [];
-
-  // ลบ marker
-  markers.forEach(m => m.setMap(null));
-  markers = [];
-
-  // ลบ label
-  Object.values(labelMarkers).forEach(m => m.setMap(null));
-  labelMarkers = {};
-
-  radiusLabels.forEach(l => l.setMap(null));
-  radiusLabels = [];
-
-  // ✅ ลบลูกศร
-  arrows.forEach(a => a.remove());
-  arrows = [];
-
-  // ✅ ลบกล่องข้อความ
-  textBoxes.forEach(t => t.remove());
-  textBoxes = [];
-  // --- ✅ ล้างช่องพิกัดครับ ---
-  document.getElementById("latInput").value = "";
-  document.getElementById("lngInput").value = "";
-}
-      function undoLast() {
-        if (circles.length > 0) {
-          circles.pop().setMap(null);
-          markers.pop().setMap(null);
-          radiusLabels.pop().setMap(null);
+      map.addLayer({
+        id: 'community-line', type: 'line', source: 'communities', filter: emptyFilter(),
+        paint: {
+          'line-color': ['coalesce', ['get', 'stroke'], '#16324a'],
+          'line-opacity': ['coalesce', ['get', 'stroke-opacity'], 1],
+          'line-width': ['coalesce', ['get', 'stroke-width'], 2]
         }
+      });
+      map.addSource('community-labels', { type: 'geojson', data: communityLabels });
+      map.addLayer({
+        id: 'community-labels', type: 'symbol', source: 'community-labels', filter: emptyFilter(),
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-size': ['interpolate', ['linear'], ['zoom'], 9, 11, 14, 21],
+          'text-font': ['Noto Sans Regular'],
+          'text-allow-overlap': false
+        },
+        paint: {
+          'text-color': '#ffffff',
+          'text-halo-color': 'rgba(0,0,0,.82)',
+          'text-halo-width': 1.6
+        }
+      });
+      updateCommunityVisibility();
+    }
+    function addDrawingLayers() {
+      if (map.getSource('drawn-circles')) return;
+      const data = { type: 'FeatureCollection', features: circleFeatures };
+      map.addSource('drawn-circles', { type: 'geojson', data });
+      map.addLayer({
+        id: 'circle-fill', type: 'fill', source: 'drawn-circles',
+        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['get', 'fillOpacity'] }
+      });
+      map.addLayer({
+        id: 'circle-line', type: 'line', source: 'drawn-circles',
+        paint: { 'line-color': ['get', 'color'], 'line-opacity': 0.85, 'line-width': 4 }
+      });
+    }
+    function restoreCustomLayers() { addCommunityLayers(); addDrawingLayers(); }
+    function updateCircleSource() {
+      const source = map && map.getSource('drawn-circles');
+      if (source) source.setData({ type: 'FeatureCollection', features: circleFeatures });
+    }
+    function selectedCommunityNames() { return $('#communitySelect').val() || []; }
+    function updateCommunityVisibility() {
+      if (!map || !map.getLayer('community-fill')) return;
+      const selected = selectedCommunityNames();
+      const showAll = document.getElementById('showAllLayoutsToggle').checked;
+      const showSelected = document.getElementById('showPolygonToggle').checked;
+      const polygonNames = showAll ? communityNames : (showSelected ? selected : []);
+      map.setFilter('community-fill', nameFilter(polygonNames));
+      map.setFilter('community-line', nameFilter(polygonNames));
+      map.setFilter('community-labels', nameFilter(selected));
+    }
+    function populateCommunitySelect() {
+      const select = document.getElementById('communitySelect');
+      select.innerHTML = '';
+      communityNames.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name; option.textContent = name; select.appendChild(option);
+      });
+      $('#communitySelect').select2({
+        placeholder: 'ค้นหาชุมชน…', width: '100%', closeOnSelect: false
+      }).on('change', updateCommunityVisibility);
+    }
+    async function loadCommunities() {
+      const response = await fetch(COMMUNITY_URL);
+      if (!response.ok) throw new Error(`โหลดขอบเขตชุมชนไม่สำเร็จ: HTTP ${response.status}`);
+      communityData = await response.json();
+      communityNames = communityData.features
+        .map(feature => feature.properties && feature.properties.name).filter(Boolean);
+      communityLabels = {
+        type: 'FeatureCollection',
+        features: communityData.features.flatMap(feature => {
+          const name = feature.properties && feature.properties.name;
+          if (!name) return [];
+          const point = turf.pointOnFeature(feature);
+          point.properties = { name };
+          return [point];
+        })
+      };
+      populateCommunitySelect();
+      addCommunityLayers();
+    }
+    function handleMapClick(lngLat) {
+      document.getElementById('latInput').value = lngLat.lat.toFixed(6);
+      document.getElementById('lngInput').value = lngLat.lng.toFixed(6);
+      drawCircle(lngLat.lng, lngLat.lat);
+    }
+    function makeStarMarker(lng, lat) {
+      const element = document.createElement('div');
+      element.className = 'map-star'; element.textContent = '★';
+      return new maplibregl.Marker({ element, anchor: 'center' }).setLngLat([lng, lat]).addTo(map);
+    }
+    function makeRadiusLabel(lng, lat, radiusMeters) {
+      const center = turf.point([lng, lat]);
+      const destination = turf.destination(center, radiusMeters / 1000, -135, { units: 'kilometers' });
+      const element = document.createElement('div');
+      element.className = 'radius-label';
+      element.textContent = radiusMeters >= 1000
+        ? `${Number((radiusMeters / 1000).toFixed(1))} กม.` : `${radiusMeters} ม.`;
+      return new maplibregl.Marker({ element, anchor: 'center' })
+        .setLngLat(destination.geometry.coordinates).addTo(map);
+    }
+    function drawCircle(lng, lat) {
+      const radius = Math.max(100, Number(document.getElementById('radiusInput').value) || 1000);
+      const color = document.getElementById('colorInput').value;
+      const fillOpacity = document.getElementById('fillToggle').checked ? 0.35 : 0;
+      const feature = turf.circle([lng, lat], radius / 1000, {
+        steps: 128, units: 'kilometers',
+        properties: { id: `circle-${Date.now()}-${circleFeatures.length}`, color, fillOpacity }
+      });
+      circleFeatures.push(feature);
+      const marker = makeStarMarker(lng, lat);
+      const label = makeRadiusLabel(lng, lat, radius);
+      drawItems.push({ feature, marker, label });
+      updateCircleSource();
+    }
+    function addPointFromInput() {
+      const lat = Number(document.getElementById('latInput').value);
+      const lng = Number(document.getElementById('lngInput').value);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+        alert('กรุณากรอกพิกัดให้ถูกต้อง'); return;
       }
-    let selectedArrows = [];
+      drawCircle(lng, lat);
+      map.easeTo({ center: [lng, lat], duration: 500 });
+    }
+    function undoLast() {
+      const item = drawItems.pop();
+      if (!item) return;
+      item.marker.remove(); item.label.remove(); circleFeatures.pop(); updateCircleSource();
+    }
+    function clearMap() {
+      drawItems.forEach(item => { item.marker.remove(); item.label.remove(); });
+      drawItems = []; circleFeatures = []; updateCircleSource();
+      arrows.forEach(element => element.remove()); arrows = []; selectedArrow = null;
+      textBoxes.forEach(element => element.remove()); textBoxes = [];
+      document.getElementById('latInput').value = '';
+      document.getElementById('lngInput').value = '';
+    }
+    function showAllCommunities() { $('#communitySelect').val(communityNames).trigger('change'); }
+    function toggleBase() {
+      currentBase = currentBase === 'streets' ? 'satellite' : 'streets';
+      document.getElementById('baseBtn').textContent = currentBase === 'streets' ? '🛰️ ดาวเทียม' : '🗺️ แผนที่ถนน';
+      map.setStyle(STYLES[currentBase]);
+      map.once('style.load', restoreCustomLayers);
+    }
+    function toggleMapView() {
+      document.body.classList.toggle('map-full');
+      const full = document.body.classList.contains('map-full');
+      document.getElementById('toggleMapBtn').textContent = full ? 'แสดงเครื่องมือ' : 'ขยายแผนที่';
+      setTimeout(() => map.resize(), 30);
+    }
+    function makeDraggable(element) {
+      element.addEventListener('pointerdown', event => {
+        if (event.button !== 0) return;
+        event.stopPropagation(); element.setPointerCapture(event.pointerId);
+        const startX = event.clientX; const startY = event.clientY;
+        const startLeft = element.offsetLeft; const startTop = element.offsetTop;
+        const move = moveEvent => {
+          element.style.left = `${startLeft + moveEvent.clientX - startX}px`;
+          element.style.top = `${startTop + moveEvent.clientY - startY}px`;
+        };
+        const up = () => {
+          element.removeEventListener('pointermove', move);
+          element.removeEventListener('pointerup', up);
+          element.removeEventListener('pointercancel', up);
+        };
+        element.addEventListener('pointermove', move);
+        element.addEventListener('pointerup', up);
+        element.addEventListener('pointercancel', up);
+      });
+    }
     function addArrow() {
-  selectedArrows = [];
-
-  const arrow = document.createElement("div");
-  arrow.className = "draggable";
-  arrow.innerHTML = "⟵";
-  arrow.style.left = "300px";
-  arrow.style.top = "200px";
-  arrow.style.fontSize = "86px";
-  arrow.style.color = "#87CEFA";
-  arrow.style.fontWeight = "bold";
-  arrow.style.fontFamily = "Arial Black, sans-serif";
-  arrow.style.transform = "rotate(0deg)";
-  arrow.style.textShadow = "0 0 3px white"; // เพิ่มขอบขาว
-  arrow.style.background = "transparent";
-  arrow.style.borderRadius = "8px";
-  arrow.style.padding = "6px";
-  arrow.onclick = () => selectedArrows = [arrow];
-
-  document.getElementById("mapContainer").appendChild(arrow);
-  makeDraggableGroup(arrow);
-  selectedArrows.push(arrow); // ✅ สำหรับการเลือก
-  arrows.push(arrow);         // ✅ สำหรับการล้าง
-}
-
-function rotateSelectedArrow(deg) {
-  selectedArrows.forEach(arrow => {
-    arrow.style.transform = `rotate(${deg}deg)`;
-  });
-}
-
-function makeDraggableGroup(el) {
-  el.onmousedown = function(e) {
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const origLeft = el.offsetLeft;
-    const origTop = el.offsetTop;
-
-    document.onmousemove = function(e) {
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      el.style.left = origLeft + dx + "px";
-      el.style.top = origTop + dy + "px";
-    };
-
-    document.onmouseup = function() {
-      document.onmousemove = null;
-      document.onmouseup = null;
-    };
-  };
-}
-let selectedTextBoxes = [];
-function addTextBox() {
-  const box = document.createElement("div");
-  box.className = "draggable";
-  box.contentEditable = true;
-  box.innerText = "ข้อความ";
-  box.style.left = "150px";
-  box.style.top = "150px";
-  box.style.color = "white";
-  box.style.fontWeight = "bold";
-  box.style.fontSize = "18px";
-  box.style.border = "none";
-  box.style.textShadow = "0 0 4px black";
-  box.style.background = "rgba(0,0,0,0.5)";
-  box.style.borderRadius = "6px";
-  box.style.padding = "6px";
-
-  // ✅ จัดข้อความหลายบรรทัดให้อยู่กึ่งกลาง
-  box.style.display = "flex";
-  box.style.flexDirection = "column";
-  box.style.justifyContent = "center";
-  box.style.alignItems = "center";
-  box.style.textAlign = "center";
-  box.style.whiteSpace = "pre-wrap";
-  box.style.wordBreak = "break-word";
-
-  document.getElementById("mapContainer").appendChild(box);
-  selectedTextBoxes = [box];
-  makeDraggableGroupText(box);
-  textBoxes.push(box);
-}
-function makeDraggableGroupText(el) {
-  el.onmousedown = function(e) {
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const origLeft = el.offsetLeft;
-    const origTop = el.offsetTop;
-
-    document.onmousemove = function(e) {
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      el.style.left = origLeft + dx + "px";
-      el.style.top = origTop + dy + "px";
-    };
-
-    document.onmouseup = function() {
-      document.onmousemove = null;
-      document.onmouseup = null;
-    };
-  };
-}
-      document.addEventListener("keydown", function(event) {
-  if (event.key === "Escape") {
-    const controls = document.getElementById("controls");
-    const mapContainer = document.getElementById("map");
-    const toggleBtn = document.getElementById("toggleMapBtn");
-
-    controls.style.display = "block";
-    mapContainer.style.height = "calc(100vh - 120px)";
-    toggleBtn.textContent = "ยุบเมนู / ขยายแผนที่";
-  }
-});
-    </script>
-
-    <script async
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAxeg9EY61Gc1aZfb25zhsxPICPafjKPWwc&callback=initMap">
-    </script>
-  </
-
-
-
-
-
+      const arrow = document.createElement('div');
+      arrow.className = 'draggable arrow-overlay'; arrow.textContent = '⟵';
+      arrow.style.left = '300px'; arrow.style.top = '160px';
+      arrow.style.transform = `rotate(${document.getElementById('arrowRotation').value}deg)`;
+      arrow.addEventListener('click', event => { event.stopPropagation(); selectedArrow = arrow; });
+      document.getElementById('mapwrap').appendChild(arrow);
+      makeDraggable(arrow); arrows.push(arrow); selectedArrow = arrow;
+    }
+    function rotateSelectedArrow(degrees) {
+      if (selectedArrow) selectedArrow.style.transform = `rotate(${degrees}deg)`;
+    }
+    function addTextBox() {
+      const box = document.createElement('div');
+      box.className = 'draggable text-overlay'; box.contentEditable = 'true'; box.textContent = 'ข้อความ';
+      box.style.left = '150px'; box.style.top = '130px';
+      box.addEventListener('click', event => event.stopPropagation());
+      document.getElementById('mapwrap').appendChild(box);
+      makeDraggable(box); textBoxes.push(box); box.focus();
+    }
+    function initializeControls() {
+      document.getElementById('showPolygonToggle').addEventListener('change', updateCommunityVisibility);
+      document.getElementById('showAllLayoutsToggle').addEventListener('change', updateCommunityVisibility);
+      document.getElementById('clearCommunities').addEventListener('click', () => {
+        $('#communitySelect').val(null).trigger('change');
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && document.body.classList.contains('map-full')) toggleMapView();
+      });
+    }
+    function initMap() {
+      map = new maplibregl.Map({
+        container: 'map', style: STYLES.streets, center: [101.185, 12.738], zoom: 12
+      });
+      map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+      map.on('click', event => handleMapClick(event.lngLat));
+      map.on('load', async () => {
+        addDrawingLayers();
+        try { await loadCommunities(); }
+        catch (error) { console.error(error); alert('ไม่สามารถโหลดข้อมูลขอบเขตชุมชนได้'); }
+      });
+    }
+    initializeControls();
+    initMap();
+  </script>
+</body>
+</html>
