@@ -327,7 +327,7 @@
     function toggleBase() {
       currentBase = currentBase === 'streets' ? 'satellite' : 'streets';
       document.getElementById('baseBtn').textContent = currentBase === 'streets' ? '🛰️ ดาวเทียม' : '🗺️ แผนที่ถนน';
-      map.once('style.load', restoreCustomLayers);
+      map.once('idle', restoreCustomLayers);
       map.setStyle(STYLES[currentBase]);
     }
     function toggleMapView() {
