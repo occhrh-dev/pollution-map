@@ -53,6 +53,7 @@
       gap: 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper);
     }
     .control-group label { font-size: 13px; white-space: nowrap; }
+    #interactionMode { min-width: 150px; }
     .control-group input[type="number"] { width: 98px; }
     .control-group input[type="color"] { width: 36px; height: 28px; padding: 1px; border: 0; }
     input[type="number"] { padding: 6px 7px; border: 1px solid #bac8d2; border-radius: 6px; background: #fff; }
@@ -146,6 +147,10 @@
   </header>
   <section id="controls" aria-label="เครื่องมือแผนที่">
     <div class="control-group">
+      <label for="interactionMode">โหมดแผนที่</label>
+      <button type="button" id="interactionMode" class="secondary" onclick="toggleInteractionMode()">ดูข้อมูล</button>
+    </div>
+    <div class="control-group">
       <label for="radiusInput">รัศมี (เมตร)</label>
       <input type="number" id="radiusInput" value="1000" min="100" step="100">
       <label for="colorInput">สี</label>
@@ -210,7 +215,7 @@
       </div>
       <div id="pointList"><h3>จุดที่วางบนแผนที่</h3><div id="pointListItems">ยังไม่มีจุด</div></div>
     </section>
-    <div id="hint">แตะบนแผนที่เพื่อวางจุดและสร้างวงรัศมี · เลือกชุมชนจากเมนูเพื่อแสดงขอบเขต</div>
+    <div id="hint">โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · กด “โหมดวางวงรัศมี” หากต้องการสร้างวงใหม่</div>
   </main>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -238,6 +243,7 @@
     let csvMarkers = [];
     let csvLatColumn = '';
     let csvLngColumn = '';
+    let interactionMode = 'view';
     const MAP_STORAGE_KEY = 'pollution-map-project-v1';
 
     function emptyFilter() { return ['==', ['get', 'name'], '__none__']; }
@@ -339,6 +345,7 @@
       addCommunityLayers();
     }
     function handleMapClick(lngLat) {
+      if (interactionMode !== 'draw') return;
       document.getElementById('latInput').value = lngLat.lat.toFixed(6);
       document.getElementById('lngInput').value = lngLat.lng.toFixed(6);
       drawCircle(lngLat.lng, lngLat.lat);
@@ -346,6 +353,7 @@
     function makeStarMarker(lng, lat) {
       const element = document.createElement('div');
       element.className = 'map-star'; element.textContent = '★';
+      element.addEventListener('click', event => event.stopPropagation());
       return new maplibregl.Marker({ element, anchor: 'center' }).setLngLat([lng, lat]).addTo(map);
     }
     function makeRadiusLabel(lng, lat, radiusMeters) {
@@ -503,7 +511,7 @@
     function clearCsvData() { clearCsvMarkers(); csvHeaders = []; csvRecords = []; csvLatColumn = ''; csvLngColumn = ''; const records = document.getElementById('csvRecords'); if (records) records.innerHTML = ''; const status = document.getElementById('csvStatus'); if (status) status.textContent = 'ยังไม่มีไฟล์ CSV'; setColumnOptions(); }
     function plotCsvRecords() {
       clearCsvMarkers(); let valid = 0; let invalid = 0;
-      csvRecords.forEach((record, index) => { const coordinates = getCsvCoordinates(record); if (!coordinates) { invalid++; return; } const element = document.createElement('div'); element.className = 'csv-marker'; const marker = new maplibregl.Marker({ element }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 13 }).setHTML(csvPopupHtml(record, index))).addTo(map); csvMarkers.push(marker); valid++; });
+      csvRecords.forEach((record, index) => { const coordinates = getCsvCoordinates(record); if (!coordinates) { invalid++; return; } const element = document.createElement('div'); element.className = 'csv-marker'; element.addEventListener('click', event => event.stopPropagation()); const marker = new maplibregl.Marker({ element }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 13 }).setHTML(csvPopupHtml(record, index))).addTo(map); csvMarkers.push(marker); valid++; });
       document.getElementById('csvStatus').textContent = `นำเข้า ${csvRecords.length} รายการ · ลงจุดสำเร็จ ${valid} จุด${invalid ? ` · พิกัดผิด/ไม่ครบ ${invalid} รายการ` : ''}`;
       renderCsvRecords();
     }
@@ -520,6 +528,14 @@
       panel.hidden = !panel.hidden;
       document.getElementById('dataBtn').textContent = panel.hidden ? 'จัดการข้อมูล' : 'ซ่อนจัดการข้อมูล';
       updatePointList();
+    }
+    function toggleInteractionMode() {
+      interactionMode = interactionMode === 'view' ? 'draw' : 'view';
+      const button = document.getElementById('interactionMode'); const hint = document.getElementById('hint');
+      const drawing = interactionMode === 'draw';
+      button.textContent = drawing ? 'โหมดวางวงรัศมี' : 'ดูข้อมูล';
+      button.classList.toggle('secondary', !drawing); button.classList.toggle('danger', drawing);
+      hint.textContent = drawing ? 'โหมดวางวงรัศมี: คลิกบนแผนที่เพื่อสร้างวง · กดปุ่มเดิมเพื่อกลับไปดูข้อมูล' : 'โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · กด “โหมดวางวงรัศมี” หากต้องการสร้างวงใหม่';
     }
     function updatePointList() {
       const list = document.getElementById('pointListItems');
