@@ -42,7 +42,6 @@
     button:hover { filter: brightness(1.08); }
     button:active { transform: translateY(1px); }
     button.secondary { color: var(--navy); background: #fff; }
-    button.outline { color: var(--navy); background: #fff; border: 1px solid #b9cbd5; }
     button.danger { background: var(--danger); }
     #controls {
       padding: 9px 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -62,23 +61,6 @@
     .select2-container--default .select2-selection--multiple { min-height: 34px; border-color: #bac8d2; }
     #mapwrap { position: relative; flex: 1; min-height: 0; }
     #map { position: absolute; inset: 0; }
-    #dataPanel {
-      position: absolute; top: 12px; right: 12px; width: 310px; max-height: calc(100% - 24px);
-      overflow: auto; padding: 14px; border: 1px solid var(--line); border-radius: 12px;
-      background: rgba(255,255,255,.97); box-shadow: 0 3px 16px rgba(0,0,0,.2); z-index: 12;
-    }
-    #dataPanel[hidden] { display: none; }
-    #dataPanel h2 { margin: 0 0 10px; font-size: 16px; color: var(--navy); }
-    .panel-label { display: block; margin: 9px 0 4px; font-size: 12px; font-weight: 600; }
-    .panel-input, .panel-select { width: 100%; padding: 7px 8px; border: 1px solid #bac8d2; border-radius: 6px; background: #fff; }
-    .panel-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
-    .panel-actions button { border-radius: 8px; padding: 7px 10px; font-size: 12px; }
-    #pointList { margin-top: 13px; border-top: 1px solid var(--line); padding-top: 8px; }
-    #pointList h3 { margin: 0 0 7px; font-size: 13px; }
-    .point-item { padding: 8px 0; border-bottom: 1px solid #edf1f4; font-size: 12px; line-height: 1.45; }
-    .point-item strong { display: block; color: var(--navy); }
-    .point-item button { margin-top: 5px; padding: 4px 8px; border-radius: 6px; font-size: 11px; }
-    .panel-note { margin-top: 9px; color: #657985; font-size: 11px; line-height: 1.4; }
     #hint {
       position: absolute; left: 12px; bottom: 26px; max-width: 250px; padding: 7px 10px;
       border-radius: 8px; color: #425766; background: rgba(255,255,255,.92);
@@ -114,7 +96,6 @@
       .control-group { width: 100%; flex-wrap: wrap; }
       #communityBlock { flex-basis: 100%; }
       #hint { max-width: 190px; }
-      #dataPanel { left: 8px; right: 8px; top: 8px; width: auto; max-height: 60%; }
     }
   </style>
 </head>
@@ -125,7 +106,6 @@
       <div class="subtitle">MapLibre · ข้อมูลขอบเขตชุมชนจังหวัดระยอง</div>
     </div>
     <div class="header-spacer"></div>
-    <button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
     <button id="baseBtn" type="button" onclick="toggleBase()">🛰️ ดาวเทียม</button>
     <button id="toggleMapBtn" type="button" class="secondary" onclick="toggleMapView()">ขยายแผนที่</button>
   </header>
@@ -165,24 +145,6 @@
   </section>
   <main id="mapwrap">
     <div id="map" aria-label="แผนที่"></div>
-    <section id="dataPanel" hidden aria-label="จัดการข้อมูลแผนที่">
-      <h2>จัดการข้อมูลแผนที่</h2>
-      <label class="panel-label" for="projectName">ชื่อเหตุการณ์/โครงการ</label>
-      <input class="panel-input" id="projectName" value="แผนที่ควบคุมมลพิษ" placeholder="เช่น จุดร้องเรียนกลิ่นรบกวน">
-      <label class="panel-label" for="projectStatus">สถานะ</label>
-      <select class="panel-select" id="projectStatus"><option>กำลังจัดทำ</option><option>รอตรวจสอบ</option><option>ดำเนินการแล้ว</option><option>ปิดงาน</option></select>
-      <label class="panel-label" for="projectOwner">ผู้รับผิดชอบ</label>
-      <input class="panel-input" id="projectOwner" placeholder="ชื่อหน่วยงานหรือผู้รับผิดชอบ">
-      <div class="panel-actions">
-        <button type="button" onclick="saveMapToBrowser()">บันทึกในเครื่อง</button>
-        <button type="button" class="outline" onclick="loadMapFromBrowser()">เปิดข้อมูลล่าสุด</button>
-        <button type="button" class="outline" onclick="exportMapFile()">ส่งออกไฟล์</button>
-        <button type="button" class="outline" onclick="document.getElementById('importFile').click()">นำเข้าไฟล์</button>
-        <input id="importFile" type="file" accept="application/json" hidden onchange="importMapFile(event)">
-      </div>
-      <div class="panel-note" id="saveNote">รุ่นนี้เก็บข้อมูลไว้ในเบราว์เซอร์เครื่องนี้ หรือส่งออกเป็นไฟล์เพื่อย้ายเครื่อง</div>
-      <div id="pointList"><h3>จุดที่วางบนแผนที่</h3><div id="pointListItems">ยังไม่มีจุด</div></div>
-    </section>
     <div id="hint">แตะบนแผนที่เพื่อวางจุดและสร้างวงรัศมี · เลือกชุมชนจากเมนูเพื่อแสดงขอบเขต</div>
   </main>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -206,7 +168,6 @@
     let arrows = [];
     let textBoxes = [];
     let selectedArrow = null;
-    const MAP_STORAGE_KEY = 'pollution-map-project-v1';
 
     function emptyFilter() { return ['==', ['get', 'name'], '__none__']; }
     function nameFilter(names) {
@@ -330,19 +291,15 @@
       const radius = Math.max(100, Number(document.getElementById('radiusInput').value) || 1000);
       const color = document.getElementById('colorInput').value;
       const fillOpacity = document.getElementById('fillToggle').checked ? 0.35 : 0;
-      addCircle(lng, lat, radius, color, fillOpacity);
-    }
-    function addCircle(lng, lat, radius, color, fillOpacity) {
       const feature = turf.circle([lng, lat], radius / 1000, {
         steps: 128, units: 'kilometers',
-        properties: { id: `circle-${Date.now()}-${circleFeatures.length}`, lng, lat, radius, color, fillOpacity }
+        properties: { id: `circle-${Date.now()}-${circleFeatures.length}`, color, fillOpacity }
       });
       circleFeatures.push(feature);
       const marker = makeStarMarker(lng, lat);
       const label = makeRadiusLabel(lng, lat, radius);
       drawItems.push({ feature, marker, label });
       updateCircleSource();
-      updatePointList();
     }
     function addPointFromInput() {
       const lat = Number(document.getElementById('latInput').value);
@@ -357,7 +314,6 @@
       const item = drawItems.pop();
       if (!item) return;
       item.marker.remove(); item.label.remove(); circleFeatures.pop(); updateCircleSource();
-      updatePointList();
     }
     function clearMap() {
       drawItems.forEach(item => { item.marker.remove(); item.label.remove(); });
@@ -366,7 +322,6 @@
       textBoxes.forEach(element => element.remove()); textBoxes = [];
       document.getElementById('latInput').value = '';
       document.getElementById('lngInput').value = '';
-      updatePointList();
     }
     function showAllCommunities() { $('#communitySelect').val(communityNames).trigger('change'); }
     function toggleBase() {
@@ -420,86 +375,6 @@
       box.addEventListener('click', event => event.stopPropagation());
       document.getElementById('mapwrap').appendChild(box);
       makeDraggable(box); textBoxes.push(box); box.focus();
-    }
-    function toggleDataPanel() {
-      const panel = document.getElementById('dataPanel');
-      panel.hidden = !panel.hidden;
-      document.getElementById('dataBtn').textContent = panel.hidden ? 'จัดการข้อมูล' : 'ซ่อนจัดการข้อมูล';
-      updatePointList();
-    }
-    function updatePointList() {
-      const list = document.getElementById('pointListItems');
-      if (!list) return;
-      if (!circleFeatures.length) { list.textContent = 'ยังไม่มีจุด'; return; }
-      list.innerHTML = circleFeatures.map((feature, index) => {
-        const p = feature.properties || {};
-        const radius = Number(p.radius) >= 1000 ? `${(Number(p.radius) / 1000).toFixed(1)} กม.` : `${p.radius || '-'} ม.`;
-        return `<div class="point-item"><strong>จุดที่ ${index + 1} · รัศมี ${radius}</strong>พิกัด ${Number(p.lat).toFixed(6)}, ${Number(p.lng).toFixed(6)}<br><button type="button" onclick="focusPoint(${index})">ไปยังจุดนี้</button></div>`;
-      }).join('');
-    }
-    function focusPoint(index) {
-      const p = circleFeatures[index] && circleFeatures[index].properties;
-      if (p) map.easeTo({ center: [Number(p.lng), Number(p.lat)], zoom: Math.max(map.getZoom(), 13), duration: 500 });
-    }
-    function getMapState() {
-      return {
-        version: 1,
-        savedAt: new Date().toISOString(),
-        project: {
-          name: document.getElementById('projectName').value,
-          status: document.getElementById('projectStatus').value,
-          owner: document.getElementById('projectOwner').value
-        },
-        communities: selectedCommunityNames(),
-        circles: circleFeatures.map(feature => feature.properties),
-        arrows: arrows.map(element => ({ left: element.style.left, top: element.style.top, rotation: element.style.transform || 'rotate(0deg)' })),
-        textBoxes: textBoxes.map(element => ({ left: element.style.left, top: element.style.top, text: element.textContent }))
-      };
-    }
-    function saveMapToBrowser() {
-      localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(getMapState()));
-      document.getElementById('saveNote').textContent = `บันทึกในเครื่องแล้ว · ${new Date().toLocaleString('th-TH')}`;
-    }
-    function exportMapFile() {
-      const blob = new Blob([JSON.stringify(getMapState(), null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob); const link = document.createElement('a');
-      link.href = url; link.download = `${(document.getElementById('projectName').value || 'pollution-map').replace(/[^ก-๙a-zA-Z0-9ก-๙_-]+/g, '-')}.json`;
-      link.click(); URL.revokeObjectURL(url);
-      document.getElementById('saveNote').textContent = 'ส่งออกไฟล์แผนที่แล้ว · สามารถนำเข้าในเครื่องอื่นได้';
-    }
-    function loadMapFromBrowser() {
-      const raw = localStorage.getItem(MAP_STORAGE_KEY);
-      if (!raw) { alert('ยังไม่มีข้อมูลที่บันทึกไว้ในเบราว์เซอร์นี้'); return; }
-      applyMapState(JSON.parse(raw));
-      document.getElementById('saveNote').textContent = 'เปิดข้อมูลล่าสุดจากเครื่องนี้แล้ว';
-    }
-    function importMapFile(event) {
-      const file = event.target.files[0]; if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => { try { applyMapState(JSON.parse(reader.result)); document.getElementById('saveNote').textContent = `นำเข้าไฟล์ ${file.name} แล้ว`; } catch (error) { alert('ไฟล์แผนที่ไม่ถูกต้อง'); } };
-      reader.readAsText(file); event.target.value = '';
-    }
-    function restoreArrow(state) {
-      const arrow = document.createElement('div'); arrow.className = 'draggable arrow-overlay'; arrow.textContent = '⟵';
-      arrow.style.left = state.left || '300px'; arrow.style.top = state.top || '160px'; arrow.style.transform = state.rotation || 'rotate(0deg)';
-      arrow.addEventListener('click', event => { event.stopPropagation(); selectedArrow = arrow; });
-      document.getElementById('mapwrap').appendChild(arrow); makeDraggable(arrow); arrows.push(arrow); selectedArrow = arrow;
-    }
-    function restoreTextBox(state) {
-      const box = document.createElement('div'); box.className = 'draggable text-overlay'; box.contentEditable = 'true'; box.textContent = state.text || 'ข้อความ';
-      box.style.left = state.left || '150px'; box.style.top = state.top || '130px'; box.addEventListener('click', event => event.stopPropagation());
-      document.getElementById('mapwrap').appendChild(box); makeDraggable(box); textBoxes.push(box);
-    }
-    function applyMapState(state) {
-      if (!state || !state.project) throw new Error('invalid map state');
-      clearMap();
-      document.getElementById('projectName').value = state.project.name || '';
-      document.getElementById('projectStatus').value = state.project.status || 'กำลังจัดทำ';
-      document.getElementById('projectOwner').value = state.project.owner || '';
-      (state.circles || []).forEach(p => addCircle(Number(p.lng), Number(p.lat), Number(p.radius) || 1000, p.color || '#ff0000', Number(p.fillOpacity) || 0));
-      if (state.communities) $('#communitySelect').val(state.communities).trigger('change');
-      (state.arrows || []).forEach(restoreArrow); (state.textBoxes || []).forEach(restoreTextBox);
-      updatePointList();
     }
     function initializeControls() {
       document.getElementById('showPolygonToggle').addEventListener('change', updateCommunityVisibility);
