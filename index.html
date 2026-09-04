@@ -99,6 +99,7 @@
     #csvEditPanel[hidden] { display: none; }
     #csvEditPanel h3 { margin: 0 0 7px; }
     .csv-edit-field { margin-top: 7px; }
+    .marker-preview-box { min-height: 54px; margin: 8px 0; display: flex; align-items: center; justify-content: center; gap: 12px; border: 1px dashed #b9cbd5; border-radius: 8px; background: #fff; color: #526d7d; font-size: 12px; }
     .csv-popup { min-width: 210px; max-width: 300px; font-family: "Sarabun", sans-serif; }
     .csv-popup h3 { margin: 0 0 7px; color: var(--navy); font-size: 15px; }
     .csv-popup-row { border-top: 1px solid #e3e9ed; padding: 4px 0; font-size: 12px; line-height: 1.35; }
@@ -229,9 +230,10 @@
         <section id="csvEditPanel" hidden aria-label="แก้ไขรายละเอียดจุด CSV">
           <h3>แก้ไขจุด CSV</h3>
           <label class="panel-label" for="csvMarkerShape">รูปร่างหมุด</label>
-          <select class="panel-select" id="csvMarkerShape"><option value="pin">หมุด</option><option value="circle">วงกลม</option><option value="square">สี่เหลี่ยม</option><option value="diamond">ข้าวหลามตัด</option><option value="star">ดาว</option></select>
+          <select class="panel-select" id="csvMarkerShape"><option value="pin">📍 หมุด</option><option value="circle">● วงกลม</option><option value="square">■ สี่เหลี่ยม</option><option value="diamond">◆ ข้าวหลามตัด</option><option value="star">★ ดาว</option></select>
           <label class="panel-label" for="csvMarkerColor">สีหมุด</label>
           <input class="panel-input" id="csvMarkerColor" type="color" value="#e8503b">
+          <div class="marker-preview-box"><span>ตัวอย่าง</span><div id="csvMarkerPreview" class="csv-marker pin" aria-label="ตัวอย่างหมุด"></div></div>
           <div id="csvEditFields"></div>
           <div class="panel-actions"><button type="button" id="csvEditSaveBtn">บันทึกการแก้ไข</button><button type="button" class="outline" id="csvEditCancelBtn">ยกเลิก</button></div>
         </section>
@@ -574,10 +576,16 @@
       const record = csvRecords[index]; if (!record) return; editingCsvIndex = index;
       document.getElementById('csvMarkerShape').value = record.__markerShape || 'pin';
       document.getElementById('csvMarkerColor').value = /^#[0-9a-f]{6}$/i.test(record.__markerColor || '') ? record.__markerColor : '#e8503b';
+      updateMarkerPreview();
       document.getElementById('csvEditFields').innerHTML = csvHeaders.map(header => `<div class="csv-edit-field"><label class="panel-label">${escapeHtml(header)}</label><input class="panel-input csv-edit-input" data-field="${encodeURIComponent(header)}" value="${escapeHtml(record[header] || '')}"></div>`).join('');
       document.getElementById('csvEditPanel').hidden = false; document.getElementById('csvEditPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     function closeCsvEditor() { editingCsvIndex = -1; document.getElementById('csvEditPanel').hidden = true; document.getElementById('csvEditFields').innerHTML = ''; }
+    function updateMarkerPreview() {
+      const shape = document.getElementById('csvMarkerShape').value; const color = document.getElementById('csvMarkerColor').value; const preview = document.getElementById('csvMarkerPreview');
+      preview.className = `csv-marker ${shape}`; preview.textContent = shape === 'star' ? '★' : '';
+      preview.style.color = shape === 'star' ? color : ''; preview.style.backgroundColor = shape === 'star' ? 'transparent' : color;
+    }
     function saveCsvRecordEdit() {
       const record = csvRecords[editingCsvIndex]; if (!record) return;
       document.querySelectorAll('.csv-edit-input').forEach(input => { record[decodeURIComponent(input.dataset.field)] = input.value.trim(); });
@@ -691,6 +699,8 @@
       document.getElementById('csvHistoryLoadBtn').addEventListener('click', loadCsvHistory);
       document.getElementById('csvEditSaveBtn').addEventListener('click', saveCsvRecordEdit);
       document.getElementById('csvEditCancelBtn').addEventListener('click', closeCsvEditor);
+      document.getElementById('csvMarkerShape').addEventListener('change', updateMarkerPreview);
+      document.getElementById('csvMarkerColor').addEventListener('input', updateMarkerPreview);
       document.getElementById('csvSearch').addEventListener('input', renderCsvRecords);
       refreshCsvHistory();
       document.addEventListener('keydown', event => {
