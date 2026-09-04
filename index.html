@@ -97,9 +97,9 @@
     .csv-marker.square { border-radius: 3px; transform: none; }
     .csv-marker.diamond { border-radius: 3px; transform: rotate(45deg); }
     .csv-marker.star { width: 30px; height: 30px; border: 0; background: transparent !important; box-shadow: none; transform: none; font-size: 28px; line-height: 30px; text-align: center; filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
-    #csvEditPanel { margin-top: 10px; padding: 11px; border: 1px solid #b9cbd5; border-radius: 9px; background: #f7fafc; }
-    #csvEditPanel[hidden] { display: none; }
-    #csvEditPanel h3 { margin: 0 0 7px; }
+    #csvEditPanel, #csvRadiusPanel { margin-top: 10px; padding: 11px; border: 1px solid #b9cbd5; border-radius: 9px; background: #f7fafc; }
+    #csvEditPanel[hidden], #csvRadiusPanel[hidden] { display: none; }
+    #csvEditPanel h3, #csvRadiusPanel h3 { margin: 0 0 7px; }
     .csv-edit-field { margin-top: 7px; }
     .marker-preview-box { min-height: 54px; margin: 8px 0; display: flex; align-items: center; justify-content: center; gap: 12px; border: 1px dashed #b9cbd5; border-radius: 8px; background: #fff; color: #526d7d; font-size: 12px; }
     .csv-popup { min-width: 210px; max-width: 300px; font-family: "Sarabun", sans-serif; }
@@ -242,6 +242,16 @@
           <div id="csvEditFields"></div>
           <div class="panel-actions"><button type="button" id="csvEditSaveBtn">บันทึกการแก้ไข</button><button type="button" class="outline" id="csvEditCancelBtn">ยกเลิก</button></div>
         </section>
+        <section id="csvRadiusPanel" hidden aria-label="สร้างวงรัศมีจากจุด CSV">
+          <h3>สร้างวงรัศมีจากจุด CSV</h3>
+          <div class="panel-note" id="csvRadiusPointName"></div>
+          <label class="panel-label" for="csvRadiusMeters">รัศมี (เมตร)</label>
+          <input class="panel-input" id="csvRadiusMeters" type="number" value="1000" min="1" step="100">
+          <label class="panel-label" for="csvRadiusColor">สีวงรัศมี</label>
+          <input class="panel-input" id="csvRadiusColor" type="color" value="#ff0000">
+          <label class="panel-label"><input type="checkbox" id="csvRadiusFill" checked> เติมสีภายในวง</label>
+          <div class="panel-actions"><button type="button" id="csvRadiusCreateBtn">สร้างวงรัศมี</button><button type="button" class="outline" id="csvRadiusCancelBtn">ยกเลิก</button></div>
+        </section>
       </div>
       <div id="pointList"><h3>จุดที่วางบนแผนที่</h3><div id="pointListItems">ยังไม่มีจุด</div></div>
     </section>
@@ -275,6 +285,7 @@
     let csvLngColumn = '';
     let currentCsvName = '';
     let editingCsvIndex = -1;
+    let radiusCsvIndex = -1;
     let csvListExpanded = false;
     let interactionMode = 'view';
     const MAP_STORAGE_KEY = 'pollution-map-project-v1';
@@ -406,13 +417,13 @@
       const fillOpacity = document.getElementById('fillToggle').checked ? 0.35 : 0;
       addCircle(lng, lat, radius, color, fillOpacity);
     }
-    function addCircle(lng, lat, radius, color, fillOpacity) {
+    function addCircle(lng, lat, radius, color, fillOpacity, showCenter = true) {
       const feature = turf.circle([lng, lat], radius / 1000, {
         steps: 128, units: 'kilometers',
-        properties: { id: `circle-${Date.now()}-${circleFeatures.length}`, lng, lat, radius, color, fillOpacity }
+        properties: { id: `circle-${Date.now()}-${circleFeatures.length}`, lng, lat, radius, color, fillOpacity, showCenter }
       });
       circleFeatures.push(feature);
-      const marker = makeStarMarker(lng, lat);
+      const marker = showCenter ? makeStarMarker(lng, lat) : { remove() {} };
       const label = makeRadiusLabel(lng, lat, radius);
       drawItems.push({ feature, marker, label });
       updateCircleSource();
@@ -537,7 +548,7 @@
     function csvPopupHtml(record, index) {
       const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`;
       const rows = csvHeaders.filter(header => record[header] !== '').map(header => `<div class="csv-popup-row"><b>${escapeHtml(header)}:</b> ${escapeHtml(record[header])}</div>`).join('');
-      return `<div class="csv-popup"><h3>${escapeHtml(title)}</h3>${rows}</div>`;
+      return `<div class="csv-popup"><h3>${escapeHtml(title)}</h3>${rows}<button type="button" onclick="openCsvRadiusCreator(${index})">สร้างรัศมีจากจุดนี้</button></div>`;
     }
     function getCsvCoordinates(record) {
       const lat = Number(String(record[csvLatColumn] || '').replace(',', '.')); const lng = Number(String(record[csvLngColumn] || '').replace(',', '.'));
@@ -577,13 +588,32 @@
     function renderCsvRecords() {
       const query = document.getElementById('csvSearch').value.trim().toLowerCase(); const list = document.getElementById('csvRecords');
       const matches = csvRecords.map((record, index) => ({ record, index })).filter(item => !query || Object.values(item.record).some(value => String(value).toLowerCase().includes(query))).slice(0, 100);
-      list.innerHTML = matches.map(({ record, index }) => { const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`; return `<div class="csv-record"><strong>${escapeHtml(title)}</strong>${escapeHtml(record[csvLatColumn] || '-')}, ${escapeHtml(record[csvLngColumn] || '-')}<div class="csv-record-actions"><button type="button" onclick="focusCsvRecord(${index})">ดูบนแผนที่</button><button type="button" class="outline" onclick="openCsvEditor(${index})">แก้ไข</button></div></div>`; }).join('') || '<div class="panel-note">ไม่พบข้อมูล</div>';
+      list.innerHTML = matches.map(({ record, index }) => { const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`; return `<div class="csv-record"><strong>${escapeHtml(title)}</strong>${escapeHtml(record[csvLatColumn] || '-')}, ${escapeHtml(record[csvLngColumn] || '-')}<div class="csv-record-actions"><button type="button" onclick="focusCsvRecord(${index})">ดูบนแผนที่</button><button type="button" class="outline" onclick="openCsvEditor(${index})">แก้ไข</button><button type="button" class="outline" onclick="openCsvRadiusCreator(${index})">สร้างรัศมี</button></div></div>`; }).join('') || '<div class="panel-note">ไม่พบข้อมูล</div>';
     }
     function updateCsvListToggle() { const area = document.getElementById('csvListArea'); const button = document.getElementById('csvListToggleBtn'); if (!area || !button) return; area.hidden = !csvListExpanded; button.textContent = csvListExpanded ? 'ซ่อนรายการข้อมูล' : `แสดงรายการข้อมูล (${csvRecords.length})`; }
     function toggleCsvList() { csvListExpanded = !csvListExpanded; updateCsvListToggle(); if (csvListExpanded) renderCsvRecords(); }
     function focusCsvRecord(index) { const coordinates = getCsvCoordinates(csvRecords[index]); if (!coordinates) { alert('รายการนี้ไม่มีพิกัดที่ถูกต้อง'); return; } map.easeTo({ center: coordinates, zoom: Math.max(map.getZoom(), 14), duration: 500 }); const marker = csvMarkers.find(item => { const position = item.getLngLat(); return Math.abs(position.lng - coordinates[0]) < 0.000001 && Math.abs(position.lat - coordinates[1]) < 0.000001; }); if (marker) marker.togglePopup(); }
+    function openCsvRadiusCreator(index) {
+      const record = csvRecords[index]; const coordinates = record && getCsvCoordinates(record); if (!coordinates) { alert('จุดนี้ไม่มีพิกัดที่ถูกต้อง'); return; }
+      radiusCsvIndex = index; closeCsvEditor(); csvListExpanded = false; updateCsvListToggle();
+      const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`;
+      document.getElementById('csvRadiusPointName').textContent = `${title} · ${coordinates[1]}, ${coordinates[0]}`;
+      document.getElementById('csvRadiusMeters').value = Math.max(1, Number(document.getElementById('radiusInput').value) || 1000);
+      document.getElementById('csvRadiusColor').value = document.getElementById('colorInput').value || '#ff0000';
+      document.getElementById('csvRadiusFill').checked = document.getElementById('fillToggle').checked;
+      const panel = document.getElementById('dataPanel'); panel.hidden = false; document.getElementById('dataBtn').textContent = 'ซ่อนจัดการข้อมูล';
+      document.getElementById('csvRadiusPanel').hidden = false; document.getElementById('csvRadiusPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    function closeCsvRadiusCreator() { radiusCsvIndex = -1; document.getElementById('csvRadiusPanel').hidden = true; }
+    function createRadiusFromCsv() {
+      const record = csvRecords[radiusCsvIndex]; const coordinates = record && getCsvCoordinates(record); const radius = Math.max(1, Number(document.getElementById('csvRadiusMeters').value) || 1000);
+      if (!coordinates) { alert('จุดนี้ไม่มีพิกัดที่ถูกต้อง'); return; }
+      const color = document.getElementById('csvRadiusColor').value; const fillOpacity = document.getElementById('csvRadiusFill').checked ? 0.35 : 0;
+      addCircle(coordinates[0], coordinates[1], radius, color, fillOpacity, false); closeCsvRadiusCreator(); document.getElementById('csvStatus').textContent = `สร้างวงรัศมี ${radius.toLocaleString('th-TH')} เมตรจากจุด CSV แล้ว`;
+    }
     function openCsvEditor(index) {
       const record = csvRecords[index]; if (!record) return; editingCsvIndex = index;
+      closeCsvRadiusCreator();
       csvListExpanded = false; updateCsvListToggle();
       document.getElementById('csvMarkerShape').value = record.__markerShape || 'pin';
       document.getElementById('csvMarkerColor').value = /^#[0-9a-f]{6}$/i.test(record.__markerColor || '') ? record.__markerColor : '#e8503b';
@@ -689,7 +719,7 @@
       document.getElementById('projectName').value = state.project.name || '';
       document.getElementById('projectStatus').value = state.project.status || 'กำลังจัดทำ';
       document.getElementById('projectOwner').value = state.project.owner || '';
-      (state.circles || []).forEach(p => addCircle(Number(p.lng), Number(p.lat), Number(p.radius) || 1000, p.color || '#ff0000', Number(p.fillOpacity) || 0));
+      (state.circles || []).forEach(p => addCircle(Number(p.lng), Number(p.lat), Number(p.radius) || 1000, p.color || '#ff0000', Number(p.fillOpacity) || 0, p.showCenter !== false));
       if (state.communities) $('#communitySelect').val(state.communities).trigger('change');
       if (state.csv && state.csv.records) { currentCsvName = state.csv.name || ''; csvHeaders = state.csv.headers || []; csvRecords = state.csv.records || []; csvLatColumn = state.csv.latColumn || ''; csvLngColumn = state.csv.lngColumn || ''; setColumnOptions(); document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn; plotCsvRecords(); }
       (state.arrows || []).forEach(restoreArrow); (state.textBoxes || []).forEach(restoreTextBox);
@@ -713,6 +743,8 @@
       document.getElementById('csvListToggleBtn').addEventListener('click', toggleCsvList);
       document.getElementById('csvMarkerShape').addEventListener('change', updateMarkerPreview);
       document.getElementById('csvMarkerColor').addEventListener('input', updateMarkerPreview);
+      document.getElementById('csvRadiusCreateBtn').addEventListener('click', createRadiusFromCsv);
+      document.getElementById('csvRadiusCancelBtn').addEventListener('click', closeCsvRadiusCreator);
       document.getElementById('csvSearch').addEventListener('input', renderCsvRecords);
       refreshCsvHistory();
       document.addEventListener('keydown', event => {
