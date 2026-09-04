@@ -89,7 +89,16 @@
     .csv-record { padding: 8px 0; border-bottom: 1px solid #edf1f4; font-size: 11px; line-height: 1.4; }
     .csv-record strong { display: block; color: var(--navy); font-size: 12px; }
     .csv-record button { margin-top: 4px; padding: 4px 8px; border-radius: 6px; font-size: 11px; }
+    .csv-record-actions { display: flex; gap: 5px; flex-wrap: wrap; }
     .csv-marker { width: 20px; height: 20px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; background: #e8503b; box-shadow: 0 2px 6px rgba(0,0,0,.35); transform: rotate(-45deg); }
+    .csv-marker.circle { border-radius: 50%; transform: none; }
+    .csv-marker.square { border-radius: 3px; transform: none; }
+    .csv-marker.diamond { border-radius: 3px; transform: rotate(45deg); }
+    .csv-marker.star { width: 30px; height: 30px; border: 0; background: transparent !important; box-shadow: none; transform: none; font-size: 28px; line-height: 30px; text-align: center; filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
+    #csvEditPanel { margin-top: 10px; padding: 11px; border: 1px solid #b9cbd5; border-radius: 9px; background: #f7fafc; }
+    #csvEditPanel[hidden] { display: none; }
+    #csvEditPanel h3 { margin: 0 0 7px; }
+    .csv-edit-field { margin-top: 7px; }
     .csv-popup { min-width: 210px; max-width: 300px; font-family: "Sarabun", sans-serif; }
     .csv-popup h3 { margin: 0 0 7px; color: var(--navy); font-size: 15px; }
     .csv-popup-row { border-top: 1px solid #e3e9ed; padding: 4px 0; font-size: 12px; line-height: 1.35; }
@@ -217,6 +226,15 @@
         <div id="csvStatus">ยังไม่มีไฟล์ CSV</div>
         <input class="panel-input" id="csvSearch" placeholder="ค้นหาในข้อมูล CSV..." disabled>
         <div id="csvRecords"></div>
+        <section id="csvEditPanel" hidden aria-label="แก้ไขรายละเอียดจุด CSV">
+          <h3>แก้ไขจุด CSV</h3>
+          <label class="panel-label" for="csvMarkerShape">รูปร่างหมุด</label>
+          <select class="panel-select" id="csvMarkerShape"><option value="pin">หมุด</option><option value="circle">วงกลม</option><option value="square">สี่เหลี่ยม</option><option value="diamond">ข้าวหลามตัด</option><option value="star">ดาว</option></select>
+          <label class="panel-label" for="csvMarkerColor">สีหมุด</label>
+          <input class="panel-input" id="csvMarkerColor" type="color" value="#e8503b">
+          <div id="csvEditFields"></div>
+          <div class="panel-actions"><button type="button" id="csvEditSaveBtn">บันทึกการแก้ไข</button><button type="button" class="outline" id="csvEditCancelBtn">ยกเลิก</button></div>
+        </section>
       </div>
       <div id="pointList"><h3>จุดที่วางบนแผนที่</h3><div id="pointListItems">ยังไม่มีจุด</div></div>
     </section>
@@ -249,6 +267,7 @@
     let csvLatColumn = '';
     let csvLngColumn = '';
     let currentCsvName = '';
+    let editingCsvIndex = -1;
     let interactionMode = 'view';
     const MAP_STORAGE_KEY = 'pollution-map-project-v1';
     const CSV_HISTORY_KEY = 'pollution-map-csv-history-v1';
@@ -541,16 +560,30 @@
     }
     function plotCsvRecords() {
       clearCsvMarkers(); let valid = 0; let invalid = 0;
-      csvRecords.forEach((record, index) => { const coordinates = getCsvCoordinates(record); if (!coordinates) { invalid++; return; } const element = document.createElement('div'); element.className = 'csv-marker'; element.addEventListener('click', event => event.stopPropagation()); const marker = new maplibregl.Marker({ element }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 13 }).setHTML(csvPopupHtml(record, index))).addTo(map); csvMarkers.push(marker); valid++; });
+      csvRecords.forEach((record, index) => { const coordinates = getCsvCoordinates(record); if (!coordinates) { invalid++; return; } const shape = ['pin','circle','square','diamond','star'].includes(record.__markerShape) ? record.__markerShape : 'pin'; const color = /^#[0-9a-f]{6}$/i.test(record.__markerColor || '') ? record.__markerColor : '#e8503b'; const element = document.createElement('div'); element.className = `csv-marker ${shape}`; if (shape === 'star') { element.textContent = '★'; element.style.color = color; } else { element.style.backgroundColor = color; } element.addEventListener('click', event => event.stopPropagation()); const marker = new maplibregl.Marker({ element }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 13 }).setHTML(csvPopupHtml(record, index))).addTo(map); csvMarkers.push(marker); valid++; });
       document.getElementById('csvStatus').textContent = `นำเข้า ${csvRecords.length} รายการ · ลงจุดสำเร็จ ${valid} จุด${invalid ? ` · พิกัดผิด/ไม่ครบ ${invalid} รายการ` : ''}`;
       renderCsvRecords();
     }
     function renderCsvRecords() {
       const query = document.getElementById('csvSearch').value.trim().toLowerCase(); const list = document.getElementById('csvRecords');
       const matches = csvRecords.map((record, index) => ({ record, index })).filter(item => !query || Object.values(item.record).some(value => String(value).toLowerCase().includes(query))).slice(0, 100);
-      list.innerHTML = matches.map(({ record, index }) => { const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`; return `<div class="csv-record"><strong>${escapeHtml(title)}</strong>${escapeHtml(record[csvLatColumn] || '-')}, ${escapeHtml(record[csvLngColumn] || '-')}<br><button type="button" onclick="focusCsvRecord(${index})">ดูบนแผนที่</button></div>`; }).join('') || '<div class="panel-note">ไม่พบข้อมูล</div>';
+      list.innerHTML = matches.map(({ record, index }) => { const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`; return `<div class="csv-record"><strong>${escapeHtml(title)}</strong>${escapeHtml(record[csvLatColumn] || '-')}, ${escapeHtml(record[csvLngColumn] || '-')}<div class="csv-record-actions"><button type="button" onclick="focusCsvRecord(${index})">ดูบนแผนที่</button><button type="button" class="outline" onclick="openCsvEditor(${index})">แก้ไข</button></div></div>`; }).join('') || '<div class="panel-note">ไม่พบข้อมูล</div>';
     }
     function focusCsvRecord(index) { const coordinates = getCsvCoordinates(csvRecords[index]); if (!coordinates) { alert('รายการนี้ไม่มีพิกัดที่ถูกต้อง'); return; } map.easeTo({ center: coordinates, zoom: Math.max(map.getZoom(), 14), duration: 500 }); const marker = csvMarkers.find(item => { const position = item.getLngLat(); return Math.abs(position.lng - coordinates[0]) < 0.000001 && Math.abs(position.lat - coordinates[1]) < 0.000001; }); if (marker) marker.togglePopup(); }
+    function openCsvEditor(index) {
+      const record = csvRecords[index]; if (!record) return; editingCsvIndex = index;
+      document.getElementById('csvMarkerShape').value = record.__markerShape || 'pin';
+      document.getElementById('csvMarkerColor').value = /^#[0-9a-f]{6}$/i.test(record.__markerColor || '') ? record.__markerColor : '#e8503b';
+      document.getElementById('csvEditFields').innerHTML = csvHeaders.map(header => `<div class="csv-edit-field"><label class="panel-label">${escapeHtml(header)}</label><input class="panel-input csv-edit-input" data-field="${encodeURIComponent(header)}" value="${escapeHtml(record[header] || '')}"></div>`).join('');
+      document.getElementById('csvEditPanel').hidden = false; document.getElementById('csvEditPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    function closeCsvEditor() { editingCsvIndex = -1; document.getElementById('csvEditPanel').hidden = true; document.getElementById('csvEditFields').innerHTML = ''; }
+    function saveCsvRecordEdit() {
+      const record = csvRecords[editingCsvIndex]; if (!record) return;
+      document.querySelectorAll('.csv-edit-input').forEach(input => { record[decodeURIComponent(input.dataset.field)] = input.value.trim(); });
+      record.__markerShape = document.getElementById('csvMarkerShape').value; record.__markerColor = document.getElementById('csvMarkerColor').value;
+      saveCsvHistory(currentCsvName || 'ข้อมูล-CSV'); closeCsvEditor(); plotCsvRecords(); document.getElementById('csvStatus').textContent = 'บันทึกการแก้ไขจุดและรูปแบบหมุดแล้ว';
+    }
     function importCsvFile(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const parsed = parseCSV(reader.result.replace(/^\uFEFF/, '')); csvHeaders = parsed.headers; csvRecords = parsed.records; currentCsvName = file.name; setColumnOptions(); saveCsvHistory(file.name); document.getElementById('csvStatus').textContent = `อ่านไฟล์ ${file.name} แล้ว · พบ ${csvRecords.length} รายการ · กรุณาตรวจคอลัมน์แล้วกดลงจุด`; renderCsvRecords(); } catch (error) { alert('อ่านไฟล์ CSV ไม่สำเร็จ กรุณาตรวจรูปแบบไฟล์'); } }; reader.readAsText(file, 'UTF-8'); event.target.value = ''; }
     function exportCsvData() { if (!csvRecords.length) return; const csv = [csvHeaders, ...csvRecords.map(record => csvHeaders.map(header => `"${String(record[header] || '').replace(/"/g, '""')}"`))].map(row => row.join(',')).join('\r\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'pollution-map-data.csv'; link.click(); URL.revokeObjectURL(url); }
     function toggleDataPanel() {
@@ -656,6 +689,8 @@
       document.getElementById('csvExportBtn').addEventListener('click', exportCsvData);
       document.getElementById('csvClearBtn').addEventListener('click', hideCsvPoints);
       document.getElementById('csvHistoryLoadBtn').addEventListener('click', loadCsvHistory);
+      document.getElementById('csvEditSaveBtn').addEventListener('click', saveCsvRecordEdit);
+      document.getElementById('csvEditCancelBtn').addEventListener('click', closeCsvEditor);
       document.getElementById('csvSearch').addEventListener('input', renderCsvRecords);
       refreshCsvHistory();
       document.addEventListener('keydown', event => {
