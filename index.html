@@ -204,12 +204,16 @@
       <div class="panel-note" id="saveNote">รุ่นนี้เก็บข้อมูลไว้ในเบราว์เซอร์เครื่องนี้ หรือส่งออกเป็นไฟล์เพื่อย้ายเครื่อง</div>
       <div id="csvSection">
         <h3>นำเข้าข้อมูล CSV</h3>
+        <label class="panel-label" for="csvHistorySelect">ประวัติไฟล์ที่เคยนำเข้า</label>
+        <select class="panel-select" id="csvHistorySelect" disabled><option value="">ยังไม่มีประวัติ</option></select>
+        <div class="panel-actions"><button type="button" class="outline" id="csvHistoryLoadBtn" disabled>เปิดจากประวัติ</button></div>
+        <label class="panel-label" for="csvFile">หรือเลือกไฟล์ CSV ใหม่</label>
         <input class="csv-file" id="csvFile" type="file" accept=".csv,text/csv">
         <div class="csv-grid">
           <div><label class="panel-label" for="csvLatColumn">คอลัมน์ละติจูด</label><select class="panel-select" id="csvLatColumn" disabled></select></div>
           <div><label class="panel-label" for="csvLngColumn">คอลัมน์ลองจิจูด</label><select class="panel-select" id="csvLngColumn" disabled></select></div>
         </div>
-        <div class="panel-actions"><button type="button" id="csvPlotBtn" disabled>ลงจุดจาก CSV</button><button type="button" class="outline" id="csvExportBtn" disabled>ส่งออก CSV</button><button type="button" class="danger" id="csvClearBtn" disabled>ล้างจุดจาก CSV</button></div>
+        <div class="panel-actions"><button type="button" id="csvPlotBtn" disabled>ลงจุดจาก CSV</button><button type="button" class="outline" id="csvExportBtn" disabled>ส่งออก CSV</button><button type="button" class="outline" id="csvClearBtn" disabled>ซ่อนจุด CSV</button></div>
         <div id="csvStatus">ยังไม่มีไฟล์ CSV</div>
         <input class="panel-input" id="csvSearch" placeholder="ค้นหาในข้อมูล CSV..." disabled>
         <div id="csvRecords"></div>
@@ -244,8 +248,10 @@
     let csvMarkers = [];
     let csvLatColumn = '';
     let csvLngColumn = '';
+    let currentCsvName = '';
     let interactionMode = 'view';
     const MAP_STORAGE_KEY = 'pollution-map-project-v1';
+    const CSV_HISTORY_KEY = 'pollution-map-csv-history-v1';
 
     function emptyFilter() { return ['==', ['get', 'name'], '__none__']; }
     function nameFilter(names) {
@@ -509,8 +515,30 @@
       return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? [lng, lat] : null;
     }
     function clearCsvMarkers() { csvMarkers.forEach(marker => marker.remove()); csvMarkers = []; }
-    function clearCsvData() { clearCsvMarkers(); csvHeaders = []; csvRecords = []; csvLatColumn = ''; csvLngColumn = ''; const records = document.getElementById('csvRecords'); if (records) records.innerHTML = ''; const status = document.getElementById('csvStatus'); if (status) status.textContent = 'ยังไม่มีไฟล์ CSV'; setColumnOptions(); }
+    function hideCsvPoints() { clearCsvMarkers(); document.getElementById('csvStatus').textContent = `ซ่อนจุด CSV แล้ว · ข้อมูล ${csvRecords.length} รายการยังอยู่ กด “ลงจุดจาก CSV” เพื่อแสดงใหม่`; }
+    function clearCsvData() { clearCsvMarkers(); csvHeaders = []; csvRecords = []; csvLatColumn = ''; csvLngColumn = ''; currentCsvName = ''; const records = document.getElementById('csvRecords'); if (records) records.innerHTML = ''; const status = document.getElementById('csvStatus'); if (status) status.textContent = 'ยังไม่มีไฟล์ CSV'; setColumnOptions(); }
     function clearAllMapData() { if (!confirm('ต้องการล้างสิ่งที่วาดและข้อมูล CSV ทั้งหมดหรือไม่?')) return; clearMap(); clearCsvData(); document.getElementById('saveNote').textContent = 'ล้างข้อมูลทั้งหมดแล้ว'; }
+    function readCsvHistory() { try { return JSON.parse(localStorage.getItem(CSV_HISTORY_KEY) || '[]'); } catch (error) { return []; } }
+    function refreshCsvHistory() {
+      const history = readCsvHistory(); const select = document.getElementById('csvHistorySelect'); const loadButton = document.getElementById('csvHistoryLoadBtn');
+      select.innerHTML = history.length ? '<option value="">เลือกไฟล์เดิม...</option>' + history.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} · ${item.records.length} รายการ</option>`).join('') : '<option value="">ยังไม่มีประวัติ</option>';
+      select.disabled = !history.length; loadButton.disabled = !history.length;
+    }
+    function saveCsvHistory(fileName) {
+      const history = readCsvHistory().filter(item => item.name !== fileName);
+      const entry = { id: String(Date.now()), name: fileName, savedAt: new Date().toISOString(), headers: csvHeaders, records: csvRecords, latColumn: csvLatColumn, lngColumn: csvLngColumn };
+      history.unshift(entry);
+      try { localStorage.setItem(CSV_HISTORY_KEY, JSON.stringify(history.slice(0, 5))); refreshCsvHistory(); document.getElementById('csvHistorySelect').value = entry.id; }
+      catch (error) { document.getElementById('csvStatus').textContent += ' · ไม่สามารถเก็บประวัติได้ เนื่องจากไฟล์มีขนาดใหญ่เกินไป'; }
+    }
+    function loadCsvHistory() {
+      const id = document.getElementById('csvHistorySelect').value; const entry = readCsvHistory().find(item => item.id === id);
+      if (!entry) { alert('กรุณาเลือกไฟล์จากประวัติ'); return; }
+      csvHeaders = entry.headers || []; csvRecords = entry.records || []; currentCsvName = entry.name || 'ข้อมูล CSV'; setColumnOptions();
+      csvLatColumn = entry.latColumn || csvLatColumn; csvLngColumn = entry.lngColumn || csvLngColumn;
+      document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn;
+      plotCsvRecords(); document.getElementById('csvStatus').textContent = `เปิด ${currentCsvName} จากประวัติแล้ว · ${csvRecords.length} รายการ`;
+    }
     function plotCsvRecords() {
       clearCsvMarkers(); let valid = 0; let invalid = 0;
       csvRecords.forEach((record, index) => { const coordinates = getCsvCoordinates(record); if (!coordinates) { invalid++; return; } const element = document.createElement('div'); element.className = 'csv-marker'; element.addEventListener('click', event => event.stopPropagation()); const marker = new maplibregl.Marker({ element }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 13 }).setHTML(csvPopupHtml(record, index))).addTo(map); csvMarkers.push(marker); valid++; });
@@ -523,7 +551,7 @@
       list.innerHTML = matches.map(({ record, index }) => { const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`; return `<div class="csv-record"><strong>${escapeHtml(title)}</strong>${escapeHtml(record[csvLatColumn] || '-')}, ${escapeHtml(record[csvLngColumn] || '-')}<br><button type="button" onclick="focusCsvRecord(${index})">ดูบนแผนที่</button></div>`; }).join('') || '<div class="panel-note">ไม่พบข้อมูล</div>';
     }
     function focusCsvRecord(index) { const coordinates = getCsvCoordinates(csvRecords[index]); if (!coordinates) { alert('รายการนี้ไม่มีพิกัดที่ถูกต้อง'); return; } map.easeTo({ center: coordinates, zoom: Math.max(map.getZoom(), 14), duration: 500 }); const marker = csvMarkers.find(item => { const position = item.getLngLat(); return Math.abs(position.lng - coordinates[0]) < 0.000001 && Math.abs(position.lat - coordinates[1]) < 0.000001; }); if (marker) marker.togglePopup(); }
-    function importCsvFile(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const parsed = parseCSV(reader.result.replace(/^\uFEFF/, '')); csvHeaders = parsed.headers; csvRecords = parsed.records; setColumnOptions(); document.getElementById('csvStatus').textContent = `อ่านไฟล์ ${file.name} แล้ว · พบ ${csvRecords.length} รายการ · กรุณาตรวจคอลัมน์แล้วกดลงจุด`; renderCsvRecords(); } catch (error) { alert('อ่านไฟล์ CSV ไม่สำเร็จ กรุณาตรวจรูปแบบไฟล์'); } }; reader.readAsText(file, 'UTF-8'); event.target.value = ''; }
+    function importCsvFile(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const parsed = parseCSV(reader.result.replace(/^\uFEFF/, '')); csvHeaders = parsed.headers; csvRecords = parsed.records; currentCsvName = file.name; setColumnOptions(); saveCsvHistory(file.name); document.getElementById('csvStatus').textContent = `อ่านไฟล์ ${file.name} แล้ว · พบ ${csvRecords.length} รายการ · กรุณาตรวจคอลัมน์แล้วกดลงจุด`; renderCsvRecords(); } catch (error) { alert('อ่านไฟล์ CSV ไม่สำเร็จ กรุณาตรวจรูปแบบไฟล์'); } }; reader.readAsText(file, 'UTF-8'); event.target.value = ''; }
     function exportCsvData() { if (!csvRecords.length) return; const csv = [csvHeaders, ...csvRecords.map(record => csvHeaders.map(header => `"${String(record[header] || '').replace(/"/g, '""')}"`))].map(row => row.join(',')).join('\r\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'pollution-map-data.csv'; link.click(); URL.revokeObjectURL(url); }
     function toggleDataPanel() {
       const panel = document.getElementById('dataPanel');
@@ -564,7 +592,7 @@
         },
         communities: selectedCommunityNames(),
         circles: circleFeatures.map(feature => feature.properties),
-        csv: { headers: csvHeaders, records: csvRecords, latColumn: csvLatColumn, lngColumn: csvLngColumn },
+        csv: { name: currentCsvName, headers: csvHeaders, records: csvRecords, latColumn: csvLatColumn, lngColumn: csvLngColumn },
         arrows: arrows.map(element => ({ left: element.style.left, top: element.style.top, rotation: element.style.transform || 'rotate(0deg)' })),
         textBoxes: textBoxes.map(element => ({ left: element.style.left, top: element.style.top, text: element.textContent }))
       };
@@ -611,7 +639,7 @@
       document.getElementById('projectOwner').value = state.project.owner || '';
       (state.circles || []).forEach(p => addCircle(Number(p.lng), Number(p.lat), Number(p.radius) || 1000, p.color || '#ff0000', Number(p.fillOpacity) || 0));
       if (state.communities) $('#communitySelect').val(state.communities).trigger('change');
-      if (state.csv && state.csv.records) { csvHeaders = state.csv.headers || []; csvRecords = state.csv.records || []; csvLatColumn = state.csv.latColumn || ''; csvLngColumn = state.csv.lngColumn || ''; setColumnOptions(); document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn; plotCsvRecords(); }
+      if (state.csv && state.csv.records) { currentCsvName = state.csv.name || ''; csvHeaders = state.csv.headers || []; csvRecords = state.csv.records || []; csvLatColumn = state.csv.latColumn || ''; csvLngColumn = state.csv.lngColumn || ''; setColumnOptions(); document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn; plotCsvRecords(); }
       (state.arrows || []).forEach(restoreArrow); (state.textBoxes || []).forEach(restoreTextBox);
       updatePointList();
     }
@@ -626,8 +654,10 @@
       document.getElementById('csvLngColumn').addEventListener('change', event => { csvLngColumn = event.target.value; renderCsvRecords(); });
       document.getElementById('csvPlotBtn').addEventListener('click', plotCsvRecords);
       document.getElementById('csvExportBtn').addEventListener('click', exportCsvData);
-      document.getElementById('csvClearBtn').addEventListener('click', () => { if (confirm('ต้องการล้างข้อมูล CSV ทั้งหมดหรือไม่?')) clearCsvData(); });
+      document.getElementById('csvClearBtn').addEventListener('click', hideCsvPoints);
+      document.getElementById('csvHistoryLoadBtn').addEventListener('click', loadCsvHistory);
       document.getElementById('csvSearch').addEventListener('input', renderCsvRecords);
+      refreshCsvHistory();
       document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && document.body.classList.contains('map-full')) toggleMapView();
       });
