@@ -78,6 +78,21 @@
     .point-item { padding: 8px 0; border-bottom: 1px solid #edf1f4; font-size: 12px; line-height: 1.45; }
     .point-item strong { display: block; color: var(--navy); }
     .point-item button { margin-top: 5px; padding: 4px 8px; border-radius: 6px; font-size: 11px; }
+    #csvSection { margin-top: 13px; border-top: 1px solid var(--line); padding-top: 10px; }
+    #csvSection h3 { margin: 0 0 7px; font-size: 13px; }
+    .csv-file { width: 100%; font-size: 11px; }
+    .csv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
+    .csv-grid .panel-label { margin-top: 0; }
+    #csvStatus { margin-top: 7px; color: #657985; font-size: 11px; line-height: 1.35; }
+    #csvSearch { margin-top: 7px; }
+    .csv-record { padding: 8px 0; border-bottom: 1px solid #edf1f4; font-size: 11px; line-height: 1.4; }
+    .csv-record strong { display: block; color: var(--navy); font-size: 12px; }
+    .csv-record button { margin-top: 4px; padding: 4px 8px; border-radius: 6px; font-size: 11px; }
+    .csv-marker { width: 20px; height: 20px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; background: #e8503b; box-shadow: 0 2px 6px rgba(0,0,0,.35); transform: rotate(-45deg); }
+    .csv-popup { min-width: 210px; max-width: 300px; font-family: "Sarabun", sans-serif; }
+    .csv-popup h3 { margin: 0 0 7px; color: var(--navy); font-size: 15px; }
+    .csv-popup-row { border-top: 1px solid #e3e9ed; padding: 4px 0; font-size: 12px; line-height: 1.35; }
+    .csv-popup-row b { color: #526d7d; }
     .panel-note { margin-top: 9px; color: #657985; font-size: 11px; line-height: 1.4; }
     #hint {
       position: absolute; left: 12px; bottom: 26px; max-width: 250px; padding: 7px 10px;
@@ -181,6 +196,18 @@
         <input id="importFile" type="file" accept="application/json" hidden onchange="importMapFile(event)">
       </div>
       <div class="panel-note" id="saveNote">รุ่นนี้เก็บข้อมูลไว้ในเบราว์เซอร์เครื่องนี้ หรือส่งออกเป็นไฟล์เพื่อย้ายเครื่อง</div>
+      <div id="csvSection">
+        <h3>นำเข้าข้อมูล CSV</h3>
+        <input class="csv-file" id="csvFile" type="file" accept=".csv,text/csv">
+        <div class="csv-grid">
+          <div><label class="panel-label" for="csvLatColumn">คอลัมน์ละติจูด</label><select class="panel-select" id="csvLatColumn" disabled></select></div>
+          <div><label class="panel-label" for="csvLngColumn">คอลัมน์ลองจิจูด</label><select class="panel-select" id="csvLngColumn" disabled></select></div>
+        </div>
+        <div class="panel-actions"><button type="button" id="csvPlotBtn" disabled>ลงจุดจาก CSV</button><button type="button" class="outline" id="csvExportBtn" disabled>ส่งออก CSV</button></div>
+        <div id="csvStatus">ยังไม่มีไฟล์ CSV</div>
+        <input class="panel-input" id="csvSearch" placeholder="ค้นหาในข้อมูล CSV..." disabled>
+        <div id="csvRecords"></div>
+      </div>
       <div id="pointList"><h3>จุดที่วางบนแผนที่</h3><div id="pointListItems">ยังไม่มีจุด</div></div>
     </section>
     <div id="hint">แตะบนแผนที่เพื่อวางจุดและสร้างวงรัศมี · เลือกชุมชนจากเมนูเพื่อแสดงขอบเขต</div>
@@ -206,6 +233,11 @@
     let arrows = [];
     let textBoxes = [];
     let selectedArrow = null;
+    let csvHeaders = [];
+    let csvRecords = [];
+    let csvMarkers = [];
+    let csvLatColumn = '';
+    let csvLngColumn = '';
     const MAP_STORAGE_KEY = 'pollution-map-project-v1';
 
     function emptyFilter() { return ['==', ['get', 'name'], '__none__']; }
@@ -367,6 +399,7 @@
       document.getElementById('latInput').value = '';
       document.getElementById('lngInput').value = '';
       updatePointList();
+      clearCsvData();
     }
     function showAllCommunities() { $('#communitySelect').val(communityNames).trigger('change'); }
     function toggleBase() {
@@ -421,6 +454,67 @@
       document.getElementById('mapwrap').appendChild(box);
       makeDraggable(box); textBoxes.push(box); box.focus();
     }
+    function parseCSV(text) {
+      const rows = []; let row = []; let value = ''; let quoted = false;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i]; const next = text[i + 1];
+        if (char === '"' && quoted && next === '"') { value += '"'; i++; continue; }
+        if (char === '"') { quoted = !quoted; continue; }
+        if (char === ',' && !quoted) { row.push(value.trim()); value = ''; continue; }
+        if ((char === '\n' || char === '\r') && !quoted) {
+          if (char === '\r' && next === '\n') i++;
+          row.push(value.trim()); value = '';
+          if (row.some(cell => cell !== '')) rows.push(row); row = []; continue;
+        }
+        value += char;
+      }
+      if (value !== '' || row.length) { row.push(value.trim()); rows.push(row); }
+      if (!rows.length) return { headers: [], records: [] };
+      const headers = rows[0].map((header, index) => header || `คอลัมน์ ${index + 1}`);
+      const records = rows.slice(1).map(cells => Object.fromEntries(headers.map((header, index) => [header, cells[index] || '']))).filter(record => Object.values(record).some(Boolean));
+      return { headers, records };
+    }
+    function guessColumn(headers, words) {
+      return headers.find(header => words.some(word => header.toLowerCase().includes(word))) || '';
+    }
+    function setColumnOptions() {
+      const latSelect = document.getElementById('csvLatColumn'); const lngSelect = document.getElementById('csvLngColumn');
+      latSelect.innerHTML = csvHeaders.map(header => `<option value="${escapeHtml(header)}">${escapeHtml(header)}</option>`).join('');
+      lngSelect.innerHTML = latSelect.innerHTML;
+      csvLatColumn = guessColumn(csvHeaders, ['lat', 'ละติจูด', 'latitude']) || csvHeaders[0] || '';
+      csvLngColumn = guessColumn(csvHeaders, ['lng', 'lon', 'ลองจิจูด', 'longitude']) || csvHeaders[1] || '';
+      latSelect.value = csvLatColumn; lngSelect.value = csvLngColumn;
+      latSelect.disabled = !csvHeaders.length; lngSelect.disabled = !csvHeaders.length;
+      document.getElementById('csvPlotBtn').disabled = !csvRecords.length;
+      document.getElementById('csvExportBtn').disabled = !csvRecords.length;
+      document.getElementById('csvSearch').disabled = !csvRecords.length;
+    }
+    function escapeHtml(value) { return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
+    function csvPopupHtml(record, index) {
+      const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`;
+      const rows = csvHeaders.filter(header => record[header] !== '').map(header => `<div class="csv-popup-row"><b>${escapeHtml(header)}:</b> ${escapeHtml(record[header])}</div>`).join('');
+      return `<div class="csv-popup"><h3>${escapeHtml(title)}</h3>${rows}</div>`;
+    }
+    function getCsvCoordinates(record) {
+      const lat = Number(String(record[csvLatColumn] || '').replace(',', '.')); const lng = Number(String(record[csvLngColumn] || '').replace(',', '.'));
+      return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? [lng, lat] : null;
+    }
+    function clearCsvMarkers() { csvMarkers.forEach(marker => marker.remove()); csvMarkers = []; }
+    function clearCsvData() { clearCsvMarkers(); csvHeaders = []; csvRecords = []; csvLatColumn = ''; csvLngColumn = ''; const records = document.getElementById('csvRecords'); if (records) records.innerHTML = ''; const status = document.getElementById('csvStatus'); if (status) status.textContent = 'ยังไม่มีไฟล์ CSV'; setColumnOptions(); }
+    function plotCsvRecords() {
+      clearCsvMarkers(); let valid = 0; let invalid = 0;
+      csvRecords.forEach((record, index) => { const coordinates = getCsvCoordinates(record); if (!coordinates) { invalid++; return; } const element = document.createElement('div'); element.className = 'csv-marker'; const marker = new maplibregl.Marker({ element }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 13 }).setHTML(csvPopupHtml(record, index))).addTo(map); csvMarkers.push(marker); valid++; });
+      document.getElementById('csvStatus').textContent = `นำเข้า ${csvRecords.length} รายการ · ลงจุดสำเร็จ ${valid} จุด${invalid ? ` · พิกัดผิด/ไม่ครบ ${invalid} รายการ` : ''}`;
+      renderCsvRecords();
+    }
+    function renderCsvRecords() {
+      const query = document.getElementById('csvSearch').value.trim().toLowerCase(); const list = document.getElementById('csvRecords');
+      const matches = csvRecords.map((record, index) => ({ record, index })).filter(item => !query || Object.values(item.record).some(value => String(value).toLowerCase().includes(query))).slice(0, 100);
+      list.innerHTML = matches.map(({ record, index }) => { const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`; return `<div class="csv-record"><strong>${escapeHtml(title)}</strong>${escapeHtml(record[csvLatColumn] || '-')}, ${escapeHtml(record[csvLngColumn] || '-')}<br><button type="button" onclick="focusCsvRecord(${index})">ดูบนแผนที่</button></div>`; }).join('') || '<div class="panel-note">ไม่พบข้อมูล</div>';
+    }
+    function focusCsvRecord(index) { const coordinates = getCsvCoordinates(csvRecords[index]); if (!coordinates) { alert('รายการนี้ไม่มีพิกัดที่ถูกต้อง'); return; } map.easeTo({ center: coordinates, zoom: Math.max(map.getZoom(), 14), duration: 500 }); const marker = csvMarkers.find(item => { const position = item.getLngLat(); return Math.abs(position.lng - coordinates[0]) < 0.000001 && Math.abs(position.lat - coordinates[1]) < 0.000001; }); if (marker) marker.togglePopup(); }
+    function importCsvFile(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const parsed = parseCSV(reader.result.replace(/^\uFEFF/, '')); csvHeaders = parsed.headers; csvRecords = parsed.records; setColumnOptions(); document.getElementById('csvStatus').textContent = `อ่านไฟล์ ${file.name} แล้ว · พบ ${csvRecords.length} รายการ · กรุณาตรวจคอลัมน์แล้วกดลงจุด`; renderCsvRecords(); } catch (error) { alert('อ่านไฟล์ CSV ไม่สำเร็จ กรุณาตรวจรูปแบบไฟล์'); } }; reader.readAsText(file, 'UTF-8'); event.target.value = ''; }
+    function exportCsvData() { if (!csvRecords.length) return; const csv = [csvHeaders, ...csvRecords.map(record => csvHeaders.map(header => `"${String(record[header] || '').replace(/"/g, '""')}"`))].map(row => row.join(',')).join('\r\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'pollution-map-data.csv'; link.click(); URL.revokeObjectURL(url); }
     function toggleDataPanel() {
       const panel = document.getElementById('dataPanel');
       panel.hidden = !panel.hidden;
@@ -452,6 +546,7 @@
         },
         communities: selectedCommunityNames(),
         circles: circleFeatures.map(feature => feature.properties),
+        csv: { headers: csvHeaders, records: csvRecords, latColumn: csvLatColumn, lngColumn: csvLngColumn },
         arrows: arrows.map(element => ({ left: element.style.left, top: element.style.top, rotation: element.style.transform || 'rotate(0deg)' })),
         textBoxes: textBoxes.map(element => ({ left: element.style.left, top: element.style.top, text: element.textContent }))
       };
@@ -498,6 +593,7 @@
       document.getElementById('projectOwner').value = state.project.owner || '';
       (state.circles || []).forEach(p => addCircle(Number(p.lng), Number(p.lat), Number(p.radius) || 1000, p.color || '#ff0000', Number(p.fillOpacity) || 0));
       if (state.communities) $('#communitySelect').val(state.communities).trigger('change');
+      if (state.csv && state.csv.records) { csvHeaders = state.csv.headers || []; csvRecords = state.csv.records || []; csvLatColumn = state.csv.latColumn || ''; csvLngColumn = state.csv.lngColumn || ''; setColumnOptions(); document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn; plotCsvRecords(); }
       (state.arrows || []).forEach(restoreArrow); (state.textBoxes || []).forEach(restoreTextBox);
       updatePointList();
     }
@@ -507,6 +603,12 @@
       document.getElementById('clearCommunities').addEventListener('click', () => {
         $('#communitySelect').val(null).trigger('change');
       });
+      document.getElementById('csvFile').addEventListener('change', importCsvFile);
+      document.getElementById('csvLatColumn').addEventListener('change', event => { csvLatColumn = event.target.value; renderCsvRecords(); });
+      document.getElementById('csvLngColumn').addEventListener('change', event => { csvLngColumn = event.target.value; renderCsvRecords(); });
+      document.getElementById('csvPlotBtn').addEventListener('click', plotCsvRecords);
+      document.getElementById('csvExportBtn').addEventListener('click', exportCsvData);
+      document.getElementById('csvSearch').addEventListener('input', renderCsvRecords);
       document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && document.body.classList.contains('map-full')) toggleMapView();
       });
