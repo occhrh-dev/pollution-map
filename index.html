@@ -181,6 +181,7 @@
       <label for="arrowRotation">หมุน</label>
       <input id="arrowRotation" type="range" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
       <button type="button" onclick="addTextBox()">เพิ่มข้อความ</button>
+      <button type="button" class="outline" onclick="clearAllMapData()">ล้างทั้งหมด</button>
     </div>
   </section>
   <main id="mapwrap">
@@ -208,7 +209,7 @@
           <div><label class="panel-label" for="csvLatColumn">คอลัมน์ละติจูด</label><select class="panel-select" id="csvLatColumn" disabled></select></div>
           <div><label class="panel-label" for="csvLngColumn">คอลัมน์ลองจิจูด</label><select class="panel-select" id="csvLngColumn" disabled></select></div>
         </div>
-        <div class="panel-actions"><button type="button" id="csvPlotBtn" disabled>ลงจุดจาก CSV</button><button type="button" class="outline" id="csvExportBtn" disabled>ส่งออก CSV</button></div>
+        <div class="panel-actions"><button type="button" id="csvPlotBtn" disabled>ลงจุดจาก CSV</button><button type="button" class="outline" id="csvExportBtn" disabled>ส่งออก CSV</button><button type="button" class="danger" id="csvClearBtn" disabled>ล้างจุดจาก CSV</button></div>
         <div id="csvStatus">ยังไม่มีไฟล์ CSV</div>
         <input class="panel-input" id="csvSearch" placeholder="ค้นหาในข้อมูล CSV..." disabled>
         <div id="csvRecords"></div>
@@ -407,7 +408,6 @@
       document.getElementById('latInput').value = '';
       document.getElementById('lngInput').value = '';
       updatePointList();
-      clearCsvData();
     }
     function showAllCommunities() { $('#communitySelect').val(communityNames).trigger('change'); }
     function toggleBase() {
@@ -495,6 +495,7 @@
       latSelect.disabled = !csvHeaders.length; lngSelect.disabled = !csvHeaders.length;
       document.getElementById('csvPlotBtn').disabled = !csvRecords.length;
       document.getElementById('csvExportBtn').disabled = !csvRecords.length;
+      document.getElementById('csvClearBtn').disabled = !csvRecords.length;
       document.getElementById('csvSearch').disabled = !csvRecords.length;
     }
     function escapeHtml(value) { return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
@@ -509,6 +510,7 @@
     }
     function clearCsvMarkers() { csvMarkers.forEach(marker => marker.remove()); csvMarkers = []; }
     function clearCsvData() { clearCsvMarkers(); csvHeaders = []; csvRecords = []; csvLatColumn = ''; csvLngColumn = ''; const records = document.getElementById('csvRecords'); if (records) records.innerHTML = ''; const status = document.getElementById('csvStatus'); if (status) status.textContent = 'ยังไม่มีไฟล์ CSV'; setColumnOptions(); }
+    function clearAllMapData() { if (!confirm('ต้องการล้างสิ่งที่วาดและข้อมูล CSV ทั้งหมดหรือไม่?')) return; clearMap(); clearCsvData(); document.getElementById('saveNote').textContent = 'ล้างข้อมูลทั้งหมดแล้ว'; }
     function plotCsvRecords() {
       clearCsvMarkers(); let valid = 0; let invalid = 0;
       csvRecords.forEach((record, index) => { const coordinates = getCsvCoordinates(record); if (!coordinates) { invalid++; return; } const element = document.createElement('div'); element.className = 'csv-marker'; element.addEventListener('click', event => event.stopPropagation()); const marker = new maplibregl.Marker({ element }).setLngLat(coordinates).setPopup(new maplibregl.Popup({ offset: 13 }).setHTML(csvPopupHtml(record, index))).addTo(map); csvMarkers.push(marker); valid++; });
@@ -624,6 +626,7 @@
       document.getElementById('csvLngColumn').addEventListener('change', event => { csvLngColumn = event.target.value; renderCsvRecords(); });
       document.getElementById('csvPlotBtn').addEventListener('click', plotCsvRecords);
       document.getElementById('csvExportBtn').addEventListener('click', exportCsvData);
+      document.getElementById('csvClearBtn').addEventListener('click', () => { if (confirm('ต้องการล้างข้อมูล CSV ทั้งหมดหรือไม่?')) clearCsvData(); });
       document.getElementById('csvSearch').addEventListener('input', renderCsvRecords);
       document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && document.body.classList.contains('map-full')) toggleMapView();
