@@ -102,6 +102,10 @@
     #csvEditPanel h3, #csvRadiusPanel h3 { margin: 0 0 7px; }
     .csv-edit-field { margin-top: 7px; }
     .marker-preview-box { min-height: 54px; margin: 8px 0; display: flex; align-items: center; justify-content: center; gap: 12px; border: 1px dashed #b9cbd5; border-radius: 8px; background: #fff; color: #526d7d; font-size: 12px; }
+    .radius-set-row { display: grid; grid-template-columns: 1fr 50px auto; align-items: end; gap: 6px; margin-top: 8px; padding-bottom: 8px; border-bottom: 1px solid #e2e9ed; }
+    .radius-set-row .panel-label { margin-top: 0; }
+    .radius-color { width: 50px; height: 34px; padding: 2px; border: 1px solid #bac8d2; border-radius: 6px; background: #fff; }
+    .radius-remove { padding: 7px 9px; border-radius: 7px; }
     .csv-popup { min-width: 210px; max-width: 300px; font-family: "Sarabun", sans-serif; }
     .csv-popup h3 { margin: 0 0 7px; color: var(--navy); font-size: 15px; }
     .csv-popup-row { border-top: 1px solid #e3e9ed; padding: 4px 0; font-size: 12px; line-height: 1.35; }
@@ -243,14 +247,12 @@
           <div class="panel-actions"><button type="button" id="csvEditSaveBtn">บันทึกการแก้ไข</button><button type="button" class="outline" id="csvEditCancelBtn">ยกเลิก</button></div>
         </section>
         <section id="csvRadiusPanel" hidden aria-label="สร้างวงรัศมีจากจุด CSV">
-          <h3>สร้างวงรัศมีจากจุด CSV</h3>
+          <h3>สร้างชุดวงรัศมีจากจุด CSV</h3>
           <div class="panel-note" id="csvRadiusPointName"></div>
-          <label class="panel-label" for="csvRadiusMeters">รัศมี (เมตร)</label>
-          <input class="panel-input" id="csvRadiusMeters" type="number" value="1000" min="1" step="100">
-          <label class="panel-label" for="csvRadiusColor">สีวงรัศมี</label>
-          <input class="panel-input" id="csvRadiusColor" type="color" value="#ff0000">
+          <div id="csvRadiusSetRows"></div>
+          <div class="panel-actions"><button type="button" class="outline" id="csvRadiusAddBtn">+ เพิ่มวง</button></div>
           <label class="panel-label"><input type="checkbox" id="csvRadiusFill" checked> เติมสีภายในวง</label>
-          <div class="panel-actions"><button type="button" id="csvRadiusCreateBtn">สร้างวงรัศมี</button><button type="button" class="outline" id="csvRadiusCancelBtn">ยกเลิก</button></div>
+          <div class="panel-actions"><button type="button" id="csvRadiusCreateBtn">สร้างชุดวงรัศมี</button><button type="button" class="outline" id="csvRadiusCancelBtn">ยกเลิก</button></div>
         </section>
       </div>
       <div id="pointList"><h3>จุดที่วางบนแผนที่</h3><div id="pointListItems">ยังไม่มีจุด</div></div>
@@ -290,6 +292,7 @@
     let interactionMode = 'view';
     const MAP_STORAGE_KEY = 'pollution-map-project-v1';
     const CSV_HISTORY_KEY = 'pollution-map-csv-history-v1';
+    const RADIUS_SET_KEY = 'pollution-map-radius-set-v1';
 
     function emptyFilter() { return ['==', ['get', 'name'], '__none__']; }
     function nameFilter(names) {
@@ -593,23 +596,41 @@
     function updateCsvListToggle() { const area = document.getElementById('csvListArea'); const button = document.getElementById('csvListToggleBtn'); if (!area || !button) return; area.hidden = !csvListExpanded; button.textContent = csvListExpanded ? 'ซ่อนรายการข้อมูล' : `แสดงรายการข้อมูล (${csvRecords.length})`; }
     function toggleCsvList() { csvListExpanded = !csvListExpanded; updateCsvListToggle(); if (csvListExpanded) renderCsvRecords(); }
     function focusCsvRecord(index) { const coordinates = getCsvCoordinates(csvRecords[index]); if (!coordinates) { alert('รายการนี้ไม่มีพิกัดที่ถูกต้อง'); return; } map.easeTo({ center: coordinates, zoom: Math.max(map.getZoom(), 14), duration: 500 }); const marker = csvMarkers.find(item => { const position = item.getLngLat(); return Math.abs(position.lng - coordinates[0]) < 0.000001 && Math.abs(position.lat - coordinates[1]) < 0.000001; }); if (marker) marker.togglePopup(); }
+    function defaultRadiusSet() { return [{ km: 1, color: '#e53935' }, { km: 3, color: '#fb8c00' }, { km: 5, color: '#43a047' }]; }
+    function readRadiusSet() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(RADIUS_SET_KEY) || 'null');
+        if (Array.isArray(saved) && saved.some(item => Number(item.km) > 0)) return saved.filter(item => Number(item.km) > 0).map(item => ({ km: Number(item.km), color: /^#[0-9a-f]{6}$/i.test(item.color || '') ? item.color : '#e53935' }));
+      } catch (error) { /* ใช้ค่าเริ่มต้นเมื่อข้อมูลเดิมเสียหาย */ }
+      return defaultRadiusSet();
+    }
+    function addRadiusSetRow(km = 1, color = '#e53935') {
+      const row = document.createElement('div'); row.className = 'radius-set-row';
+      row.innerHTML = `<label class="panel-label">ระยะ (กม.)<input class="panel-input radius-km" type="number" min="0.1" step="0.1" value="${Number(km) || 1}"></label><label class="panel-label">สี<input class="radius-color" type="color" value="${/^#[0-9a-f]{6}$/i.test(color) ? color : '#e53935'}"></label><button type="button" class="outline radius-remove" title="ลบวงนี้">ลบ</button>`;
+      row.querySelector('.radius-remove').addEventListener('click', () => { const rows = document.querySelectorAll('#csvRadiusSetRows .radius-set-row'); if (rows.length <= 1) { alert('ต้องมีวงรัศมีอย่างน้อย 1 วง'); return; } row.remove(); });
+      document.getElementById('csvRadiusSetRows').appendChild(row);
+    }
+    function renderRadiusSetRows(radiusSet) { const container = document.getElementById('csvRadiusSetRows'); container.innerHTML = ''; radiusSet.forEach(item => addRadiusSetRow(item.km, item.color)); }
+    function collectRadiusSetRows() { return [...document.querySelectorAll('#csvRadiusSetRows .radius-set-row')].map(row => ({ km: Number(row.querySelector('.radius-km').value), color: row.querySelector('.radius-color').value })).filter(item => Number.isFinite(item.km) && item.km > 0); }
     function openCsvRadiusCreator(index) {
       const record = csvRecords[index]; const coordinates = record && getCsvCoordinates(record); if (!coordinates) { alert('จุดนี้ไม่มีพิกัดที่ถูกต้อง'); return; }
       radiusCsvIndex = index; closeCsvEditor(); csvListExpanded = false; updateCsvListToggle();
       const title = record['ชื่อจุด'] || record['ชื่อ'] || record['name'] || record[csvHeaders[0]] || `จุดที่ ${index + 1}`;
       document.getElementById('csvRadiusPointName').textContent = `${title} · ${coordinates[1]}, ${coordinates[0]}`;
-      document.getElementById('csvRadiusMeters').value = Math.max(1, Number(document.getElementById('radiusInput').value) || 1000);
-      document.getElementById('csvRadiusColor').value = document.getElementById('colorInput').value || '#ff0000';
+      renderRadiusSetRows(readRadiusSet());
       document.getElementById('csvRadiusFill').checked = document.getElementById('fillToggle').checked;
       const panel = document.getElementById('dataPanel'); panel.hidden = false; document.getElementById('dataBtn').textContent = 'ซ่อนจัดการข้อมูล';
       document.getElementById('csvRadiusPanel').hidden = false; document.getElementById('csvRadiusPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     function closeCsvRadiusCreator() { radiusCsvIndex = -1; document.getElementById('csvRadiusPanel').hidden = true; }
     function createRadiusFromCsv() {
-      const record = csvRecords[radiusCsvIndex]; const coordinates = record && getCsvCoordinates(record); const radius = Math.max(1, Number(document.getElementById('csvRadiusMeters').value) || 1000);
+      const record = csvRecords[radiusCsvIndex]; const coordinates = record && getCsvCoordinates(record);
       if (!coordinates) { alert('จุดนี้ไม่มีพิกัดที่ถูกต้อง'); return; }
-      const color = document.getElementById('csvRadiusColor').value; const fillOpacity = document.getElementById('csvRadiusFill').checked ? 0.35 : 0;
-      addCircle(coordinates[0], coordinates[1], radius, color, fillOpacity, false); closeCsvRadiusCreator(); document.getElementById('csvStatus').textContent = `สร้างวงรัศมี ${radius.toLocaleString('th-TH')} เมตรจากจุด CSV แล้ว`;
+      const radiusSet = collectRadiusSetRows(); if (!radiusSet.length) { alert('กรุณากำหนดระยะวงรัศมีอย่างน้อย 1 วง'); return; }
+      localStorage.setItem(RADIUS_SET_KEY, JSON.stringify(radiusSet));
+      const fillOpacity = document.getElementById('csvRadiusFill').checked ? 0.18 : 0;
+      [...radiusSet].sort((a, b) => b.km - a.km).forEach(item => addCircle(coordinates[0], coordinates[1], item.km * 1000, item.color, fillOpacity, false));
+      closeCsvRadiusCreator(); document.getElementById('csvStatus').textContent = `สร้างชุดวงรัศมี ${radiusSet.length} วงจากจุด CSV แล้ว`;
     }
     function openCsvEditor(index) {
       const record = csvRecords[index]; if (!record) return; editingCsvIndex = index;
@@ -743,6 +764,7 @@
       document.getElementById('csvListToggleBtn').addEventListener('click', toggleCsvList);
       document.getElementById('csvMarkerShape').addEventListener('change', updateMarkerPreview);
       document.getElementById('csvMarkerColor').addEventListener('input', updateMarkerPreview);
+      document.getElementById('csvRadiusAddBtn').addEventListener('click', () => { const rows = collectRadiusSetRows(); const lastKm = rows.length ? Math.max(...rows.map(item => item.km)) : 0; addRadiusSetRow(lastKm + 1, '#e53935'); });
       document.getElementById('csvRadiusCreateBtn').addEventListener('click', createRadiusFromCsv);
       document.getElementById('csvRadiusCancelBtn').addEventListener('click', closeCsvRadiusCreator);
       document.getElementById('csvSearch').addEventListener('input', renderCsvRecords);
