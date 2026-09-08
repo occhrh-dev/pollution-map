@@ -196,6 +196,7 @@
     <div class="control-group" id="communityBlock">
       <label for="communitySelect">ชุมชน</label>
       <select id="communitySelect" multiple></select>
+      <button type="button" onclick="openCommunitySettings()">เปลี่ยนผังชุมชน</button>
       <button type="button" onclick="showAllCommunities()">เลือกทั้งหมด</button>
       <button type="button" id="clearCommunities">ล้าง</button>
     </div>
@@ -217,6 +218,16 @@
     <div id="map" aria-label="แผนที่"></div>
     <section id="dataPanel" hidden aria-label="จัดการข้อมูลแผนที่">
       <h2>จัดการข้อมูลแผนที่</h2>
+      <details id="communitySettings">
+        <summary>ผังชุมชนประจำหน่วยงาน</summary>
+        <p class="panel-note" id="communityConfigStatus">ผังเริ่มต้น: ชุมชนเขตรับผิดชอบเดิม</p>
+        <label class="panel-label" for="communityFile">เลือกผังใหม่ (GeoJSON / KML / KMZ)</label>
+        <input id="communityFile" class="csv-file" type="file" accept=".geojson,.json,.kml,.kmz">
+        <label class="panel-label" for="communityNameField">คอลัมน์ชื่อชุมชน</label>
+        <select id="communityNameField" class="panel-select" disabled></select>
+        <div class="panel-actions"><button id="communityApply" type="button" disabled>ใช้เป็นผังชุมชน</button><button id="communityReset" class="outline" type="button">กลับไปใช้ผังเดิม</button></div>
+        <p class="panel-note">เปลี่ยนรายชื่อในช่องชุมชนและขอบเขตที่เลือกได้ด้านบน บันทึกผังแยกตามหน่วยงานในเบราว์เซอร์ทันที ใช้เฉพาะพื้นที่รูปปิด ส่วนจุดและเส้นจะไม่นำมาเป็นชุมชน</p>
+      </details>
       <label class="panel-label" for="projectName">ชื่อเหตุการณ์/โครงการ</label>
       <input class="panel-input" id="projectName" value="แผนที่ควบคุมมลพิษ" placeholder="เช่น จุดร้องเรียนกลิ่นรบกวน">
       <label class="panel-label" for="projectStatus">สถานะ</label>
@@ -328,6 +339,9 @@
     const MAP_STORAGE_KEY = 'pollution-map-project-v1' + demoSuffix;
     const CSV_HISTORY_KEY = 'pollution-map-csv-history-v1' + demoSuffix;
     const RADIUS_SET_KEY = 'pollution-map-radius-set-v1' + demoSuffix;
+    const COMMUNITY_CONFIG_KEY = 'pollution-map-community-config-v1' + demoSuffix;
+    let pendingCommunity = null;
+    let communityConfig = null;
 
     function emptyFilter() { return ['==', ['get', 'name'], '__none__']; }
     function nameFilter(names) {
@@ -509,6 +523,8 @@
     }
     function populateCommunitySelect() {
       const select = document.getElementById('communitySelect');
+      if ($('#communitySelect').hasClass('select2-hidden-accessible')) $('#communitySelect').select2('destroy');
+      $('#communitySelect').off('change', updateCommunityVisibility);
       select.innerHTML = '';
       communityNames.forEach(name => {
         const option = document.createElement('option');
@@ -519,11 +535,17 @@
       }).on('change', updateCommunityVisibility);
     }
     async function loadCommunities() {
+      try { communityConfig = JSON.parse(localStorage.getItem(COMMUNITY_CONFIG_KEY) || 'null'); } catch { communityConfig = null; }
+      if (communityConfig) { installCommunityData(communityConfig.data); updateCommunityConfigStatus(); return; }
       const response = await fetch(COMMUNITY_URL);
       if (!response.ok) throw new Error(`โหลดขอบเขตชุมชนไม่สำเร็จ: HTTP ${response.status}`);
-      communityData = await response.json();
-      communityNames = communityData.features
-        .map(feature => feature.properties && feature.properties.name).filter(Boolean);
+      installCommunityData(await response.json());
+      updateCommunityConfigStatus();
+    }
+    function installCommunityData(data) {
+      communityData = data;
+      communityNames = [...new Set(communityData.features
+        .map(feature => feature.properties && feature.properties.name).filter(Boolean))];
       communityLabels = {
         type: 'FeatureCollection',
         features: communityData.features.flatMap(feature => {
@@ -535,7 +557,62 @@
         })
       };
       populateCommunitySelect();
+      if (communityConfig) $('#communitySelect').val(communityNames).trigger('change');
+      if (map.getSource('communities')) map.getSource('communities').setData(communityData);
+      if (map.getSource('community-labels')) map.getSource('community-labels').setData(communityLabels);
       addCommunityLayers();
+      updateCommunityVisibility();
+    }
+    function updateCommunityConfigStatus() {
+      document.getElementById('communityConfigStatus').textContent = `${communityConfig ? communityConfig.name : 'ผังเริ่มต้นของโรงพยาบาล'} · ${communityNames.length} ชุมชน`;
+    }
+    function openCommunitySettings() {
+      document.getElementById('dataPanel').hidden = false;
+      document.getElementById('dataBtn').textContent = 'ซ่อนจัดการข้อมูล';
+      const panel = document.getElementById('communitySettings'); panel.open = true; panel.scrollIntoView({ block: 'nearest' });
+    }
+    async function readCommunityFile(event) {
+      const file = event.target.files[0]; if (!file) return;
+      pendingCommunity = null; document.getElementById('communityApply').disabled = true;
+      const select = document.getElementById('communityNameField'); select.innerHTML = ''; select.disabled = true;
+      try {
+        const data = await readSpatialFile(file);
+        data.features = data.features.filter(f => ['Polygon','MultiPolygon'].includes(f.geometry.type));
+        if (!data.features.length) throw new Error('ไฟล์นี้ไม่มีขอบเขตพื้นที่ Polygon หรือ MultiPolygon');
+        const fields = [...new Set(data.features.flatMap(f => Object.keys(f.properties)))].filter(key => data.features.some(f => ['string','number'].includes(typeof f.properties[key])));
+        if (!fields.length) throw new Error('ไม่พบคอลัมน์ชื่อชุมชนในไฟล์');
+        fields.forEach(field => select.add(new Option(field, field)));
+        select.value = fields.find(f => /^(name|ชื่อ|ชื่อชุมชน|ชุมชน|village|หมู่บ้าน)$/i.test(f)) || fields[0];
+        select.disabled = false; pendingCommunity = { name: file.name, data }; document.getElementById('communityApply').disabled = false;
+        document.getElementById('communityConfigStatus').textContent = `อ่าน ${file.name} แล้ว พบ ${data.features.length} พื้นที่ · เลือกคอลัมน์ชื่อแล้วกดใช้เป็นผังชุมชน`;
+      } catch (error) { alert(error.message); updateCommunityConfigStatus(); }
+      event.target.value = '';
+    }
+    function applyCommunityFile() {
+      if (!pendingCommunity) return;
+      try {
+        const field = document.getElementById('communityNameField').value;
+        const data = { type: 'FeatureCollection', features: pendingCommunity.data.features.map(f => {
+          const name = String(f.properties[field] ?? '').trim();
+          if (!name) throw new Error('มีพื้นที่ที่ไม่มีชื่อในคอลัมน์นี้ กรุณาเลือกคอลัมน์อื่นหรือเติมชื่อในไฟล์');
+          turf.pointOnFeature(f);
+          return { ...f, properties: { ...f.properties, name } };
+        }) };
+        const config = { name: pendingCommunity.name, field, data };
+        localStorage.setItem(COMMUNITY_CONFIG_KEY, JSON.stringify(config));
+        communityConfig = config; installCommunityData(data); updateCommunityConfigStatus();
+        $('#communitySelect').val(communityNames).trigger('change');
+        const bounds = turf.bbox(data); map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]], {padding:60,maxZoom:14});
+        pendingCommunity = null; document.getElementById('communityApply').disabled = true;
+      } catch (error) { alert(`เปลี่ยนผังไม่สำเร็จ: ${error.message}`); }
+    }
+    async function resetCommunityFile() {
+      try {
+        const response = await fetch(COMMUNITY_URL); if (!response.ok) throw new Error('โหลดผังเดิมไม่สำเร็จ');
+        const data = await response.json(); localStorage.removeItem(COMMUNITY_CONFIG_KEY); communityConfig = null;
+        installCommunityData(data); updateCommunityConfigStatus();
+        pendingCommunity = null; document.getElementById('communityApply').disabled = true;
+      } catch (error) { alert(error.message); }
     }
     function handleMapClick(lngLat) {
       if (interactionMode !== 'draw') return;
@@ -900,12 +977,18 @@
       (state.spatialLayers || []).forEach(layer => addSpatialLayer(layer.name, layer.data, layer));
       document.getElementById('spatialStatus').textContent = spatialLayers.length ? `เปิดชั้นข้อมูลที่บันทึกไว้ ${spatialLayers.length} ชั้นแล้ว` : 'ยังไม่มีชั้นข้อมูลที่นำเข้า';
       (state.circles || []).forEach(p => addCircle(Number(p.lng), Number(p.lat), Number(p.radius) || 1000, p.color || '#ff0000', Number(p.fillOpacity) || 0, p.showCenter !== false));
-      if (state.communities) $('#communitySelect').val(state.communities).trigger('change');
+      if (state.communities) {
+        const matching = state.communities.filter(name => communityNames.includes(name));
+        $('#communitySelect').val(communityConfig && state.communities.length && !matching.length ? communityNames : matching).trigger('change');
+      }
       if (state.csv && state.csv.records && state.csv.records.length) { currentCsvName = state.csv.name || ''; csvHeaders = state.csv.headers || []; csvRecords = state.csv.records || []; csvLatColumn = state.csv.latColumn || ''; csvLngColumn = state.csv.lngColumn || ''; setColumnOptions(); document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn; plotCsvRecords(); }
       (state.arrows || []).forEach(restoreArrow); (state.textBoxes || []).forEach(restoreTextBox);
       updatePointList();
     }
     function initializeControls() {
+      document.getElementById('communityFile').addEventListener('change', readCommunityFile);
+      document.getElementById('communityApply').addEventListener('click', applyCommunityFile);
+      document.getElementById('communityReset').addEventListener('click', resetCommunityFile);
       document.getElementById('showPolygonToggle').addEventListener('change', updateCommunityVisibility);
       document.getElementById('showAllLayoutsToggle').addEventListener('change', updateCommunityVisibility);
       document.getElementById('clearCommunities').addEventListener('click', () => {
