@@ -111,6 +111,19 @@
     .csv-popup-row { border-top: 1px solid #e3e9ed; padding: 4px 0; font-size: 12px; line-height: 1.35; }
     .csv-popup-row b { color: #526d7d; }
     .panel-note { margin-top: 9px; color: #657985; font-size: 11px; line-height: 1.4; }
+    #spatialSection { margin-top: 13px; border-top: 1px solid var(--line); padding-top: 10px; }
+    #spatialSection h3 { margin: 0 0 7px; font-size: 13px; }
+    #spatialStatus { margin-top: 7px; color: #657985; font-size: 11px; line-height: 1.4; }
+    #spatialLayerDetails { margin-top: 9px; border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; }
+    #spatialLayerDetails summary { padding: 8px 9px; cursor: pointer; color: var(--navy); font-size: 12px; font-weight: 700; }
+    #spatialLayerList { padding: 0 9px 8px; }
+    .spatial-layer-item { padding: 9px 0; border-top: 1px solid #edf1f4; font-size: 11px; }
+    .spatial-layer-head { display: flex; align-items: center; gap: 6px; }
+    .spatial-layer-head strong { flex: 1; color: var(--navy); font-size: 12px; overflow-wrap: anywhere; }
+    .spatial-style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 7px; }
+    .spatial-style-grid .panel-label { margin: 0; }
+    .spatial-style-grid input[type="color"] { display: block; width: 100%; height: 31px; padding: 2px; border: 1px solid #bac8d2; border-radius: 6px; background: #fff; }
+    .spatial-opacity { width: 100%; }
     #hint {
       position: absolute; left: 12px; bottom: 26px; max-width: 250px; padding: 7px 10px;
       border-radius: 8px; color: #425766; background: rgba(255,255,255,.92);
@@ -218,6 +231,21 @@
         <input id="importFile" type="file" accept="application/json" hidden onchange="importMapFile(event)">
       </div>
       <div class="panel-note" id="saveNote">รุ่นนี้เก็บข้อมูลไว้ในเบราว์เซอร์เครื่องนี้ หรือส่งออกเป็นไฟล์เพื่อย้ายเครื่อง</div>
+      <div id="spatialSection">
+        <h3>ชั้นข้อมูลพื้นที่</h3>
+        <div class="panel-note">รองรับ GeoJSON, JSON, KML และ KMZ · ไฟล์จะถูกเพิ่มเป็นชั้นใหม่โดยไม่ลบขอบเขตชุมชนเดิม</div>
+        <div class="panel-actions">
+          <button type="button" id="spatialImportBtn">นำเข้าชั้นข้อมูล</button>
+          <button type="button" class="outline" id="spatialExampleBtn">ลองข้อมูลตัวอย่าง</button>
+          <button type="button" class="outline" id="spatialClearBtn" disabled>ล้างชั้นข้อมูล</button>
+          <input id="spatialFile" type="file" accept=".geojson,.json,.kml,.kmz,application/geo+json,application/json,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz" hidden>
+        </div>
+        <div id="spatialStatus">ยังไม่มีชั้นข้อมูลที่นำเข้า</div>
+        <details id="spatialLayerDetails">
+          <summary id="spatialLayerSummary">ชั้นข้อมูลที่นำเข้า (0)</summary>
+          <div id="spatialLayerList"><div class="panel-note">ยังไม่มีข้อมูล</div></div>
+        </details>
+      </div>
       <div id="csvSection">
         <h3>นำเข้าข้อมูล CSV</h3>
         <label class="panel-label" for="csvHistorySelect">ประวัติไฟล์ที่เคยนำเข้า</label>
@@ -263,6 +291,7 @@
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script>
     const MAPTILER_KEY = 'XOw46Ht6gxyHhSCkLXPf';
     const COMMUNITY_URL = 'ผังโครงร่างเขตควบคุมมลพิษ.json';
@@ -290,6 +319,8 @@
     let radiusCsvIndex = -1;
     let csvListExpanded = false;
     let interactionMode = 'view';
+    let spatialLayers = [];
+    let spatialLayerCounter = 0;
     const MAP_STORAGE_KEY = 'pollution-map-project-v1';
     const CSV_HISTORY_KEY = 'pollution-map-csv-history-v1';
     const RADIUS_SET_KEY = 'pollution-map-radius-set-v1';
@@ -333,6 +364,114 @@
       });
       updateCommunityVisibility();
     }
+    function spatialSourceId(layer) { return `spatial-source-${layer.id}`; }
+    function spatialMapLayerIds(layer) { return [`spatial-fill-${layer.id}`, `spatial-line-${layer.id}`, `spatial-point-${layer.id}`]; }
+    function addSpatialLayerToMap(layer) {
+      if (!map || !map.isStyleLoaded() || map.getSource(spatialSourceId(layer))) return;
+      map.addSource(spatialSourceId(layer), { type: 'geojson', data: layer.data });
+      const beforeId = map.getLayer('circle-fill') ? 'circle-fill' : undefined;
+      map.addLayer({ id: spatialMapLayerIds(layer)[0], type: 'fill', source: spatialSourceId(layer), filter: ['==', ['geometry-type'], 'Polygon'], layout: { visibility: layer.visible ? 'visible' : 'none' }, paint: { 'fill-color': layer.fillColor, 'fill-opacity': layer.fillOpacity } }, beforeId);
+      map.addLayer({ id: spatialMapLayerIds(layer)[1], type: 'line', source: spatialSourceId(layer), filter: ['match', ['geometry-type'], ['LineString', 'Polygon'], true, false], layout: { visibility: layer.visible ? 'visible' : 'none' }, paint: { 'line-color': layer.lineColor, 'line-width': 2.5, 'line-opacity': 0.95 } }, beforeId);
+      map.addLayer({ id: spatialMapLayerIds(layer)[2], type: 'circle', source: spatialSourceId(layer), filter: ['==', ['geometry-type'], 'Point'], layout: { visibility: layer.visible ? 'visible' : 'none' }, paint: { 'circle-radius': 7, 'circle-color': layer.fillColor, 'circle-stroke-color': layer.lineColor, 'circle-stroke-width': 2 } });
+    }
+    function addAllSpatialLayers() { spatialLayers.forEach(addSpatialLayerToMap); }
+    function removeSpatialLayerFromMap(layer) {
+      if (!map) return;
+      spatialMapLayerIds(layer).forEach(id => { if (map.getLayer(id)) map.removeLayer(id); });
+      if (map.getSource(spatialSourceId(layer))) map.removeSource(spatialSourceId(layer));
+    }
+    function normalizeGeoJson(value) {
+      let collection;
+      if (value && value.type === 'FeatureCollection') collection = value;
+      else if (value && value.type === 'Feature') collection = { type: 'FeatureCollection', features: [value] };
+      else if (value && value.type && value.coordinates) collection = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: value }] };
+      else throw new Error('ไม่พบข้อมูล GeoJSON ที่ถูกต้อง');
+      const expandGeometry = (geometry, properties, base = {}) => geometry && geometry.type === 'GeometryCollection'
+        ? (geometry.geometries || []).flatMap(child => expandGeometry(child, properties, base))
+        : (geometry ? [{ ...base, type: 'Feature', properties, geometry }] : []);
+      const features = (collection.features || []).filter(feature => feature && feature.type === 'Feature' && feature.geometry).flatMap(feature => expandGeometry(feature.geometry, feature.properties && typeof feature.properties === 'object' ? feature.properties : {}, feature.id === undefined ? {} : { id: feature.id }));
+      if (!features.length) throw new Error('ไฟล์ไม่มีจุด เส้น หรือพื้นที่ที่นำมาแสดงได้');
+      return { type: 'FeatureCollection', features };
+    }
+    function kmlCoordinates(text) {
+      return String(text || '').trim().split(/\s+/).map(item => item.split(',').slice(0, 2).map(Number)).filter(pair => pair.length === 2 && pair.every(Number.isFinite));
+    }
+    function firstKmlChild(node, localName) { return [...(node.children || [])].find(child => child.localName === localName); }
+    function parseKmlGeometry(node) {
+      if (!node) return null;
+      if (node.localName === 'Point') { const coordinates = kmlCoordinates((firstKmlChild(node, 'coordinates') || {}).textContent)[0]; return coordinates ? { type: 'Point', coordinates } : null; }
+      if (node.localName === 'LineString') { const coordinates = kmlCoordinates((firstKmlChild(node, 'coordinates') || {}).textContent); return coordinates.length > 1 ? { type: 'LineString', coordinates } : null; }
+      if (node.localName === 'Polygon') {
+        const boundaryRing = boundary => { const ring = boundary && [...boundary.getElementsByTagName('*')].find(item => item.localName === 'LinearRing'); const coordinateNode = ring && [...ring.getElementsByTagName('*')].find(item => item.localName === 'coordinates'); return kmlCoordinates(coordinateNode && coordinateNode.textContent); };
+        const outer = [...node.getElementsByTagName('*')].find(item => item.localName === 'outerBoundaryIs'); const rings = [boundaryRing(outer), ...[...node.getElementsByTagName('*')].filter(item => item.localName === 'innerBoundaryIs').map(boundaryRing)].filter(ring => ring.length >= 4);
+        return rings.length ? { type: 'Polygon', coordinates: rings } : null;
+      }
+      if (node.localName === 'MultiGeometry') { const geometries = [...(node.children || [])].map(parseKmlGeometry).filter(Boolean); return geometries.length ? { type: 'GeometryCollection', geometries } : null; }
+      return null;
+    }
+    function parseKmlText(text) {
+      const xml = new DOMParser().parseFromString(text, 'application/xml');
+      if (xml.querySelector('parsererror')) throw new Error('โครงสร้างไฟล์ KML ไม่ถูกต้อง');
+      const placemarks = [...xml.getElementsByTagName('*')].filter(node => node.localName === 'Placemark');
+      const features = placemarks.map(placemark => {
+        const directChildren = [...(placemark.children || [])];
+        const geometryNode = directChildren.find(node => ['Point', 'LineString', 'Polygon', 'MultiGeometry'].includes(node.localName));
+        const geometry = parseKmlGeometry(geometryNode); if (!geometry) return null;
+        const properties = {};
+        ['name', 'description'].forEach(key => { const node = directChildren.find(item => item.localName === key); if (node && node.textContent.trim()) properties[key] = node.textContent.trim(); });
+        [...placemark.getElementsByTagName('*')].filter(node => node.localName === 'Data' || node.localName === 'SimpleData').forEach(node => { const key = node.getAttribute('name'); const valueNode = [...(node.children || [])].find(item => item.localName === 'value'); const value = (valueNode ? valueNode.textContent : node.textContent).trim(); if (key && value) properties[key] = value; });
+        return { type: 'Feature', properties, geometry };
+      }).filter(Boolean);
+      return normalizeGeoJson({ type: 'FeatureCollection', features });
+    }
+    async function readSpatialFile(file) {
+      if (file.size > 25 * 1024 * 1024) throw new Error('ไฟล์ใหญ่เกิน 25 MB กรุณาลดขนาดไฟล์ก่อน');
+      const extension = file.name.split('.').pop().toLowerCase();
+      if (extension === 'geojson' || extension === 'json') return normalizeGeoJson(JSON.parse(await file.text()));
+      if (extension === 'kml') return parseKmlText(await file.text());
+      if (extension === 'kmz') {
+        if (typeof JSZip === 'undefined') throw new Error('ส่วนอ่าน KMZ ยังโหลดไม่เสร็จ กรุณาลองใหม่');
+        const archive = await JSZip.loadAsync(await file.arrayBuffer());
+        const entries = Object.values(archive.files).filter(entry => !entry.dir && /\.kml$/i.test(entry.name));
+        const entry = entries.find(item => /(^|\/)doc\.kml$/i.test(item.name)) || entries[0];
+        if (!entry) throw new Error('ไม่พบไฟล์ KML ภายใน KMZ');
+        return parseKmlText(await entry.async('text'));
+      }
+      throw new Error('รองรับเฉพาะ GeoJSON, JSON, KML และ KMZ');
+    }
+    function addSpatialLayer(name, data, settings = {}) {
+      const layer = { id: settings.id || `layer-${Date.now()}-${spatialLayerCounter++}`, name: name || `ชั้นข้อมูล ${spatialLayers.length + 1}`, data: normalizeGeoJson(data), fillColor: settings.fillColor || '#2e86de', lineColor: settings.lineColor || '#16324a', fillOpacity: Number.isFinite(Number(settings.fillOpacity)) ? Number(settings.fillOpacity) : 0.28, visible: settings.visible !== false };
+      spatialLayers.push(layer); addSpatialLayerToMap(layer); renderSpatialLayers(); return layer;
+    }
+    function renderSpatialLayers() {
+      document.getElementById('spatialLayerSummary').textContent = `ชั้นข้อมูลที่นำเข้า (${spatialLayers.length})`;
+      document.getElementById('spatialClearBtn').disabled = !spatialLayers.length;
+      document.getElementById('spatialLayerList').innerHTML = spatialLayers.map((layer, index) => `<div class="spatial-layer-item"><div class="spatial-layer-head"><input type="checkbox" ${layer.visible ? 'checked' : ''} onchange="toggleSpatialLayer(${index}, this.checked)" aria-label="แสดง ${escapeHtml(layer.name)}"><strong>${escapeHtml(layer.name)}</strong></div><label class="panel-label">ชื่อชั้นข้อมูล<input class="panel-input" value="${escapeHtml(layer.name)}" onchange="renameSpatialLayer(${index}, this.value)"></label><div class="panel-note">${layer.data.features.length.toLocaleString('th-TH')} รายการ</div><div class="spatial-style-grid"><label class="panel-label">สีพื้นที่/จุด<input type="color" value="${layer.fillColor}" oninput="updateSpatialLayerStyle(${index}, 'fillColor', this.value)"></label><label class="panel-label">สีเส้น<input type="color" value="${layer.lineColor}" oninput="updateSpatialLayerStyle(${index}, 'lineColor', this.value)"></label></div><label class="panel-label">ความโปร่งใส<input class="spatial-opacity" type="range" min="0" max="0.8" step="0.05" value="${layer.fillOpacity}" oninput="updateSpatialLayerStyle(${index}, 'fillOpacity', this.value)"></label><div class="panel-actions"><button type="button" onclick="fitSpatialLayer(${index})">ดูบนแผนที่</button><button type="button" class="outline" onclick="removeSpatialLayer(${index})">ลบชั้นนี้</button></div></div>`).join('') || '<div class="panel-note">ยังไม่มีข้อมูล</div>';
+    }
+    function renameSpatialLayer(index, value) { const layer = spatialLayers[index]; if (!layer) return; layer.name = value.trim() || `ชั้นข้อมูล ${index + 1}`; renderSpatialLayers(); }
+    function toggleSpatialLayer(index, visible) { const layer = spatialLayers[index]; if (!layer) return; layer.visible = visible; spatialMapLayerIds(layer).forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none'); }); }
+    function updateSpatialLayerStyle(index, field, value) { const layer = spatialLayers[index]; if (!layer) return; layer[field] = field === 'fillOpacity' ? Number(value) : value; const ids = spatialMapLayerIds(layer); if (map.getLayer(ids[0])) { map.setPaintProperty(ids[0], 'fill-color', layer.fillColor); map.setPaintProperty(ids[0], 'fill-opacity', layer.fillOpacity); } if (map.getLayer(ids[1])) map.setPaintProperty(ids[1], 'line-color', layer.lineColor); if (map.getLayer(ids[2])) { map.setPaintProperty(ids[2], 'circle-color', layer.fillColor); map.setPaintProperty(ids[2], 'circle-stroke-color', layer.lineColor); } }
+    function fitSpatialLayer(index) { const layer = spatialLayers[index]; if (!layer) return; const bounds = turf.bbox(layer.data); if (bounds.every(Number.isFinite)) map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], { padding: 60, maxZoom: 15, duration: 650 }); }
+    function removeSpatialLayer(index) { const layer = spatialLayers[index]; if (!layer) return; removeSpatialLayerFromMap(layer); spatialLayers.splice(index, 1); renderSpatialLayers(); document.getElementById('spatialStatus').textContent = `ลบชั้นข้อมูล ${layer.name} แล้ว`; }
+    function clearSpatialLayers(ask = true) { if (!spatialLayers.length) return; if (ask && !confirm('ล้างชั้นข้อมูลที่นำเข้าทั้งหมดหรือไม่? ขอบเขตชุมชนและข้อมูล CSV จะไม่ถูกลบ')) return; spatialLayers.forEach(removeSpatialLayerFromMap); spatialLayers = []; renderSpatialLayers(); document.getElementById('spatialStatus').textContent = 'ล้างชั้นข้อมูลที่นำเข้าแล้ว'; }
+    async function importSpatialFile(event) {
+      const file = event.target.files[0]; if (!file) return;
+      document.getElementById('spatialStatus').textContent = `กำลังอ่าน ${file.name}...`;
+      try { const data = await readSpatialFile(file); const layer = addSpatialLayer(file.name.replace(/\.(geojson|json|kml|kmz)$/i, ''), data); document.getElementById('spatialLayerDetails').open = true; document.getElementById('spatialStatus').textContent = `นำเข้า ${file.name} สำเร็จ · ${data.features.length.toLocaleString('th-TH')} รายการ`; fitSpatialLayer(spatialLayers.indexOf(layer)); }
+      catch (error) { console.error(error); alert(error.message || 'ไม่สามารถอ่านไฟล์ชั้นข้อมูลได้'); document.getElementById('spatialStatus').textContent = 'นำเข้าไฟล์ไม่สำเร็จ'; }
+      event.target.value = '';
+    }
+    async function loadSpatialExample() {
+      try { const response = await fetch('sample-spatial-layer.geojson'); if (!response.ok) throw new Error('โหลดไฟล์ตัวอย่างไม่สำเร็จ'); const data = normalizeGeoJson(await response.json()); const layer = addSpatialLayer('พื้นที่เฝ้าระวังตัวอย่าง', data, { fillColor: '#7e57c2', lineColor: '#4527a0', fillOpacity: 0.3 }); document.getElementById('spatialLayerDetails').open = true; document.getElementById('spatialStatus').textContent = `เพิ่มข้อมูลตัวอย่างแล้ว · ${data.features.length} รายการ`; fitSpatialLayer(spatialLayers.indexOf(layer)); } catch (error) { alert(error.message); }
+    }
+    function handleSpatialFeatureClick(event) {
+      if (interactionMode !== 'view' || !map) return;
+      const ids = spatialLayers.filter(layer => layer.visible).flatMap(spatialMapLayerIds).filter(id => map.getLayer(id)); if (!ids.length) return;
+      const feature = map.queryRenderedFeatures(event.point, { layers: ids })[0]; if (!feature) return;
+      const properties = feature.properties || {}; const title = properties.name || properties.Name || properties.NAME || 'รายละเอียดพื้นที่';
+      const rows = Object.entries(properties).filter(([, value]) => value !== null && value !== '').slice(0, 20).map(([key, value]) => `<div class="csv-popup-row"><b>${escapeHtml(key)}:</b> ${escapeHtml(typeof value === 'object' ? JSON.stringify(value) : value)}</div>`).join('');
+      new maplibregl.Popup({ maxWidth: '320px' }).setLngLat(event.lngLat).setHTML(`<div class="csv-popup"><h3>${escapeHtml(title)}</h3>${rows || '<div class="panel-note">ไม่มีรายละเอียดเพิ่มเติม</div>'}</div>`).addTo(map);
+    }
     function addDrawingLayers() {
       if (map.getSource('drawn-circles')) return;
       const data = { type: 'FeatureCollection', features: circleFeatures };
@@ -346,7 +485,7 @@
         paint: { 'line-color': ['get', 'color'], 'line-opacity': 0.85, 'line-width': 4 }
       });
     }
-    function restoreCustomLayers() { addCommunityLayers(); addDrawingLayers(); }
+    function restoreCustomLayers() { addCommunityLayers(); addAllSpatialLayers(); addDrawingLayers(); }
     function updateCircleSource() {
       const source = map && map.getSource('drawn-circles');
       if (source) source.setData({ type: 'FeatureCollection', features: circleFeatures });
@@ -560,7 +699,7 @@
     function clearCsvMarkers() { csvMarkers.forEach(marker => marker.remove()); csvMarkers = []; }
     function hideCsvPoints() { clearCsvMarkers(); document.getElementById('csvStatus').textContent = `ซ่อนจุด CSV แล้ว · ข้อมูล ${csvRecords.length} รายการยังอยู่ กด “ลงจุดจาก CSV” เพื่อแสดงใหม่`; }
     function clearCsvData() { clearCsvMarkers(); csvHeaders = []; csvRecords = []; csvLatColumn = ''; csvLngColumn = ''; currentCsvName = ''; csvListExpanded = false; const records = document.getElementById('csvRecords'); if (records) records.innerHTML = ''; const status = document.getElementById('csvStatus'); if (status) status.textContent = 'ยังไม่มีไฟล์ CSV'; setColumnOptions(); }
-    function clearAllMapData() { if (!confirm('ต้องการล้างสิ่งที่วาดและข้อมูล CSV ทั้งหมดหรือไม่?')) return; clearMap(); clearCsvData(); document.getElementById('saveNote').textContent = 'ล้างข้อมูลทั้งหมดแล้ว'; }
+    function clearAllMapData() { if (!confirm('ต้องการล้างสิ่งที่วาด ข้อมูล CSV และชั้นข้อมูลที่นำเข้าทั้งหมดหรือไม่?')) return; clearMap(); clearCsvData(); clearSpatialLayers(false); document.getElementById('saveNote').textContent = 'ล้างข้อมูลทั้งหมดแล้ว'; }
     function readCsvHistory() { try { return JSON.parse(localStorage.getItem(CSV_HISTORY_KEY) || '[]'); } catch (error) { return []; } }
     function refreshCsvHistory() {
       const history = readCsvHistory(); const select = document.getElementById('csvHistorySelect'); const loadButton = document.getElementById('csvHistoryLoadBtn');
@@ -694,6 +833,7 @@
           owner: document.getElementById('projectOwner').value
         },
         communities: selectedCommunityNames(),
+        spatialLayers: spatialLayers.map(layer => ({ id: layer.id, name: layer.name, data: layer.data, fillColor: layer.fillColor, lineColor: layer.lineColor, fillOpacity: layer.fillOpacity, visible: layer.visible })),
         circles: circleFeatures.map(feature => feature.properties),
         csv: { name: currentCsvName, headers: csvHeaders, records: csvRecords, latColumn: csvLatColumn, lngColumn: csvLngColumn },
         arrows: arrows.map(element => ({ left: element.style.left, top: element.style.top, rotation: element.style.transform || 'rotate(0deg)' })),
@@ -740,9 +880,11 @@
       document.getElementById('projectName').value = state.project.name || '';
       document.getElementById('projectStatus').value = state.project.status || 'กำลังจัดทำ';
       document.getElementById('projectOwner').value = state.project.owner || '';
+      clearSpatialLayers(false);
+      (state.spatialLayers || []).forEach(layer => addSpatialLayer(layer.name, layer.data, layer));
       (state.circles || []).forEach(p => addCircle(Number(p.lng), Number(p.lat), Number(p.radius) || 1000, p.color || '#ff0000', Number(p.fillOpacity) || 0, p.showCenter !== false));
       if (state.communities) $('#communitySelect').val(state.communities).trigger('change');
-      if (state.csv && state.csv.records) { currentCsvName = state.csv.name || ''; csvHeaders = state.csv.headers || []; csvRecords = state.csv.records || []; csvLatColumn = state.csv.latColumn || ''; csvLngColumn = state.csv.lngColumn || ''; setColumnOptions(); document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn; plotCsvRecords(); }
+      if (state.csv && state.csv.records && state.csv.records.length) { currentCsvName = state.csv.name || ''; csvHeaders = state.csv.headers || []; csvRecords = state.csv.records || []; csvLatColumn = state.csv.latColumn || ''; csvLngColumn = state.csv.lngColumn || ''; setColumnOptions(); document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn; plotCsvRecords(); }
       (state.arrows || []).forEach(restoreArrow); (state.textBoxes || []).forEach(restoreTextBox);
       updatePointList();
     }
@@ -752,6 +894,10 @@
       document.getElementById('clearCommunities').addEventListener('click', () => {
         $('#communitySelect').val(null).trigger('change');
       });
+      document.getElementById('spatialImportBtn').addEventListener('click', () => document.getElementById('spatialFile').click());
+      document.getElementById('spatialExampleBtn').addEventListener('click', loadSpatialExample);
+      document.getElementById('spatialFile').addEventListener('change', importSpatialFile);
+      document.getElementById('spatialClearBtn').addEventListener('click', () => clearSpatialLayers(true));
       document.getElementById('csvFile').addEventListener('change', importCsvFile);
       document.getElementById('csvLatColumn').addEventListener('change', event => { csvLatColumn = event.target.value; renderCsvRecords(); });
       document.getElementById('csvLngColumn').addEventListener('change', event => { csvLngColumn = event.target.value; renderCsvRecords(); });
@@ -778,7 +924,7 @@
         container: 'map', style: STYLES.streets, center: [101.185, 12.738], zoom: 12
       });
       map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
-      map.on('click', event => handleMapClick(event.lngLat));
+      map.on('click', event => { if (interactionMode === 'draw') handleMapClick(event.lngLat); else handleSpatialFeatureClick(event); });
       map.on('load', async () => {
         addDrawingLayers();
         try { await loadCommunities(); }
