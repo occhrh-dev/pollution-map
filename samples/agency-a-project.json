@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "savedAt": "2026-09-08T03:00:00.000Z",
+  "organization": { "id": "agency-a", "name": "หน่วยงาน A — สาธารณสุขจังหวัด" },
+  "view": { "center": [101.185, 12.738], "zoom": 12 },
+  "project": { "name": "ตัวอย่างเฝ้าระวังกลิ่น — หน่วยงาน A", "status": "กำลังจัดทำ", "owner": "กลุ่มงานอนามัยสิ่งแวดล้อม" },
+  "communities": [],
+  "spatialLayers": [],
+  "circles": [
+    { "lng": 101.185, "lat": 12.738, "radius": 1000, "color": "#e53935", "fillOpacity": 0.18, "showCenter": true },
+    { "lng": 101.185, "lat": 12.738, "radius": 3000, "color": "#fb8c00", "fillOpacity": 0.10, "showCenter": false }
+  ],
+  "csv": {
+    "name": "agency-a-sample.csv",
+    "headers": ["ชื่อจุด", "lat", "long", "ประเภท", "ผู้รับผิดชอบ"],
+    "records": [
+      { "ชื่อจุด": "จุดร้องเรียน A1", "lat": "12.738", "long": "101.185", "ประเภท": "กลิ่น", "ผู้รับผิดชอบ": "หน่วยงาน A", "__markerShape": "pin", "__markerColor": "#e53935" }
+    ],
+    "latColumn": "lat",
+    "lngColumn": "long"
+  },
+  "arrows": [],
+  "textBoxes": []
+}

@@ -33,6 +33,7 @@
     h1 { margin: 0; font-size: 19px; line-height: 1.15; }
     .subtitle { margin-top: 2px; font-size: 11px; opacity: .78; }
     .header-spacer { flex: 1; }
+    .agency-badge { max-width: 310px; padding: 5px 11px; border: 1px solid rgba(255,255,255,.28); border-radius: 16px; background: rgba(255,255,255,.12); font-size: 12px; line-height: 1.25; }
     button, input, select { font: inherit; }
     button {
       border: 0; border-radius: 18px; padding: 7px 13px; cursor: pointer;
@@ -169,6 +170,7 @@
       <h1>🗺️ แผนที่ควบคุมมลพิษ</h1>
       <div class="subtitle">MapLibre · ข้อมูลขอบเขตชุมชนจังหวัดระยอง</div>
     </div>
+    <div class="agency-badge" id="agencyBadge" hidden></div>
     <div class="header-spacer"></div>
     <button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
     <button id="baseBtn" type="button" onclick="toggleBase()">🛰️ ดาวเทียม</button>
@@ -242,6 +244,7 @@
         <input id="importFile" type="file" accept="application/json" hidden onchange="importMapFile(event)">
       </div>
       <div class="panel-note" id="saveNote">รุ่นนี้เก็บข้อมูลไว้ในเบราว์เซอร์เครื่องนี้ หรือส่งออกเป็นไฟล์เพื่อย้ายเครื่อง</div>
+      <div class="panel-note" id="agencyIsolationNote" hidden></div>
       <div id="spatialSection">
         <h3>ชั้นข้อมูลพื้นที่</h3>
         <div class="panel-note">รองรับ GeoJSON, JSON, KML และ KMZ · ไฟล์จะถูกเพิ่มเป็นชั้นใหม่โดยไม่ลบขอบเขตชุมชนเดิม</div>
@@ -333,9 +336,15 @@
     let interactionMode = 'view';
     let spatialLayers = [];
     let spatialLayerCounter = 0;
-    // Demo namespaces are convenience only, not authorization boundaries.
+    const AGENCY_DIRECTORY = {
+      'agency-a': 'หน่วยงาน A — สาธารณสุขจังหวัด',
+      'agency-b': 'หน่วยงาน B — เทศบาล',
+      'agency-c': 'หน่วยงาน C — โรงพยาบาล'
+    };
+    // Demo namespaces prevent accidental mixing in this browser, but real privacy still requires login and database RLS.
     const demoAgency = new URLSearchParams(location.search).get('demoAgency');
-    const demoSuffix = ['agency-a', 'agency-b', 'agency-c'].includes(demoAgency) ? `-demo-${demoAgency}` : '';
+    const demoSuffix = Object.hasOwn(AGENCY_DIRECTORY, demoAgency) ? `-demo-${demoAgency}` : '';
+    const activeAgencyName = AGENCY_DIRECTORY[demoAgency] || '';
     const MAP_STORAGE_KEY = 'pollution-map-project-v1' + demoSuffix;
     const CSV_HISTORY_KEY = 'pollution-map-csv-history-v1' + demoSuffix;
     const RADIUS_SET_KEY = 'pollution-map-radius-set-v1' + demoSuffix;
@@ -914,8 +923,9 @@
     }
     function getMapState() {
       return {
-        version: 1,
+        version: 2,
         savedAt: new Date().toISOString(),
+        organization: demoSuffix ? { id: demoAgency, name: activeAgencyName } : null,
         view: map ? { center: map.getCenter().toArray(), zoom: map.getZoom() } : null,
         project: {
           name: document.getElementById('projectName').value,
@@ -950,7 +960,12 @@
     function importMapFile(event) {
       const file = event.target.files[0]; if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => { try { applyMapState(JSON.parse(reader.result)); document.getElementById('saveNote').textContent = `นำเข้าไฟล์ ${file.name} แล้ว`; } catch (error) { alert('ไฟล์แผนที่ไม่ถูกต้อง'); } };
+      reader.onload = () => { try {
+        const state = JSON.parse(reader.result);
+        const sourceAgency = state.organization && state.organization.id;
+        if (demoSuffix && sourceAgency && sourceAgency !== demoAgency) throw new Error(`ไฟล์นี้เป็นข้อมูลของ ${state.organization.name || sourceAgency} จึงเปิดใน ${activeAgencyName} ไม่ได้`);
+        applyMapState(state); document.getElementById('saveNote').textContent = `นำเข้าไฟล์ ${file.name} แล้ว`;
+      } catch (error) { alert(error.message || 'ไฟล์แผนที่ไม่ถูกต้อง'); } };
       reader.readAsText(file); event.target.value = '';
     }
     function restoreArrow(state) {
@@ -986,6 +1001,10 @@
       updatePointList();
     }
     function initializeControls() {
+      if (demoSuffix) {
+        const badge = document.getElementById('agencyBadge'); badge.hidden = false; badge.textContent = `พื้นที่ทำงาน: ${activeAgencyName}`;
+        const note = document.getElementById('agencyIsolationNote'); note.hidden = false; note.textContent = `ข้อมูลในหน้านี้แยกไว้สำหรับ ${activeAgencyName} รวมทั้งโครงการ ประวัติ CSV ชุดรัศมี ชั้นข้อมูล และผังชุมชน`;
+      }
       document.getElementById('communityFile').addEventListener('change', readCommunityFile);
       document.getElementById('communityApply').addEventListener('click', applyCommunityFile);
       document.getElementById('communityReset').addEventListener('click', resetCommunityFile);
@@ -1045,7 +1064,7 @@
         if (demoSuffix) {
           const raw = localStorage.getItem(MAP_STORAGE_KEY);
           if (raw) { try { applyMapState(JSON.parse(raw)); } catch (error) { alert('เปิดโครงการทดลองไม่สำเร็จ'); } }
-          else { document.getElementById('projectName').value = 'แผนที่ ' + demoAgency; document.getElementById('projectOwner').value = demoAgency; }
+          else { document.getElementById('projectName').value = `แผนที่ ${activeAgencyName}`; document.getElementById('projectOwner').value = activeAgencyName; }
         }
       });
     }

@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "savedAt": "2026-09-08T03:05:00.000Z",
+  "organization": { "id": "agency-b", "name": "หน่วยงาน B — เทศบาล" },
+  "view": { "center": [101.27, 12.69], "zoom": 12 },
+  "project": { "name": "ตัวอย่างตรวจสอบแหล่งกำเนิด — หน่วยงาน B", "status": "รอตรวจสอบ", "owner": "กองสาธารณสุขและสิ่งแวดล้อม" },
+  "communities": [],
+  "spatialLayers": [],
+  "circles": [
+    { "lng": 101.27, "lat": 12.69, "radius": 1000, "color": "#1565c0", "fillOpacity": 0.18, "showCenter": true },
+    { "lng": 101.27, "lat": 12.69, "radius": 5000, "color": "#2e7d32", "fillOpacity": 0.08, "showCenter": false }
+  ],
+  "csv": {
+    "name": "agency-b-sample.csv",
+    "headers": ["ชื่อจุด", "lat", "long", "ประเภท", "ผู้รับผิดชอบ"],
+    "records": [
+      { "ชื่อจุด": "จุดตรวจ B1", "lat": "12.690", "long": "101.270", "ประเภท": "ตรวจติดตาม", "ผู้รับผิดชอบ": "หน่วยงาน B", "__markerShape": "star", "__markerColor": "#1565c0" }
+    ],
+    "latColumn": "lat",
+    "lngColumn": "long"
+  },
+  "arrows": [],
+  "textBoxes": []
+}
