@@ -371,7 +371,9 @@
     function spatialSourceId(layer) { return `spatial-source-${layer.id}`; }
     function spatialMapLayerIds(layer) { return [`spatial-fill-${layer.id}`, `spatial-line-${layer.id}`, `spatial-point-${layer.id}`]; }
     function addSpatialLayerToMap(layer) {
-      if (!map || !map.isStyleLoaded() || map.getSource(spatialSourceId(layer))) return;
+      // Tile/source loading can make isStyleLoaded() false even though adding
+      // layers is already safe. Our drawing layer marks an initialized style.
+      if (!map || !map.getLayer('circle-fill') || map.getSource(spatialSourceId(layer))) return;
       map.addSource(spatialSourceId(layer), { type: 'geojson', data: layer.data });
       const beforeId = map.getLayer('circle-fill') ? 'circle-fill' : undefined;
       map.addLayer({ id: spatialMapLayerIds(layer)[0], type: 'fill', source: spatialSourceId(layer), filter: ['==', ['geometry-type'], 'Polygon'], layout: { visibility: layer.visible ? 'visible' : 'none' }, paint: { 'fill-color': layer.fillColor, 'fill-opacity': layer.fillOpacity } }, beforeId);
@@ -489,7 +491,7 @@
         paint: { 'line-color': ['get', 'color'], 'line-opacity': 0.85, 'line-width': 4 }
       });
     }
-    function restoreCustomLayers() { addCommunityLayers(); addAllSpatialLayers(); addDrawingLayers(); }
+    function restoreCustomLayers() { addCommunityLayers(); addDrawingLayers(); addAllSpatialLayers(); }
     function updateCircleSource() {
       const source = map && map.getSource('drawn-circles');
       if (source) source.setData({ type: 'FeatureCollection', features: circleFeatures });
@@ -896,6 +898,7 @@
       document.getElementById('projectOwner').value = state.project.owner || '';
       clearSpatialLayers(false);
       (state.spatialLayers || []).forEach(layer => addSpatialLayer(layer.name, layer.data, layer));
+      document.getElementById('spatialStatus').textContent = spatialLayers.length ? `เปิดชั้นข้อมูลที่บันทึกไว้ ${spatialLayers.length} ชั้นแล้ว` : 'ยังไม่มีชั้นข้อมูลที่นำเข้า';
       (state.circles || []).forEach(p => addCircle(Number(p.lng), Number(p.lat), Number(p.radius) || 1000, p.color || '#ff0000', Number(p.fillOpacity) || 0, p.showCenter !== false));
       if (state.communities) $('#communitySelect').val(state.communities).trigger('change');
       if (state.csv && state.csv.records && state.csv.records.length) { currentCsvName = state.csv.name || ''; csvHeaders = state.csv.headers || []; csvRecords = state.csv.records || []; csvLatColumn = state.csv.latColumn || ''; csvLngColumn = state.csv.lngColumn || ''; setColumnOptions(); document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn; plotCsvRecords(); }
@@ -949,6 +952,7 @@
         }
       });
       map.on('style.load', () => { usingFallback = !!map.getSource('osm-streets'); restoreCustomLayers(); });
+      map.on('idle', addAllSpatialLayers);
       map.on('click', event => { if (interactionMode === 'draw') handleMapClick(event.lngLat); else handleSpatialFeatureClick(event); });
       map.on('load', async () => {
         addDrawingLayers();
