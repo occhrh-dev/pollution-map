@@ -301,6 +301,7 @@
     };
     let map;
     let currentBase = 'streets';
+    let usingFallback = false;
     let communityData = null;
     let communityLabels = { type: 'FeatureCollection', features: [] };
     let communityNames = [];
@@ -600,10 +601,16 @@
     }
     function showAllCommunities() { $('#communitySelect').val(communityNames).trigger('change'); }
     function toggleBase() {
+      usingFallback = false;
       currentBase = currentBase === 'streets' ? 'satellite' : 'streets';
       document.getElementById('baseBtn').textContent = currentBase === 'streets' ? '🛰️ ดาวเทียม' : '🗺️ แผนที่ถนน';
       map.once('idle', restoreCustomLayers);
       map.setStyle(STYLES[currentBase]);
+    }
+    function fallbackStreetStyle() {
+      return { version: 8, glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf', sources: {
+        'osm-streets': { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }
+      }, layers: [{ id: 'osm-streets', type: 'raster', source: 'osm-streets' }] };
     }
     function toggleMapView() {
       document.body.classList.toggle('map-full');
@@ -931,6 +938,17 @@
         container: 'map', style: STYLES.streets, center: [101.185, 12.738], zoom: 12
       });
       map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+      map.on('error', event => {
+        const message = String(event.error && event.error.message || '');
+        if (!usingFallback && /api\.maptiler\.com/.test(message)) {
+          usingFallback = true;
+          currentBase = 'streets';
+          document.getElementById('baseBtn').textContent = '🛰️ ดาวเทียม';
+          document.getElementById('hint').textContent = 'ใช้แผนที่ถนนสำรอง OpenStreetMap · คลิกหมุดเพื่อดูข้อมูล หรือเลือกโหมดวางวงรัศมี';
+          map.setStyle(fallbackStreetStyle());
+        }
+      });
+      map.on('style.load', () => { usingFallback = !!map.getSource('osm-streets'); restoreCustomLayers(); });
       map.on('click', event => { if (interactionMode === 'draw') handleMapClick(event.lngLat); else handleSpatialFeatureClick(event); });
       map.on('load', async () => {
         addDrawingLayers();
