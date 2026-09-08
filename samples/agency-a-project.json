@@ -10,6 +10,7 @@
     { "lng": 101.185, "lat": 12.738, "radius": 1000, "color": "#e53935", "fillOpacity": 0.18, "showCenter": true },
     { "lng": 101.185, "lat": 12.738, "radius": 3000, "color": "#fb8c00", "fillOpacity": 0.10, "showCenter": false }
   ],
+  "radiusSet": [{ "km": 1, "color": "#e53935" }, { "km": 3, "color": "#fb8c00" }, { "km": 5, "color": "#43a047" }],
   "csv": {
     "name": "agency-a-sample.csv",
     "headers": ["ชื่อจุด", "lat", "long", "ประเภท", "ผู้รับผิดชอบ"],
