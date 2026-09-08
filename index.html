@@ -321,9 +321,12 @@
     let interactionMode = 'view';
     let spatialLayers = [];
     let spatialLayerCounter = 0;
-    const MAP_STORAGE_KEY = 'pollution-map-project-v1';
-    const CSV_HISTORY_KEY = 'pollution-map-csv-history-v1';
-    const RADIUS_SET_KEY = 'pollution-map-radius-set-v1';
+    // Demo namespaces are convenience only, not authorization boundaries.
+    const demoAgency = new URLSearchParams(location.search).get('demoAgency');
+    const demoSuffix = ['agency-a', 'agency-b', 'agency-c'].includes(demoAgency) ? `-demo-${demoAgency}` : '';
+    const MAP_STORAGE_KEY = 'pollution-map-project-v1' + demoSuffix;
+    const CSV_HISTORY_KEY = 'pollution-map-csv-history-v1' + demoSuffix;
+    const RADIUS_SET_KEY = 'pollution-map-radius-set-v1' + demoSuffix;
 
     function emptyFilter() { return ['==', ['get', 'name'], '__none__']; }
     function nameFilter(names) {
@@ -827,6 +830,7 @@
       return {
         version: 1,
         savedAt: new Date().toISOString(),
+        view: map ? { center: map.getCenter().toArray(), zoom: map.getZoom() } : null,
         project: {
           name: document.getElementById('projectName').value,
           status: document.getElementById('projectStatus').value,
@@ -877,6 +881,9 @@
     function applyMapState(state) {
       if (!state || !state.project) throw new Error('invalid map state');
       clearMap();
+      clearCsvData();
+      closeCsvEditor(); closeCsvRadiusCreator();
+      if (state.view && Array.isArray(state.view.center) && state.view.center.length === 2 && state.view.center.every(Number.isFinite) && Number.isFinite(state.view.zoom)) map.jumpTo(state.view);
       document.getElementById('projectName').value = state.project.name || '';
       document.getElementById('projectStatus').value = state.project.status || 'กำลังจัดทำ';
       document.getElementById('projectOwner').value = state.project.owner || '';
@@ -929,6 +936,12 @@
         addDrawingLayers();
         try { await loadCommunities(); }
         catch (error) { console.error(error); alert('ไม่สามารถโหลดข้อมูลขอบเขตชุมชนได้'); }
+        addAllSpatialLayers();
+        if (demoSuffix) {
+          const raw = localStorage.getItem(MAP_STORAGE_KEY);
+          if (raw) { try { applyMapState(JSON.parse(raw)); } catch (error) { alert('เปิดโครงการทดลองไม่สำเร็จ'); } }
+          else { document.getElementById('projectName').value = 'แผนที่ ' + demoAgency; document.getElementById('projectOwner').value = demoAgency; }
+        }
       });
     }
     initializeControls();

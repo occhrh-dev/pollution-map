@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>พื้นที่ทำงานหน่วยงาน — รุ่นทดลอง</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef4f6;color:#173347;font:16px system-ui,sans-serif}header{background:#173347;color:white;padding:20px 26px}h1{font-size:23px;margin:0 0 8px}p{line-height:1.6;margin:8px 0}.notice{padding:12px 26px;background:#fff1cd;font-size:14px}.bar{display:flex;align-items:center;gap:14px;padding:16px 26px;flex-wrap:wrap}select,button{font:inherit;padding:10px;border:1px solid #9fbac5;border-radius:8px}button{background:#087e80;color:white;cursor:pointer}.help{padding:0 26px 12px;font-size:14px}iframe{width:100%;height:72vh;border:0;background:white}.badge{background:#def0ef;border-radius:20px;padding:6px 12px;font-size:13px}
+</style>
+<header><h1>พื้นที่ทำงานแผนที่ของหน่วยงาน</h1><p>แต่ละหน่วยงานตั้งแผนที่ นำเข้าขอบเขตและจุดข้อมูล และบันทึกโครงการของตัวเอง</p></header>
+<div class="notice">รุ่นสาธิตบนเครื่องเดียว • ยังไม่มีระบบเข้าสู่ระบบจริง ทุกคนที่ใช้เบราว์เซอร์นี้สลับดูทุกหน่วยงานได้ ใช้ข้อมูลสมมติเท่านั้น</div>
+<div class="bar"><label for="agency">จำลองหน่วยงาน</label><select id="agency"><option value="agency-a">หน่วยงาน A — สาธารณสุขจังหวัด</option><option value="agency-b">หน่วยงาน B — เทศบาล</option><option value="agency-c">หน่วยงาน C — โรงพยาบาล</option></select><button id="enter">เปิดพื้นที่ทำงาน</button><span class="badge" id="active">กำลังใช้งาน: หน่วยงาน A</span></div>
+<p class="help">ทดสอบ: ใน A เปลี่ยนชื่อโครงการ/นำเข้าข้อมูล แล้วกด “บันทึกในเครื่อง” → เปิด B เพื่อสร้างอีกโครงการ → กลับ A ข้อมูลที่บันทึกจะกลับมา รวมทั้งตำแหน่งแผนที่ • บันทึกก่อนสลับหน่วยงาน</p>
+<iframe id="workspace" title="แผนที่ของหน่วยงาน" src="index.html?demoAgency=agency-a"></iframe>
+<script>document.getElementById('enter').onclick=()=>{const select=document.getElementById('agency');document.getElementById('workspace').src='index.html?demoAgency='+encodeURIComponent(select.value);document.getElementById('active').textContent='กำลังใช้งาน: '+select.selectedOptions[0].textContent;};</script></html>
