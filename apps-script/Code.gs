@@ -15,7 +15,8 @@ function doPost(e) {
       getSettings:getSettings_,saveSettings:saveSettings_,listMembers:listMembers_,upsertMember:upsertMember_,disableMember:disableMember_,
       systemSession:systemSession_,systemListAgencies:systemListAgencies_,systemSetAgencyStatus:systemSetAgencyStatus_,
       systemListRegistrationRequests:systemListRegistrationRequests_,systemReviewRegistration:systemReviewRegistration_,
-      systemListMembers:systemListMembers_,systemSetMember:systemSetMember_,systemListAuditLog:systemListAuditLog_
+      systemListMembers:systemListMembers_,systemSetMember:systemSetMember_,systemListAuditLog:systemListAuditLog_,
+      systemBackupStatus:systemBackupStatus_,systemCreateBackup:systemCreateBackup_
     };
     const action = String(input.action || '');
     if (!Object.prototype.hasOwnProperty.call(actions,action)) throw apiError_('ไม่รู้จักคำสั่งที่เรียกใช้','BAD_REQUEST');
@@ -49,6 +50,19 @@ function authorizeSystem_(input) {
 function systemSession_(input) {
   const user = authorizeSystem_(input);
   return {user:user,systemAdmin:true,systemRole:user.systemRole};
+}
+function authorizeSystemOwner_(input) {
+  const actor = authorizeSystem_(input);
+  if (actor.systemRole !== 'OWNER') throw apiError_('เฉพาะ SYSTEM OWNER เท่านั้น','ACCESS_DENIED');
+  return actor;
+}
+function systemBackupStatus_(input) {
+  const actor = authorizeSystemOwner_(input);
+  return getBackupStatusForOwner_(actor.email);
+}
+function systemCreateBackup_(input) {
+  const actor = authorizeSystemOwner_(input);
+  return createManualBackupForOwner_(actor.email);
 }
 function systemListAgencies_(input) {
   authorizeSystem_(input);
