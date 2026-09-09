@@ -61,29 +61,49 @@
     .control-group input[type="number"] { width: 98px; }
     .control-group input[type="color"] { width: 36px; height: 28px; padding: 1px; border: 0; }
     input[type="number"] { padding: 6px 7px; border: 1px solid #bac8d2; border-radius: 6px; background: #fff; }
-    #communityBlock { flex: 1 1 420px; }
+    #communityBlock { flex: 1 1 420px; min-width: 0; }
     #communitySelect { width: 100%; }
-    .select2-container { min-width: 220px; flex: 1; }
-    .select2-container--default .select2-selection--multiple { min-height: 34px; border-color: #bac8d2; }
+    .select2-container { min-width: 220px; flex: 1 1 260px; }
+    .select2-container--default .select2-selection--multiple {
+      height: 36px; min-height: 36px; max-height: 36px; overflow: hidden; border-color: #bac8d2;
+    }
+    #communityBlock .select2-selection__rendered {
+      height: 34px; display: flex; align-items: center; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: thin;
+    }
+    #communityBlock .select2-selection__choice { flex: 0 0 auto; margin-top: 3px; }
+    #communityBlock .select2-search--inline { flex: 0 0 115px; }
+    .selection-count {
+      flex: 0 0 auto; padding: 4px 8px; border-radius: 12px; color: var(--navy);
+      background: #dceced; font-size: 11px; font-weight: 700; white-space: nowrap;
+    }
     #mapwrap { position: relative; flex: 1; min-height: 0; }
     #map { position: absolute; inset: 0; }
     #dataPanel {
-      position: absolute; top: 12px; right: 12px; width: 310px; max-height: calc(100% - 24px);
+      position: absolute; top: 12px; right: 12px; width: 340px; max-height: calc(100% - 24px);
       overflow: auto; padding: 14px; border: 1px solid var(--line); border-radius: 12px;
       background: rgba(255,255,255,.97); box-shadow: 0 3px 16px rgba(0,0,0,.2); z-index: 12;
     }
     #dataPanel[hidden] { display: none; }
     #dataPanel h2 { margin: 0 0 10px; font-size: 16px; color: var(--navy); }
+    .save-guide { margin-bottom: 10px; padding: 10px; border-radius: 9px; background: #fff5d8; color: #5b4a13; font-size: 11px; line-height: 1.45; }
+    .save-guide strong { display: block; margin-bottom: 3px; color: var(--navy); font-size: 13px; }
+    .project-card { margin-bottom: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: #f8fafb; }
+    .project-card h3 { margin: 0 0 5px; color: var(--navy); font-size: 13px; }
+    .primary-save { width: 100%; padding: 9px 12px !important; font-size: 13px !important; }
+    .panel-section { margin-top: 9px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+    .panel-section > summary { padding: 9px 10px; cursor: pointer; color: var(--navy); font-size: 12px; font-weight: 700; }
+    .panel-section > .section-body { padding: 0 10px 10px; }
     .panel-label { display: block; margin: 9px 0 4px; font-size: 12px; font-weight: 600; }
     .panel-input, .panel-select { width: 100%; padding: 7px 8px; border: 1px solid #bac8d2; border-radius: 6px; background: #fff; }
     .panel-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
     .panel-actions button { border-radius: 8px; padding: 7px 10px; font-size: 12px; }
-    #pointList { margin-top: 13px; border-top: 1px solid var(--line); padding-top: 8px; }
+    #pointList { margin-top: 9px; }
     #pointList h3 { margin: 0 0 7px; font-size: 13px; }
     .point-item { padding: 8px 0; border-bottom: 1px solid #edf1f4; font-size: 12px; line-height: 1.45; }
     .point-item strong { display: block; color: var(--navy); }
     .point-item button { margin-top: 5px; padding: 4px 8px; border-radius: 6px; font-size: 11px; }
-    #csvSection { margin-top: 13px; border-top: 1px solid var(--line); padding-top: 10px; }
+    #csvSection { margin-top: 9px; }
     #csvSection h3 { margin: 0 0 7px; font-size: 13px; }
     .csv-file { width: 100%; font-size: 11px; }
     .csv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
@@ -115,7 +135,7 @@
     .csv-popup-row { border-top: 1px solid #e3e9ed; padding: 4px 0; font-size: 12px; line-height: 1.35; }
     .csv-popup-row b { color: #526d7d; }
     .panel-note { margin-top: 9px; color: #657985; font-size: 11px; line-height: 1.4; }
-    #spatialSection { margin-top: 13px; border-top: 1px solid var(--line); padding-top: 10px; }
+    #spatialSection { margin-top: 9px; }
     #spatialSection h3 { margin: 0 0 7px; font-size: 13px; }
     #spatialStatus { margin-top: 7px; color: #657985; font-size: 11px; line-height: 1.4; }
     #spatialLayerDetails { margin-top: 9px; border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; }
@@ -203,6 +223,7 @@
     <div class="control-group" id="communityBlock">
       <label for="communitySelect">ชุมชน</label>
       <select id="communitySelect" multiple></select>
+      <span id="communitySelectionCount" class="selection-count">เลือก 0 ชุมชน</span>
       <button type="button" onclick="openCommunitySettings()">เปลี่ยนผังชุมชน</button>
       <button type="button" onclick="showAllCommunities()">เลือกทั้งหมด</button>
       <button type="button" id="clearCommunities">ล้าง</button>
@@ -225,42 +246,60 @@
     <div id="map" aria-label="แผนที่"></div>
     <section id="dataPanel" hidden aria-label="จัดการข้อมูลแผนที่">
       <h2>จัดการข้อมูลแผนที่</h2>
+      <div class="save-guide" id="cloudSaveGuide" hidden>
+        <strong>💾 ต้องการเก็บงานทั้งหมด ให้กด “บันทึกทั้งโครงการ”</strong>
+        ระบบจะเก็บจุด CSV รูปแบบหมุด วงรัศมี ชั้นข้อมูล พื้นที่ชุมชนที่เลือก ลูกศร ข้อความ และรายละเอียดโครงการไว้ใน Google Drive
+      </div>
+      <section class="project-card">
+        <h3>รายละเอียดโครงการ</h3>
+        <label class="panel-label" for="projectName">ชื่อเหตุการณ์/โครงการ</label>
+        <input class="panel-input" id="projectName" value="แผนที่ควบคุมมลพิษ" placeholder="เช่น จุดร้องเรียนกลิ่นรบกวน">
+        <label class="panel-label" for="projectStatus">สถานะ</label>
+        <select class="panel-select" id="projectStatus"><option>กำลังจัดทำ</option><option>รอตรวจสอบ</option><option>ดำเนินการแล้ว</option><option>ปิดงาน</option></select>
+        <label class="panel-label" for="projectOwner">ผู้รับผิดชอบ</label>
+        <input class="panel-input" id="projectOwner" placeholder="ชื่อหน่วยงานหรือผู้รับผิดชอบ">
+      </section>
       <section id="cloudSection" class="cloud-section" hidden>
-        <h3>โครงการของฉันในหน่วยงานนี้</h3>
+        <h3>บันทึกและเปิดโครงการจาก Google Drive</h3>
         <div id="secureAccountText" class="panel-note"></div>
         <div id="secureRoleText" class="role-badge"></div>
         <label class="panel-label" for="cloudProjectSelect">เลือกโครงการ</label>
         <select class="panel-select" id="cloudProjectSelect"><option value="">— โครงการใหม่ —</option></select>
-        <div class="panel-actions"><button id="cloudNewBtn" type="button">+ โครงการใหม่</button><button id="cloudOpenBtn" type="button" class="outline">เปิดโครงการ</button><button id="cloudSaveBtn" type="button">บันทึกบนระบบ</button><button id="cloudDeleteBtn" type="button" class="danger">ลบโครงการ</button><button id="cloudMembersBtn" type="button" class="outline" hidden>จัดการสมาชิก</button></div>
+        <div class="panel-actions"><button id="cloudNewBtn" type="button">+ สร้างโครงการใหม่</button><button id="cloudOpenBtn" type="button" class="outline">เปิดโครงการที่เลือก</button></div>
+        <div class="panel-actions"><button id="cloudSaveBtn" type="button" class="primary-save">💾 บันทึกทั้งโครงการลง Google Drive</button></div>
+        <div class="panel-actions"><button id="cloudDeleteBtn" type="button" class="danger">ลบโครงการที่เลือก</button><button id="cloudMembersBtn" type="button" class="outline" hidden>จัดการสมาชิก</button></div>
         <div id="cloudStatus" class="panel-note">กำลังเชื่อมต่อระบบกลาง...</div>
       </section>
-      <details id="communitySettings">
-        <summary>ผังชุมชนประจำหน่วยงาน</summary>
+      <details id="communitySettings" class="panel-section">
+        <summary>ตั้งค่าผังชุมชนประจำหน่วยงาน</summary>
+        <div class="section-body">
         <p class="panel-note" id="communityConfigStatus">ผังเริ่มต้น: ชุมชนเขตรับผิดชอบเดิม</p>
         <label class="panel-label" for="communityFile">เลือกผังใหม่ (GeoJSON / KML / KMZ)</label>
         <input id="communityFile" class="csv-file" type="file" accept=".geojson,.json,.kml,.kmz">
         <label class="panel-label" for="communityNameField">คอลัมน์ชื่อชุมชน</label>
         <select id="communityNameField" class="panel-select" disabled></select>
-        <div class="panel-actions"><button id="communityApply" type="button" disabled>ใช้เป็นผังชุมชน</button><button id="communityReset" class="outline" type="button">กลับไปใช้ผังเดิม</button></div>
-        <p class="panel-note">เปลี่ยนรายชื่อในช่องชุมชนและขอบเขตที่เลือกได้ด้านบน ในโหมดหน่วยงานระบบจะบันทึกผังไว้ใน Google Drive ใช้เฉพาะพื้นที่รูปปิด ส่วนจุดและเส้นจะไม่นำมาเป็นชุมชน</p>
+        <div class="panel-actions"><button id="communityApply" type="button" disabled>บันทึกเฉพาะผังชุมชนนี้</button><button id="communityReset" class="outline" type="button">กลับไปใช้ผังเดิม</button></div>
+        <p class="panel-note">ส่วนนี้เปลี่ยนเฉพาะผังและรายชื่อชุมชนประจำหน่วยงาน ไม่ใช่การบันทึกโครงการ จุดหรือวงรัศมี</p>
+        </div>
       </details>
-      <label class="panel-label" for="projectName">ชื่อเหตุการณ์/โครงการ</label>
-      <input class="panel-input" id="projectName" value="แผนที่ควบคุมมลพิษ" placeholder="เช่น จุดร้องเรียนกลิ่นรบกวน">
-      <label class="panel-label" for="projectStatus">สถานะ</label>
-      <select class="panel-select" id="projectStatus"><option>กำลังจัดทำ</option><option>รอตรวจสอบ</option><option>ดำเนินการแล้ว</option><option>ปิดงาน</option></select>
-      <label class="panel-label" for="projectOwner">ผู้รับผิดชอบ</label>
-      <input class="panel-input" id="projectOwner" placeholder="ชื่อหน่วยงานหรือผู้รับผิดชอบ">
-      <div class="panel-actions">
+      <details id="localBackupSection" class="panel-section">
+        <summary>สำรองและย้ายข้อมูล (ตัวเลือกเพิ่มเติม)</summary>
+        <div class="section-body">
+          <p class="panel-note">ใช้สำรองในเบราว์เซอร์เครื่องนี้ หรือย้ายงานด้วยไฟล์ JSON ไม่ใช่การบันทึกบนระบบกลาง</p>
+          <div class="panel-actions">
         <button type="button" onclick="saveMapToBrowser()">บันทึกในเครื่อง</button>
         <button type="button" class="outline" onclick="loadMapFromBrowser()">เปิดข้อมูลล่าสุด</button>
         <button type="button" class="outline" onclick="exportMapFile()">ส่งออกไฟล์</button>
         <button type="button" class="outline" onclick="document.getElementById('importFile').click()">นำเข้าไฟล์</button>
         <input id="importFile" type="file" accept="application/json" hidden onchange="importMapFile(event)">
-      </div>
-      <div class="panel-note" id="saveNote">รุ่นนี้เก็บข้อมูลไว้ในเบราว์เซอร์เครื่องนี้ หรือส่งออกเป็นไฟล์เพื่อย้ายเครื่อง</div>
+          </div>
+          <div class="panel-note" id="saveNote">ยังไม่มีข้อมูลสำรองในเบราว์เซอร์เครื่องนี้</div>
+        </div>
+      </details>
       <div class="panel-note" id="agencyIsolationNote" hidden></div>
-      <div id="spatialSection">
-        <h3>ชั้นข้อมูลพื้นที่</h3>
+      <details id="spatialSection" class="panel-section">
+        <summary>ชั้นข้อมูลพื้นที่ (GeoJSON / KML / KMZ)</summary>
+        <div class="section-body">
         <div class="panel-note">รองรับ GeoJSON, JSON, KML และ KMZ · ไฟล์จะถูกเพิ่มเป็นชั้นใหม่โดยไม่ลบขอบเขตชุมชนเดิม</div>
         <div class="panel-actions">
           <button type="button" id="spatialImportBtn">นำเข้าชั้นข้อมูล</button>
@@ -273,9 +312,11 @@
           <summary id="spatialLayerSummary">ชั้นข้อมูลที่นำเข้า (0)</summary>
           <div id="spatialLayerList"><div class="panel-note">ยังไม่มีข้อมูล</div></div>
         </details>
-      </div>
-      <div id="csvSection">
-        <h3>นำเข้าข้อมูล CSV</h3>
+        </div>
+      </details>
+      <details id="csvSection" class="panel-section">
+        <summary>จุดข้อมูลจาก CSV</summary>
+        <div class="section-body">
         <label class="panel-label" for="csvHistorySelect">ประวัติไฟล์ที่เคยนำเข้า</label>
         <select class="panel-select" id="csvHistorySelect" disabled><option value="">ยังไม่มีประวัติ</option></select>
         <div class="panel-actions"><button type="button" class="outline" id="csvHistoryLoadBtn" disabled>เปิดจากประวัติ</button></div>
@@ -300,7 +341,8 @@
           <input class="panel-input" id="csvMarkerColor" type="color" value="#e8503b">
           <div class="marker-preview-box"><span>ตัวอย่าง</span><div id="csvMarkerPreview" class="csv-marker pin" aria-label="ตัวอย่างหมุด"></div></div>
           <div id="csvEditFields"></div>
-          <div class="panel-actions"><button type="button" id="csvEditSaveBtn">บันทึกการแก้ไข</button><button type="button" class="outline" id="csvEditCancelBtn">ยกเลิก</button></div>
+          <div class="panel-actions"><button type="button" id="csvEditSaveBtn">ใช้การแก้ไขกับจุดนี้</button><button type="button" class="outline" id="csvEditCancelBtn">ยกเลิก</button></div>
+          <p class="panel-note">หลังแก้จุดแล้ว ให้กด “บันทึกทั้งโครงการ” ด้านบนเพื่อเก็บลง Google Drive</p>
         </section>
         <section id="csvRadiusPanel" hidden aria-label="สร้างวงรัศมีจากจุด CSV">
           <h3>สร้างชุดวงรัศมีจากจุด CSV</h3>
@@ -310,8 +352,12 @@
           <label class="panel-label"><input type="checkbox" id="csvRadiusFill" checked> เติมสีภายในวง</label>
           <div class="panel-actions"><button type="button" id="csvRadiusCreateBtn">สร้างชุดวงรัศมี</button><button type="button" class="outline" id="csvRadiusCancelBtn">ยกเลิก</button></div>
         </section>
-      </div>
-      <div id="pointList"><h3>จุดที่วางบนแผนที่</h3><div id="pointListItems">ยังไม่มีจุด</div></div>
+        </div>
+      </details>
+      <details id="pointList" class="panel-section">
+        <summary id="pointListSummary">วงรัศมีและจุดที่วางเอง (0)</summary>
+        <div class="section-body"><div id="pointListItems">ยังไม่มีจุด</div></div>
+      </details>
     </section>
     <div id="hint">โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · กด “โหมดวางวงรัศมี” หากต้องการสร้างวงใหม่</div>
   </main>
@@ -411,11 +457,12 @@
       if (!secureMode || !secureOrganization) return;
       const badge = document.getElementById('agencyBadge'); badge.hidden = false; badge.textContent = `พื้นที่ทำงาน: ${secureOrganization.name}`;
       document.getElementById('logoutBtn').hidden = false;
+      document.getElementById('cloudSaveGuide').hidden = false;
       document.getElementById('cloudSection').hidden = false;
       document.getElementById('secureAccountText').textContent = secureSession.user.email;
       document.getElementById('secureRoleText').textContent = roleName(secureMembership.role);
       const note = document.getElementById('agencyIsolationNote'); note.hidden = false; note.textContent = `ข้อมูลถูกแยกสำหรับ ${secureOrganization.name} ตรวจสิทธิ์จากทะเบียนกลาง และเก็บไฟล์ใน Google Drive ของบัญชีที่เข้าสู่ระบบ`;
-      document.querySelector('[onclick="saveMapToBrowser()"]').textContent = 'สำรองในเครื่อง';
+      document.querySelector('[onclick="saveMapToBrowser()"]').textContent = 'สำรองในเครื่องนี้';
       const editable = canEditCloud();
       ['cloudNewBtn','cloudSaveBtn','communityFile','communityApply','communityReset','spatialImportBtn','spatialExampleBtn','csvFile','csvPlotBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !editable; });
       document.getElementById('cloudDeleteBtn').disabled = String(secureMembership.role).toUpperCase() !== 'ADMIN';
@@ -436,7 +483,7 @@
       if (!canEditCloud()) return;
       cloudProjectId = ''; document.getElementById('cloudProjectSelect').value = '';
       applyMapState({ version: 2, project: { name: 'โครงการใหม่', status: 'กำลังจัดทำ', owner: secureOrganization.name }, communities: [], spatialLayers: [], circles: [], csv: { headers: [], records: [] }, arrows: [], textBoxes: [] });
-      document.getElementById('cloudStatus').textContent = 'เริ่มโครงการใหม่แล้ว กรอกข้อมูลและกด “บันทึกบนระบบ”';
+      document.getElementById('cloudStatus').textContent = 'เริ่มโครงการใหม่แล้ว กรอกข้อมูลและกด “บันทึกทั้งโครงการ”';
     }
     async function openCloudProject() {
       const id = document.getElementById('cloudProjectSelect').value;
@@ -459,7 +506,7 @@
         const file = await PollutionMapAuth.saveJsonFile({ fileId: current ? current.fileId : '', fileName, data: getMapState(), agencyId: secureOrganizationId, agencyName: secureOrganization.name });
         const result = await PollutionMapAuth.api('saveProject', { agencyId: secureOrganizationId, project: { id: cloudProjectId, name, fileId: file.id, fileName: file.name || fileName } });
         cloudProjectId = result.id; await refreshCloudProjects(cloudProjectId);
-        document.getElementById('cloudStatus').textContent = `บันทึก “${name}” ใน Google Drive แล้ว · ${new Date().toLocaleString('th-TH')}`;
+        document.getElementById('cloudStatus').textContent = `บันทึกทั้งโครงการ “${name}” ใน Google Drive แล้ว · ${new Date().toLocaleString('th-TH')}`;
       } catch (error) { document.getElementById('cloudStatus').textContent = `บันทึกไม่สำเร็จ: ${error.message}`; }
       finally { button.disabled = !canEditCloud(); }
     }
@@ -649,6 +696,12 @@
       if (source) source.setData({ type: 'FeatureCollection', features: circleFeatures });
     }
     function selectedCommunityNames() { return $('#communitySelect').val() || []; }
+    function updateCommunitySelectionCount() {
+      const count = selectedCommunityNames().length;
+      const total = communityNames.length;
+      const label = document.getElementById('communitySelectionCount');
+      if (label) label.textContent = count === total && total ? `เลือกทั้งหมด ${total} ชุมชน` : `เลือก ${count} จาก ${total} ชุมชน`;
+    }
     function updateCommunityVisibility() {
       if (!map || !map.getLayer('community-fill')) return;
       const selected = selectedCommunityNames();
@@ -670,7 +723,8 @@
       });
       $('#communitySelect').select2({
         placeholder: 'ค้นหาชุมชน…', width: '100%', closeOnSelect: false
-      }).on('change', updateCommunityVisibility);
+      }).on('change', () => { updateCommunityVisibility(); updateCommunitySelectionCount(); });
+      updateCommunitySelectionCount();
     }
     async function loadCommunities() {
       if (!secureMode) { try { communityConfig = JSON.parse(localStorage.getItem(COMMUNITY_CONFIG_KEY) || 'null'); } catch { communityConfig = null; } }
@@ -1042,6 +1096,8 @@
     function updatePointList() {
       const list = document.getElementById('pointListItems');
       if (!list) return;
+      const summary = document.getElementById('pointListSummary');
+      if (summary) summary.textContent = `วงรัศมีและจุดที่วางเอง (${circleFeatures.length.toLocaleString('th-TH')})`;
       if (!circleFeatures.length) { list.textContent = 'ยังไม่มีจุด'; return; }
       list.innerHTML = circleFeatures.map((feature, index) => {
         const p = feature.properties || {};
@@ -1075,7 +1131,7 @@
     }
     function saveMapToBrowser() {
       localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(getMapState()));
-      document.getElementById('saveNote').textContent = `บันทึกในเครื่องแล้ว · ${new Date().toLocaleString('th-TH')}`;
+      document.getElementById('saveNote').textContent = `สำรองในเบราว์เซอร์เครื่องนี้แล้ว (ยังไม่ใช่ Google Drive) · ${new Date().toLocaleString('th-TH')}`;
     }
     function exportMapFile() {
       const blob = new Blob([JSON.stringify(getMapState(), null, 2)], { type: 'application/json' });
