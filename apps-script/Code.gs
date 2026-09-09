@@ -64,66 +64,49 @@ function listRegistrationAgencies_() {
   });
 }
 
+function registrationOutput_(row) {
+  function date(value) { return value instanceof Date ? value.toISOString() : String(value || ''); }
+  return { id: row.request_id, email: row.email, displayName: row.display_name,
+    agencyId: row.requested_agency_id, status: row.status, requestedAt: date(row.requested_at),
+    reviewedAt: date(row.reviewed_at), reviewedBy: row.reviewed_by || '',
+    assignedRole: row.assigned_role || '', note: row.note || '' };
+}
+
 function requestAccess_(input) {
   const claims = verifyCredential_(input.credential);
   const agencyId = cleanText_(input.agencyId, 120);
   const displayName = cleanText_(input.displayName || claims.name || claims.email, 160);
+  if (!displayName) throw apiError_('กรุณาระบุชื่อผู้สมัคร', 'BAD_REQUEST');
   const agency = agencyById_(agencyId);
   if (!agency || agency.status !== 'ACTIVE') throw apiError_('ไม่พบหน่วยงานที่เลือก', 'BAD_REQUEST');
-
-  const alreadyActive = activeUsersForClaims_(claims).some(function (row) {
-    return row.agency_id === agencyId;
-  });
-  if (alreadyActive) throw apiError_('บัญชีนี้มีสิทธิ์ในหน่วยงานนี้อยู่แล้ว', 'ALREADY_MEMBER');
-
-  const existingPending = rows_('REGISTRATION_REQUESTS').find(function (row) {
-    return normalizeEmail_(row.email) === claims.email && row.requested_agency_id === agencyId && row.status === 'PENDING';
-  });
-  if (existingPending) {
-    return { id: existingPending.request_id, status: 'PENDING', email: claims.email, agencyId: agencyId };
-  }
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
+    const members = rows_('USERS').filter(function (row) {
+      return row.agency_id === agencyId && (String(row.user_id) === claims.sub || normalizeEmail_(row.email) === claims.email);
+    });
+    if (members.some(function (row) { return row.status === 'ACTIVE'; }))
+      throw apiError_('บัญชีนี้มีสิทธิ์ในหน่วยงานนี้อยู่แล้ว', 'ALREADY_MEMBER');
+    if (members.some(function (row) { return row.status === 'DISABLED'; }))
+      throw apiError_('บัญชีนี้ถูกระงับ กรุณาติดต่อผู้ดูแลหน่วยงาน', 'ACCOUNT_DISABLED');
+    const pending = rows_('REGISTRATION_REQUESTS').find(function (row) {
+      return row.requested_agency_id === agencyId && row.status === 'PENDING' &&
+        (normalizeEmail_(row.email) === claims.email || String(row.google_sub || '') === claims.sub);
+    });
+    if (pending) return { id: pending.request_id, status: 'PENDING', email: claims.email, agencyId: agencyId };
     const requestId = newId_('REQ');
     sheet_('REGISTRATION_REQUESTS').appendRow([
-      requestId,
-      claims.email,
-      displayName,
-      agencyId,
-      'PENDING',
-      new Date(),
-      '',
-      '',
-      '',
-      ''
+      requestId, claims.email, displayName, agencyId, 'PENDING', new Date(), '', '', '', '', claims.sub
     ]);
     appendAudit_(claims.email, agencyId, 'REGISTRATION_REQUEST', 'USER', requestId, 'SUCCESS', displayName);
     return { id: requestId, status: 'PENDING', email: claims.email, agencyId: agencyId };
-  } finally {
-    lock.releaseLock();
-  }
+  } finally { lock.releaseLock(); }
 }
 
 function listRegistrationRequests_(input) {
   const auth = authorize_(input, ['ADMIN']);
   return rows_('REGISTRATION_REQUESTS').filter(function (row) {
     return row.requested_agency_id === auth.agency.id;
-  }).map(function (row) {
-    return {
-      id: row.request_id,
-      email: row.email,
-      displayName: row.display_name,
-      agencyId: row.requested_agency_id,
-      status: row.status,
-      requestedAt: row.requested_at instanceof Date ? row.requested_at.toISOString() : String(row.requested_at || ''),
-      reviewedAt: row.reviewed_at instanceof Date ? row.reviewed_at.toISOString() : String(row.reviewed_at || ''),
-      reviewedBy: row.reviewed_by || '',
-      assignedRole: row.assigned_role || '',
-      note: row.note || ''
-    };
-  }).sort(function (a, b) {
+  }).map(registrationOutput_).sort(function (a, b) {
     if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
     if (a.status !== 'PENDING' && b.status === 'PENDING') return 1;
     return String(b.requestedAt).localeCompare(String(a.requestedAt));
@@ -138,48 +121,35 @@ function reviewRegistration_(input) {
   const note = cleanText_(input.note || '', 500);
   if (['APPROVE', 'REJECT'].indexOf(decision) < 0) throw apiError_('ผลการพิจารณาไม่ถูกต้อง', 'BAD_REQUEST');
   if (decision === 'APPROVE' && USER_ROLES.indexOf(role) < 0) throw apiError_('บทบาทไม่ถูกต้อง', 'BAD_REQUEST');
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     const request = rows_('REGISTRATION_REQUESTS').find(function (row) {
       return row.request_id === requestId && row.requested_agency_id === auth.agency.id;
     });
     if (!request) throw apiError_('ไม่พบคำขอลงทะเบียน', 'NOT_FOUND');
     if (request.status !== 'PENDING') throw apiError_('คำขอนี้ถูกพิจารณาแล้ว', 'ALREADY_REVIEWED');
-
     const reviewedAt = new Date();
     if (decision === 'APPROVE') {
       const email = normalizeEmail_(request.email);
+      const sub = String(request.google_sub || '');
       const current = rows_('USERS').find(function (row) {
-        return normalizeEmail_(row.email) === email && row.agency_id === auth.agency.id;
+        return row.agency_id === auth.agency.id && (normalizeEmail_(row.email) === email || (sub && String(row.user_id) === sub));
       });
-      const values = [
-        current ? current.user_id : 'PENDING:' + email,
-        email,
-        cleanText_(request.display_name || email, 160),
-        auth.agency.id,
-        role,
-        'ACTIVE',
-        current ? current.registered_at : reviewedAt,
-        current ? current.last_login_at : ''
-      ];
+      if (current && current.status === 'DISABLED') throw apiError_('บัญชีนี้ถูกระงับ กรุณาจัดการสิทธิ์เดิมโดยตรง', 'ACCOUNT_DISABLED');
+      if (current && current.status === 'ACTIVE') throw apiError_('บัญชีนี้มีสิทธิ์อยู่แล้ว', 'ALREADY_MEMBER');
+      const values = [sub || 'PENDING:' + email, email, cleanText_(request.display_name || email, 160), auth.agency.id,
+        role, 'ACTIVE', reviewedAt, ''];
       if (current) sheet_('USERS').getRange(current._row, 1, 1, values.length).setValues([values]);
       else sheet_('USERS').appendRow(values);
     }
-
     const requestSheet = sheet_('REGISTRATION_REQUESTS');
-    requestSheet.getRange(request._row, headerIndex_('REGISTRATION_REQUESTS', 'status')).setValue(decision === 'APPROVE' ? 'APPROVED' : 'REJECTED');
-    requestSheet.getRange(request._row, headerIndex_('REGISTRATION_REQUESTS', 'reviewed_at')).setValue(reviewedAt);
-    requestSheet.getRange(request._row, headerIndex_('REGISTRATION_REQUESTS', 'reviewed_by')).setValue(auth.user.email);
-    requestSheet.getRange(request._row, headerIndex_('REGISTRATION_REQUESTS', 'assigned_role')).setValue(decision === 'APPROVE' ? role : '');
-    requestSheet.getRange(request._row, headerIndex_('REGISTRATION_REQUESTS', 'note')).setValue(note);
-
-    appendAudit_(auth.user.email, auth.agency.id, decision === 'APPROVE' ? 'REGISTRATION_APPROVE' : 'REGISTRATION_REJECT', 'USER', request.email, 'SUCCESS', decision === 'APPROVE' ? role : note);
-    return { id: requestId, status: decision === 'APPROVE' ? 'APPROVED' : 'REJECTED', role: decision === 'APPROVE' ? role : '' };
-  } finally {
-    lock.releaseLock();
-  }
+    const values = [decision === 'APPROVE' ? 'APPROVED' : 'REJECTED', reviewedAt, auth.user.email,
+      decision === 'APPROVE' ? role : '', note];
+    requestSheet.getRange(request._row, 5, 1, values.length).setValues([values]);
+    appendAudit_(auth.user.email, auth.agency.id, decision === 'APPROVE' ? 'REGISTRATION_APPROVE' : 'REGISTRATION_REJECT',
+      'USER', request.email, 'SUCCESS', decision === 'APPROVE' ? role : note);
+    return { id: requestId, status: values[0], role: values[3] };
+  } finally { lock.releaseLock(); }
 }
 
 function listProjects_(input) {
@@ -214,8 +184,8 @@ function archiveProject_(input) {
   if (!current || String(current.project_id).indexOf('CFG-') === 0) throw apiError_('ไม่พบโครงการ', 'NOT_FOUND');
   sheet_('PROJECTS').getRange(current._row, headerIndex_('PROJECTS', 'status')).setValue('ARCHIVED');
   sheet_('PROJECTS').getRange(current._row, headerIndex_('PROJECTS', 'updated_at')).setValue(new Date());
-  appendAudit_(auth.user.email, auth.agency.id, 'PROJECT_ARCHIVE', 'PROJECT', current.project_id, 'SUCCESS', current.project_name);
-  return { id: current.project_id };
+  appendAudit_(auth.user.email, auth.agency.id, 'PROJECT_ARCHIVE', 'PROJECT', input.projectId, 'SUCCESS', current.project_name);
+  return { id: input.projectId };
 }
 
 function getSettings_(input) {
