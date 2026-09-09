@@ -201,6 +201,7 @@ function reviewRegistrationCore_(input,actor,system,agencyId) {
     } else if (decision === 'APPROVE') {
       if (USER_ROLES.indexOf(role) < 0) throw apiError_('บทบาทไม่ถูกต้อง','BAD_REQUEST');
       const email = normalizeEmail_(request.email);const sub = String(request.google_sub || '');
+      if (protectedMemberEmail_(email,agencyId)) throw apiError_('บัญชีผู้ดูแลระบบส่วนกลางต้องจัดการผ่านศูนย์ผู้ดูแลระบบ','ACCESS_DENIED');
       const current = rows_('USERS').find(function(row){return row.agency_id === agencyId && (normalizeEmail_(row.email) === email || (sub && String(row.user_id) === sub));});
       if (current && current.status === 'DISABLED') throw apiError_('บัญชีนี้ถูกระงับ กรุณาจัดการสิทธิ์เดิมโดยตรง','ACCOUNT_DISABLED');
       if (current && current.status === 'ACTIVE') throw apiError_('บัญชีนี้มีสิทธิ์อยู่แล้ว','ALREADY_MEMBER');
