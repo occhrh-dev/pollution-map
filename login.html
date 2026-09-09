@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;background:linear-gradient(145deg,#e8f4f3,#eef2f7);color:#173347;font-family:Sarabun,sans-serif}.shell{width:min(940px,100%);display:grid;grid-template-columns:minmax(260px,.9fr) minmax(300px,1.1fr);overflow:hidden;border-radius:20px;background:#fff;box-shadow:0 20px 55px rgba(22,50,74,.18)}.brand{padding:42px 36px;color:white;background:#173347}.brand h1{margin:0 0 14px;font-size:28px}.brand p{line-height:1.7;opacity:.88}.panel{padding:38px 36px}h2{margin:0 0 18px}.button{width:100%;margin-top:18px;padding:11px;border:0;border-radius:9px;color:white;background:#0e7c7b;font:inherit;font-weight:700;cursor:pointer}.button.secondary{width:auto;margin:8px 6px 0 0;padding:9px 12px;color:#173347;background:#edf4f5}.button:disabled{opacity:.55;cursor:not-allowed}.message{min-height:24px;margin-top:12px;font-size:14px}.error{color:#b42318}.ok{color:#08745e}.orgs{display:grid;gap:10px;margin-top:14px}.org{padding:13px;border:1px solid #d6e0e5;border-radius:11px}.org strong{display:block}.org small{color:#627987}.setup{padding:12px;border-left:4px solid #d88b00;background:#fff4d6;line-height:1.55;font-size:14px}.privacy{margin-top:18px;color:#627987;font-size:13px;line-height:1.55}.hidden{display:none!important}#googleButton{min-height:44px}@media(max-width:700px){.shell{grid-template-columns:1fr}.brand{padding:26px}.panel{padding:27px}}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;background:linear-gradient(145deg,#e8f4f3,#eef2f7);color:#173347;font-family:Sarabun,sans-serif}.shell{width:min(940px,100%);display:grid;grid-template-columns:minmax(260px,.9fr) minmax(300px,1.1fr);overflow:hidden;border-radius:20px;background:#fff;box-shadow:0 20px 55px rgba(22,50,74,.18)}.brand{padding:42px 36px;color:white;background:#173347}.brand h1{margin:0 0 14px;font-size:28px}.brand p{line-height:1.7;opacity:.88}.panel{padding:38px 36px}h2{margin:0 0 18px}.button{width:100%;margin-top:18px;padding:11px;border:0;border-radius:9px;color:white;background:#0e7c7b;font:inherit;font-weight:700;cursor:pointer}.button.secondary{width:auto;margin:8px 6px 0 0;padding:9px 12px;color:#173347;background:#edf4f5}.button.admin{width:auto;margin:8px 6px 0 0;padding:9px 12px;color:#fff;background:#173347}.button:disabled{opacity:.55;cursor:not-allowed}.message{min-height:24px;margin-top:12px;font-size:14px}.error{color:#b42318}.ok{color:#08745e}.orgs{display:grid;gap:10px;margin-top:14px}.org{padding:13px;border:1px solid #d6e0e5;border-radius:11px}.org strong{display:block}.org small{color:#627987}.org-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.setup{padding:12px;border-left:4px solid #d88b00;background:#fff4d6;line-height:1.55;font-size:14px}.privacy{margin-top:18px;color:#627987;font-size:13px;line-height:1.55}.hidden{display:none!important}#googleButton{min-height:44px}@media(max-width:700px){.shell{grid-template-columns:1fr}.brand{padding:26px}.panel{padding:27px}.org-actions .button{width:100%;margin-right:0}}
   </style>
 </head>
 <body>
@@ -37,12 +37,17 @@
     function setMessage(text, error=false){message.textContent=text;message.className='message '+(error?'error':'ok');}
     function escapeHtml(value){const div=document.createElement('div');div.textContent=String(value??'');return div.innerHTML;}
     function roleName(role){return ({ADMIN:'ผู้ดูแลหน่วยงาน',EDITOR:'ผู้แก้ไข',VIEWER:'ผู้ดูข้อมูล',admin:'ผู้ดูแลหน่วยงาน',editor:'ผู้แก้ไข',viewer:'ผู้ดูข้อมูล'})[role]||role;}
+    function isAdmin(role){return String(role||'').toUpperCase()==='ADMIN';}
     function showOrganizations(data){
       loginPanel.classList.add('hidden'); workspacePanel.classList.remove('hidden');
       document.getElementById('accountText').textContent=`เข้าสู่ระบบด้วย ${data.user.email}`;
       const list=document.getElementById('organizations');
-      list.innerHTML=(data.agencies||[]).map(item=>`<div class="org"><strong>${escapeHtml(item.name)}</strong><small>สิทธิ์: ${roleName(item.role)}</small><br><button class="button secondary" type="button" data-agency="${encodeURIComponent(item.id)}">อนุญาต Drive และเปิดพื้นที่ทำงาน</button></div>`).join('')||'<div class="setup">บัญชีนี้ยังไม่ได้รับสิทธิ์ กรุณาติดต่อผู้ดูแลระบบ</div>';
+      list.innerHTML=(data.agencies||[]).map(item=>{
+        const adminButton=isAdmin(item.role)?`<button class="button admin" type="button" data-admin="${encodeURIComponent(item.id)}">⚙️ ศูนย์ผู้ดูแลระบบ</button>`:'';
+        return `<div class="org"><strong>${escapeHtml(item.name)}</strong><small>สิทธิ์: ${roleName(item.role)}</small><div class="org-actions"><button class="button secondary" type="button" data-agency="${encodeURIComponent(item.id)}">อนุญาต Drive และเปิดพื้นที่ทำงาน</button>${adminButton}</div></div>`;
+      }).join('')||'<div class="setup">บัญชีนี้ยังไม่ได้รับสิทธิ์ กรุณาติดต่อผู้ดูแลระบบ</div>';
       list.querySelectorAll('[data-agency]').forEach(button=>button.addEventListener('click',()=>openWorkspace(decodeURIComponent(button.dataset.agency))));
+      list.querySelectorAll('[data-admin]').forEach(button=>button.addEventListener('click',()=>openAdmin(decodeURIComponent(button.dataset.admin))));
     }
     async function handleCredential(response){
       setMessage('กำลังตรวจสอบบัญชี...');
@@ -55,6 +60,9 @@
       setMessage('กำลังขอสิทธิ์ Google Drive...');
       try { await auth.requestDriveToken(); location.href=`index.html?secure=1&org=${encodeURIComponent(id)}`; }
       catch(error){ setMessage(error.message||'ไม่ได้รับสิทธิ์ Google Drive',true); }
+    }
+    function openAdmin(id){
+      location.href=`admin.html?org=${encodeURIComponent(id)}`;
     }
     async function boot(){
       if(!auth.configured()){document.getElementById('setup').classList.remove('hidden');return;}
