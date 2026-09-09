@@ -22,12 +22,14 @@ function runBackupSetup() {
   const folder = DriveApp.getFolderById(BACKUP_FOLDER_ID);
   folder.addEditor(BACKUP_OWNER_EMAIL);
   installDailyBackupTrigger();
+  if (typeof installBackupHealthTrigger === 'function') installBackupHealthTrigger();
   const firstBackup = createRegistryBackup_('SETUP', email);
   return {
     installed: true,
     folderId: BACKUP_FOLDER_ID,
     sharedWith: BACKUP_OWNER_EMAIL,
     schedule: 'ทุกวันช่วง 02:00-03:00 Asia/Bangkok',
+    healthSchedule: 'ทุกวันช่วง 04:00-05:00 Asia/Bangkok',
     firstBackup: firstBackup
   };
 }
@@ -37,6 +39,7 @@ function verifyBackupSetup() {
     return trigger.getHandlerFunction() === BACKUP_TRIGGER_HANDLER;
   });
   const props = PropertiesService.getScriptProperties();
+  const health = typeof backupHealthSnapshot_ === 'function' ? backupHealthSnapshot_() : null;
   return {
     triggerInstalled: triggers.length === 1,
     triggerCount: triggers.length,
@@ -47,7 +50,10 @@ function verifyBackupSetup() {
     lastFileName: props.getProperty('BACKUP_LAST_FILE_NAME') || '',
     lastMode: props.getProperty('BACKUP_LAST_MODE') || '',
     lastErrorAt: props.getProperty('BACKUP_LAST_ERROR_AT') || '',
-    lastError: props.getProperty('BACKUP_LAST_ERROR') || ''
+    lastError: props.getProperty('BACKUP_LAST_ERROR') || '',
+    healthStatus: health ? health.status : '',
+    ageHours: health ? health.ageHours : null,
+    lastAlertAt: health ? health.lastAlertAt : ''
   };
 }
 
@@ -65,6 +71,7 @@ function getBackupStatusForOwner_(actorEmail) {
     throw apiError_('เฉพาะ SYSTEM OWNER เท่านั้นที่ดูสถานะ Backup ได้', 'ACCESS_DENIED');
   }
   const props = PropertiesService.getScriptProperties();
+  const health = typeof backupHealthSnapshot_ === 'function' ? backupHealthSnapshot_() : null;
   return {
     lastSuccessAt: props.getProperty('BACKUP_LAST_SUCCESS_AT') || '',
     lastFileId: props.getProperty('BACKUP_LAST_FILE_ID') || '',
@@ -74,7 +81,11 @@ function getBackupStatusForOwner_(actorEmail) {
     lastError: props.getProperty('BACKUP_LAST_ERROR') || '',
     retentionDays: BACKUP_RETENTION_DAYS,
     triggerHour: BACKUP_TRIGGER_HOUR,
-    folderId: BACKUP_FOLDER_ID
+    folderId: BACKUP_FOLDER_ID,
+    healthStatus: health ? health.status : '',
+    ageHours: health ? health.ageHours : null,
+    lastAlertAt: health ? health.lastAlertAt : '',
+    alertRecipients: typeof backupAlertRecipients_ === 'function' ? backupAlertRecipients_() : ''
   };
 }
 
@@ -105,6 +116,7 @@ function createRegistryBackup_(mode, actorEmail) {
 
       cleanupOldBackups_();
       appendAudit_(normalizeEmail_(actorEmail || 'scheduler'), '', 'SYSTEM_BACKUP_CREATE', 'BACKUP', copy.getId(), 'SUCCESS', copy.getName());
+      if (typeof markBackupHealthy_ === 'function') markBackupHealthy_(String(mode || 'BACKUP'));
       return {id: copy.getId(), name: copy.getName(), createdAt: now.toISOString(), mode: mode};
     } catch (error) {
       props.setProperty('BACKUP_LAST_ERROR_AT', now.toISOString());
@@ -112,6 +124,9 @@ function createRegistryBackup_(mode, actorEmail) {
       try {
         appendAudit_(normalizeEmail_(actorEmail || 'scheduler'), '', 'SYSTEM_BACKUP_CREATE', 'BACKUP', '', 'FAILED', String(error && error.message || error));
       } catch (auditError) {}
+      if (typeof notifyBackupFailure_ === 'function') {
+        try { notifyBackupFailure_(error, mode); } catch (alertError) {}
+      }
       throw error;
     }
   } finally {
