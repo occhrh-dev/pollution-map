@@ -226,13 +226,13 @@
     <section id="dataPanel" hidden aria-label="จัดการข้อมูลแผนที่">
       <h2>จัดการข้อมูลแผนที่</h2>
       <section id="cloudSection" class="cloud-section" hidden>
-        <h3>โครงการของหน่วยงาน</h3>
+        <h3>โครงการของฉันในหน่วยงานนี้</h3>
         <div id="secureAccountText" class="panel-note"></div>
         <div id="secureRoleText" class="role-badge"></div>
         <label class="panel-label" for="cloudProjectSelect">เลือกโครงการ</label>
         <select class="panel-select" id="cloudProjectSelect"><option value="">— โครงการใหม่ —</option></select>
         <div class="panel-actions"><button id="cloudNewBtn" type="button">+ โครงการใหม่</button><button id="cloudOpenBtn" type="button" class="outline">เปิดโครงการ</button><button id="cloudSaveBtn" type="button">บันทึกบนระบบ</button><button id="cloudDeleteBtn" type="button" class="danger">ลบโครงการ</button><button id="cloudMembersBtn" type="button" class="outline" hidden>จัดการสมาชิก</button></div>
-        <div id="cloudStatus" class="panel-note">กำลังเชื่อมต่อฐานข้อมูล...</div>
+        <div id="cloudStatus" class="panel-note">กำลังเชื่อมต่อระบบกลาง...</div>
       </section>
       <details id="communitySettings">
         <summary>ผังชุมชนประจำหน่วยงาน</summary>
@@ -242,7 +242,7 @@
         <label class="panel-label" for="communityNameField">คอลัมน์ชื่อชุมชน</label>
         <select id="communityNameField" class="panel-select" disabled></select>
         <div class="panel-actions"><button id="communityApply" type="button" disabled>ใช้เป็นผังชุมชน</button><button id="communityReset" class="outline" type="button">กลับไปใช้ผังเดิม</button></div>
-        <p class="panel-note">เปลี่ยนรายชื่อในช่องชุมชนและขอบเขตที่เลือกได้ด้านบน บันทึกผังแยกตามหน่วยงานในเบราว์เซอร์ทันที ใช้เฉพาะพื้นที่รูปปิด ส่วนจุดและเส้นจะไม่นำมาเป็นชุมชน</p>
+        <p class="panel-note">เปลี่ยนรายชื่อในช่องชุมชนและขอบเขตที่เลือกได้ด้านบน ในโหมดหน่วยงานระบบจะบันทึกผังไว้ใน Google Drive ใช้เฉพาะพื้นที่รูปปิด ส่วนจุดและเส้นจะไม่นำมาเป็นชุมชน</p>
       </details>
       <label class="panel-label" for="projectName">ชื่อเหตุการณ์/โครงการ</label>
       <input class="panel-input" id="projectName" value="แผนที่ควบคุมมลพิษ" placeholder="เช่น จุดร้องเรียนกลิ่นรบกวน">
@@ -320,8 +320,9 @@
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://accounts.google.com/gsi/client?hl=th" async defer></script>
   <script src="config.js"></script>
+  <script src="auth-client.js"></script>
   <script>
     const MAPTILER_KEY = 'XOw46Ht6gxyHhSCkLXPf';
     const COMMUNITY_URL = 'ผังโครงร่างเขตควบคุมมลพิษ.json';
@@ -357,7 +358,7 @@
       'agency-b': 'หน่วยงาน B — เทศบาล',
       'agency-c': 'หน่วยงาน C — โรงพยาบาล'
     };
-    // Demo namespaces prevent accidental mixing in this browser, but real privacy still requires login and database RLS.
+    // Demo namespaces prevent accidental mixing in this browser; secure mode verifies Google identity and agency membership on every request.
     const demoAgency = new URLSearchParams(location.search).get('demoAgency');
     const secureMode = new URLSearchParams(location.search).get('secure') === '1';
     const secureOrganizationId = secureMode ? new URLSearchParams(location.search).get('org') : '';
@@ -369,37 +370,42 @@
     const COMMUNITY_CONFIG_KEY = 'pollution-map-community-config-v1' + demoSuffix;
     let pendingCommunity = null;
     let communityConfig = null;
-    let secureClient = null;
     let secureSession = null;
     let secureMembership = null;
     let secureOrganization = null;
+    let communitySettingsFileId = '';
     let cloudProjectId = '';
     let cloudProjects = [];
 
-    function roleName(role) { return ({ admin: 'ผู้ดูแลหน่วยงาน', editor: 'ผู้แก้ไข', viewer: 'ผู้ดูข้อมูล' })[role] || role || '-'; }
-    function canEditCloud() { return secureMembership && ['admin', 'editor'].includes(secureMembership.role); }
+    function roleName(role) { return ({ ADMIN: 'ผู้ดูแลหน่วยงาน', EDITOR: 'ผู้แก้ไข', VIEWER: 'ผู้ดูข้อมูล', admin: 'ผู้ดูแลหน่วยงาน', editor: 'ผู้แก้ไข', viewer: 'ผู้ดูข้อมูล' })[role] || role || '-'; }
+    function canEditCloud() { return secureMembership && ['ADMIN', 'EDITOR'].includes(String(secureMembership.role).toUpperCase()); }
     function secureConfigReady() {
-      const config = window.POLLUTION_MAP_CONFIG || {};
-      return /^https:\/\/.+\.supabase\.co$/i.test(config.supabaseUrl || '') && !!config.supabasePublishableKey;
+      return !!window.PollutionMapAuth && PollutionMapAuth.configured();
     }
     async function bootstrapSecureSession() {
       if (!secureMode) return;
       if (!secureOrganizationId || !secureConfigReady()) { location.replace('login.html'); throw new Error('secure configuration missing'); }
-      const config = window.POLLUTION_MAP_CONFIG;
-      secureClient = supabase.createClient(config.supabaseUrl, config.supabasePublishableKey);
-      const { data: sessionData, error: sessionError } = await secureClient.auth.getSession();
-      if (sessionError || !sessionData.session) { location.replace('login.html'); throw new Error('authentication required'); }
-      secureSession = sessionData.session;
-      const { data: membership, error: membershipError } = await secureClient.from('organization_members')
-        .select('organization_id,role,organizations(id,name,slug)')
-        .eq('organization_id', secureOrganizationId).maybeSingle();
-      if (membershipError || !membership) { alert('บัญชีนี้ไม่มีสิทธิ์เข้าถึงหน่วยงานดังกล่าว'); location.replace('login.html'); throw membershipError || new Error('membership required'); }
-      secureMembership = membership;
-      secureOrganization = membership.organizations;
-      const { data: settings, error: settingsError } = await secureClient.from('organization_settings')
-        .select('community_name,community_data').eq('organization_id', secureOrganizationId).maybeSingle();
-      if (settingsError) console.error(settingsError);
-      if (settings && settings.community_data) communityConfig = { name: settings.community_name || 'ผังชุมชนของหน่วยงาน', data: settings.community_data };
+      if (!PollutionMapAuth.credential() || !PollutionMapAuth.session()) { location.replace('login.html'); throw new Error('authentication required'); }
+      try {
+        const data = await PollutionMapAuth.api('session', { agencyId: secureOrganizationId });
+        secureSession = { user: data.user };
+        secureMembership = data.membership;
+        secureOrganization = data.agency;
+        try {
+          const settings = await PollutionMapAuth.api('getSettings', { agencyId: secureOrganizationId });
+          if (settings && settings.fileId) {
+            communitySettingsFileId = settings.fileId;
+            const saved = await PollutionMapAuth.loadJsonFile(settings.fileId);
+            if (saved && saved.config) communityConfig = saved.config;
+          }
+        } catch (settingsError) { console.warn('โหลดผังชุมชนส่วนกลางไม่สำเร็จ', settingsError); }
+      } catch (error) {
+        if (error.code === 'AUTH_REQUIRED' || error.code === 'ACCESS_DENIED') {
+          alert(error.message || 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงหน่วยงานดังกล่าว');
+          location.replace('login.html');
+        }
+        throw error;
+      }
     }
     function setupSecureUI() {
       if (!secureMode || !secureOrganization) return;
@@ -408,23 +414,23 @@
       document.getElementById('cloudSection').hidden = false;
       document.getElementById('secureAccountText').textContent = secureSession.user.email;
       document.getElementById('secureRoleText').textContent = roleName(secureMembership.role);
-      const note = document.getElementById('agencyIsolationNote'); note.hidden = false; note.textContent = `ข้อมูลบนระบบถูกแยกสำหรับ ${secureOrganization.name} และตรวจสิทธิ์โดยฐานข้อมูลทุกครั้ง`;
+      const note = document.getElementById('agencyIsolationNote'); note.hidden = false; note.textContent = `ข้อมูลถูกแยกสำหรับ ${secureOrganization.name} ตรวจสิทธิ์จากทะเบียนกลาง และเก็บไฟล์ใน Google Drive ของบัญชีที่เข้าสู่ระบบ`;
       document.querySelector('[onclick="saveMapToBrowser()"]').textContent = 'สำรองในเครื่อง';
       const editable = canEditCloud();
       ['cloudNewBtn','cloudSaveBtn','communityFile','communityApply','communityReset','spatialImportBtn','spatialExampleBtn','csvFile','csvPlotBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !editable; });
-      document.getElementById('cloudDeleteBtn').disabled = secureMembership.role !== 'admin';
-      const membersButton = document.getElementById('cloudMembersBtn'); membersButton.hidden = secureMembership.role !== 'admin';
+      document.getElementById('cloudDeleteBtn').disabled = String(secureMembership.role).toUpperCase() !== 'ADMIN';
+      const membersButton = document.getElementById('cloudMembersBtn'); membersButton.hidden = String(secureMembership.role).toUpperCase() !== 'ADMIN';
       if (!editable) document.getElementById('cloudStatus').textContent = 'สิทธิ์ผู้ดูข้อมูล: เปิดดูและส่งออกได้ แต่ไม่สามารถบันทึกหรือแก้ไขข้อมูลส่วนกลาง';
     }
     async function refreshCloudProjects(selectId = cloudProjectId) {
       if (!secureMode) return;
-      const { data, error } = await secureClient.from('map_projects').select('id,name,updated_at').eq('organization_id', secureOrganizationId).order('updated_at', { ascending: false });
-      if (error) { document.getElementById('cloudStatus').textContent = `โหลดรายการโครงการไม่สำเร็จ: ${error.message}`; return; }
-      cloudProjects = data || [];
-      const select = document.getElementById('cloudProjectSelect');
-      select.innerHTML = '<option value="">— โครงการใหม่ —</option>' + cloudProjects.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
-      select.value = selectId || '';
-      document.getElementById('cloudStatus').textContent = `พบ ${cloudProjects.length.toLocaleString('th-TH')} โครงการในหน่วยงานนี้`;
+      try {
+        cloudProjects = await PollutionMapAuth.api('listProjects', { agencyId: secureOrganizationId }) || [];
+        const select = document.getElementById('cloudProjectSelect');
+        select.innerHTML = '<option value="">— โครงการใหม่ —</option>' + cloudProjects.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
+        select.value = selectId || '';
+        document.getElementById('cloudStatus').textContent = `พบ ${cloudProjects.length.toLocaleString('th-TH')} โครงการในหน่วยงานนี้`;
+      } catch (error) { document.getElementById('cloudStatus').textContent = `โหลดรายการโครงการไม่สำเร็จ: ${error.message}`; }
     }
     function startNewCloudProject() {
       if (!canEditCloud()) return;
@@ -437,37 +443,42 @@
       if (!id) { document.getElementById('cloudStatus').textContent = 'กรุณาเลือกโครงการที่ต้องการเปิด'; return; }
       const summary = cloudProjects.find(item => item.id === id); if (!summary) return;
       document.getElementById('cloudStatus').textContent = 'กำลังเปิดโครงการ...';
-      const { data: project, error } = await secureClient.from('map_projects').select('id,name,state').eq('organization_id', secureOrganizationId).eq('id', id).single();
-      if (error) { document.getElementById('cloudStatus').textContent = `เปิดโครงการไม่สำเร็จ: ${error.message}`; return; }
-      applyMapState(project.state); cloudProjectId = project.id;
-      document.getElementById('cloudStatus').textContent = `เปิด ${project.name} แล้ว`;
+      try {
+        const state = await PollutionMapAuth.loadJsonFile(summary.fileId);
+        applyMapState(state); cloudProjectId = summary.id;
+        document.getElementById('cloudStatus').textContent = `เปิด ${summary.name} แล้ว`;
+      } catch (error) { document.getElementById('cloudStatus').textContent = `เปิดโครงการไม่สำเร็จ: ${error.message}`; }
     }
     async function saveCloudProject() {
       if (!canEditCloud()) return;
       const name = document.getElementById('projectName').value.trim(); if (!name) { alert('กรุณาระบุชื่อโครงการ'); return; }
       const button = document.getElementById('cloudSaveBtn'); button.disabled = true; document.getElementById('cloudStatus').textContent = 'กำลังบันทึก...';
-      const payload = { organization_id: secureOrganizationId, name, state: getMapState(), updated_at: new Date().toISOString() };
-      let result;
-      if (cloudProjectId) result = await secureClient.from('map_projects').update(payload).eq('id', cloudProjectId).select('id').single();
-      else result = await secureClient.from('map_projects').insert(payload).select('id').single();
-      button.disabled = false;
-      if (result.error) { document.getElementById('cloudStatus').textContent = `บันทึกไม่สำเร็จ: ${result.error.message}`; return; }
-      cloudProjectId = result.data.id; await refreshCloudProjects(cloudProjectId);
-      document.getElementById('cloudStatus').textContent = `บันทึก “${name}” บนระบบแล้ว · ${new Date().toLocaleString('th-TH')}`;
+      try {
+        const current = cloudProjects.find(item => item.id === cloudProjectId);
+        const fileName = `${name.replace(/[^ก-๙a-zA-Z0-9_-]+/g, '-').slice(0, 120) || 'project'}.json`;
+        const file = await PollutionMapAuth.saveJsonFile({ fileId: current ? current.fileId : '', fileName, data: getMapState(), agencyId: secureOrganizationId, agencyName: secureOrganization.name });
+        const result = await PollutionMapAuth.api('saveProject', { agencyId: secureOrganizationId, project: { id: cloudProjectId, name, fileId: file.id, fileName: file.name || fileName } });
+        cloudProjectId = result.id; await refreshCloudProjects(cloudProjectId);
+        document.getElementById('cloudStatus').textContent = `บันทึก “${name}” ใน Google Drive แล้ว · ${new Date().toLocaleString('th-TH')}`;
+      } catch (error) { document.getElementById('cloudStatus').textContent = `บันทึกไม่สำเร็จ: ${error.message}`; }
+      finally { button.disabled = !canEditCloud(); }
     }
     async function deleteCloudProject() {
-      if (secureMembership.role !== 'admin' || !cloudProjectId) { document.getElementById('cloudStatus').textContent = 'เลือกโครงการก่อนลบ'; return; }
+      if (String(secureMembership.role).toUpperCase() !== 'ADMIN' || !cloudProjectId) { document.getElementById('cloudStatus').textContent = 'เลือกโครงการก่อนลบ'; return; }
       const project = cloudProjects.find(item => item.id === cloudProjectId);
       if (!confirm(`ลบโครงการ “${project ? project.name : ''}” ออกจากระบบหรือไม่?`)) return;
-      const { error } = await secureClient.from('map_projects').delete().eq('id', cloudProjectId);
-      if (error) { document.getElementById('cloudStatus').textContent = `ลบไม่สำเร็จ: ${error.message}`; return; }
-      cloudProjectId = ''; startNewCloudProject(); await refreshCloudProjects();
+      try {
+        await PollutionMapAuth.api('archiveProject', { agencyId: secureOrganizationId, projectId: cloudProjectId });
+        if (project && project.fileId) await PollutionMapAuth.trashDriveFile(project.fileId);
+        cloudProjectId = ''; startNewCloudProject(); await refreshCloudProjects();
+      } catch (error) { document.getElementById('cloudStatus').textContent = `ลบไม่สำเร็จ: ${error.message}`; }
     }
-    async function signOutSecure() { if (secureClient) await secureClient.auth.signOut({ scope: 'local' }); location.replace('login.html'); }
+    async function signOutSecure() { PollutionMapAuth.clearLogin(); if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect(); location.replace('login.html'); }
     async function saveCommunityConfigCloud(config) {
       if (!secureMode) return;
-      const { error } = await secureClient.from('organization_settings').upsert({ organization_id: secureOrganizationId, community_name: config ? config.name : null, community_data: config ? config.data : null, updated_at: new Date().toISOString() }, { onConflict: 'organization_id' });
-      if (error) throw error;
+      const file = await PollutionMapAuth.saveJsonFile({ fileId: communitySettingsFileId, fileName: 'community-settings.json', data: { config }, agencyId: secureOrganizationId, agencyName: secureOrganization.name });
+      communitySettingsFileId = file.id;
+      await PollutionMapAuth.api('saveSettings', { agencyId: secureOrganizationId, fileId: file.id });
     }
 
     function emptyFilter() { return ['==', ['get', 'name'], '__none__']; }

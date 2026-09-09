@@ -1,6 +1,6 @@
-// ค่า publishable/anon key สามารถอยู่บนเว็บไซต์ได้ เพราะสิทธิ์ข้อมูลถูกบังคับด้วย RLS
-// ห้ามใส่ service_role key ในไฟล์นี้โดยเด็ดขาด
+// ค่าทั้งสองเป็นรหัสสาธารณะสำหรับเชื่อมบริการ ไม่ใช่รหัสผ่านหรือกุญแจลับ
+// ห้ามใส่ Client Secret, รหัสผ่าน, access token หรือ service-account key ในไฟล์นี้
 window.POLLUTION_MAP_CONFIG = {
-  supabaseUrl: '',
-  supabasePublishableKey: ''
+  googleClientId: '',
+  appsScriptWebAppUrl: ''
 };
