@@ -1,15 +1,54 @@
 // Pollution Map central registry backup service.
-// This file is intended to live in the SAME Apps Script project as Code.gs.
-// Automatic backups are created by the Apps Script execution account.
+// Add this file to the SAME Apps Script project as Code.gs.
+// Backups are copies of the entire central registry spreadsheet.
+// There is intentionally NO automatic restore function.
 
 const BACKUP_FOLDER_ID = '1xkf1K0S-zaB4Xr_IXqeblWzdDR_jU3Ow';
 const BACKUP_RETENTION_DAYS = 30;
 const BACKUP_OWNER_EMAIL = 'choksayam.kleaw@gmail.com';
+const BACKUP_EXECUTION_EMAIL = 'occ.hrh@gmail.com';
 const BACKUP_TRIGGER_HOUR = 2;
 const BACKUP_TRIGGER_HANDLER = 'createDailyBackup';
 
 function createDailyBackup() {
   return createRegistryBackup_('DAILY', 'scheduler');
+}
+
+function runBackupSetup() {
+  const email = normalizeEmail_(Session.getEffectiveUser().getEmail());
+  if (email !== BACKUP_EXECUTION_EMAIL) {
+    throw new Error('กรุณารันการติดตั้ง Backup ด้วยบัญชี ' + BACKUP_EXECUTION_EMAIL);
+  }
+  const folder = DriveApp.getFolderById(BACKUP_FOLDER_ID);
+  folder.addEditor(BACKUP_OWNER_EMAIL);
+  installDailyBackupTrigger();
+  const firstBackup = createRegistryBackup_('SETUP', email);
+  return {
+    installed: true,
+    folderId: BACKUP_FOLDER_ID,
+    sharedWith: BACKUP_OWNER_EMAIL,
+    schedule: 'ทุกวันช่วง 02:00-03:00 Asia/Bangkok',
+    firstBackup: firstBackup
+  };
+}
+
+function verifyBackupSetup() {
+  const triggers = ScriptApp.getProjectTriggers().filter(function(trigger) {
+    return trigger.getHandlerFunction() === BACKUP_TRIGGER_HANDLER;
+  });
+  const props = PropertiesService.getScriptProperties();
+  return {
+    triggerInstalled: triggers.length === 1,
+    triggerCount: triggers.length,
+    folderId: BACKUP_FOLDER_ID,
+    retentionDays: BACKUP_RETENTION_DAYS,
+    lastSuccessAt: props.getProperty('BACKUP_LAST_SUCCESS_AT') || '',
+    lastFileId: props.getProperty('BACKUP_LAST_FILE_ID') || '',
+    lastFileName: props.getProperty('BACKUP_LAST_FILE_NAME') || '',
+    lastMode: props.getProperty('BACKUP_LAST_MODE') || '',
+    lastErrorAt: props.getProperty('BACKUP_LAST_ERROR_AT') || '',
+    lastError: props.getProperty('BACKUP_LAST_ERROR') || ''
+  };
 }
 
 function createManualBackupForOwner_(actorEmail) {
@@ -49,13 +88,13 @@ function createRegistryBackup_(mode, actorEmail) {
       const source = DriveApp.getFileById(SPREADSHEET_ID);
       const folder = DriveApp.getFolderById(BACKUP_FOLDER_ID);
       const stamp = Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd_HHmmss');
-      const fileName = 'Pollution Map Registry Backup_' + stamp + '_' + mode;
+      const fileName = 'Pollution Map Registry Backup_' + stamp + '_' + String(mode || 'UNKNOWN');
       const copy = source.makeCopy(fileName, folder);
 
-      // Make sure the SYSTEM OWNER can access the backup even though the Apps Script
-      // execution account owns the folder/file. Repeated addEditor calls are safe.
-      try { folder.addEditor(BACKUP_OWNER_EMAIL); } catch (shareError) {}
-      try { copy.addEditor(BACKUP_OWNER_EMAIL); } catch (shareError2) {}
+      // The Apps Script execution account owns the backup. Keep the SYSTEM OWNER
+      // as an editor of both the folder and each generated copy.
+      folder.addEditor(BACKUP_OWNER_EMAIL);
+      copy.addEditor(BACKUP_OWNER_EMAIL);
 
       props.setProperty('BACKUP_LAST_SUCCESS_AT', now.toISOString());
       props.setProperty('BACKUP_LAST_FILE_ID', copy.getId());
@@ -70,7 +109,9 @@ function createRegistryBackup_(mode, actorEmail) {
     } catch (error) {
       props.setProperty('BACKUP_LAST_ERROR_AT', now.toISOString());
       props.setProperty('BACKUP_LAST_ERROR', String(error && error.message || error));
-      try { appendAudit_(normalizeEmail_(actorEmail || 'scheduler'), '', 'SYSTEM_BACKUP_CREATE', 'BACKUP', '', 'FAILED', String(error && error.message || error)); } catch (auditError) {}
+      try {
+        appendAudit_(normalizeEmail_(actorEmail || 'scheduler'), '', 'SYSTEM_BACKUP_CREATE', 'BACKUP', '', 'FAILED', String(error && error.message || error));
+      } catch (auditError) {}
       throw error;
     }
   } finally {
@@ -96,8 +137,8 @@ function cleanupOldBackups_() {
 
 function installDailyBackupTrigger() {
   const email = normalizeEmail_(Session.getEffectiveUser().getEmail());
-  if (email !== 'occ.hrh@gmail.com') {
-    throw new Error('กรุณารันการติดตั้ง Trigger ด้วยบัญชี occ.hrh@gmail.com');
+  if (email !== BACKUP_EXECUTION_EMAIL) {
+    throw new Error('กรุณารันการติดตั้ง Trigger ด้วยบัญชี ' + BACKUP_EXECUTION_EMAIL);
   }
   const existing = ScriptApp.getProjectTriggers().filter(function(trigger) {
     return trigger.getHandlerFunction() === BACKUP_TRIGGER_HANDLER;
