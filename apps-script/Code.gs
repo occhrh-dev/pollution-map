@@ -5,39 +5,37 @@ const EDIT_ROLES = ['ADMIN', 'EDITOR'];
 function doGet() {
   return json_({ok:true,data:{service:'pollution-map-auth',status:'ready'}});
 }
-
 function doPost(e) {
   try {
     const input = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     const actions = {
-      login:login_, session:session_, listRegistrationAgencies:listRegistrationAgencies_,
-      requestAccess:requestAccess_, listRegistrationRequests:listRegistrationRequests_,
-      reviewRegistration:reviewRegistration_, listProjects:listProjects_, saveProject:saveProject_,
-      archiveProject:archiveProject_, getSettings:getSettings_, saveSettings:saveSettings_,
-      listMembers:listMembers_, upsertMember:upsertMember_, disableMember:disableMember_,
-      systemSession:systemSession_, systemListAgencies:systemListAgencies_,
-      systemSetAgencyStatus:systemSetAgencyStatus_, systemListRegistrationRequests:systemListRegistrationRequests_,
-      systemReviewRegistration:systemReviewRegistration_, systemListMembers:systemListMembers_,
-      systemSetMember:systemSetMember_
+      login:login_,session:session_,listRegistrationAgencies:listRegistrationAgencies_,requestAccess:requestAccess_,
+      listRegistrationRequests:listRegistrationRequests_,reviewRegistration:reviewRegistration_,
+      listProjects:listProjects_,saveProject:saveProject_,archiveProject:archiveProject_,
+      getSettings:getSettings_,saveSettings:saveSettings_,listMembers:listMembers_,upsertMember:upsertMember_,disableMember:disableMember_,
+      systemSession:systemSession_,systemListAgencies:systemListAgencies_,systemSetAgencyStatus:systemSetAgencyStatus_,
+      systemListRegistrationRequests:systemListRegistrationRequests_,systemReviewRegistration:systemReviewRegistration_,
+      systemListMembers:systemListMembers_,systemSetMember:systemSetMember_
     };
     const action = String(input.action || '');
-    if (!Object.prototype.hasOwnProperty.call(actions, action)) throw apiError_('ไม่รู้จักคำสั่งที่เรียกใช้','BAD_REQUEST');
+    if (!Object.prototype.hasOwnProperty.call(actions,action)) throw apiError_('ไม่รู้จักคำสั่งที่เรียกใช้','BAD_REQUEST');
     return json_({ok:true,data:actions[action](input)});
   } catch(error) {
     return json_({ok:false,error:error.message || 'ระบบทำงานไม่สำเร็จ',code:error.code || 'SERVER_ERROR'});
   }
 }
 
+// A system administrator is an explicitly trusted Google identity AND an active
+// administrator of the central registry. An agency role alone never grants this scope.
 function systemAdminEmails_() {
   return configValue_('SYSTEM_ADMIN_EMAILS').split(',').map(normalizeEmail_).filter(Boolean);
 }
 function systemAdminIdentity_(claims) {
   if (systemAdminEmails_().indexOf(claims.email) < 0) return false;
-  const reviewAgencyId = configValue_('REGISTRATION_REVIEW_AGENCY_ID');
-  if (!reviewAgencyId) return false;
-  const agency = agencyById_(reviewAgencyId);
-  return !!(agency && agency.status === 'ACTIVE' && activeUsersForClaims_(claims).some(function(row) {
-    return row.agency_id === reviewAgencyId && row.role === 'ADMIN';
+  const id = configValue_('REGISTRATION_REVIEW_AGENCY_ID');
+  const agency = agencyById_(id);
+  return !!(id && agency && agency.status === 'ACTIVE' && activeUsersForClaims_(claims).some(function(row) {
+    return row.agency_id === id && row.role === 'ADMIN';
   }));
 }
 function authorizeSystem_(input) {
@@ -46,8 +44,7 @@ function authorizeSystem_(input) {
   return {id:claims.sub,email:claims.email,name:claims.name || ''};
 }
 function systemSession_(input) {
-  const user = authorizeSystem_(input);
-  return {user:user,systemAdmin:true};
+  return {user:authorizeSystem_(input),systemAdmin:true};
 }
 function systemListAgencies_(input) {
   authorizeSystem_(input);
@@ -60,11 +57,12 @@ function systemSetAgencyStatus_(input) {
   const id = cleanText_(input.targetAgencyId,120);
   const status = String(input.status || '').toUpperCase();
   if (['ACTIVE','SUSPENDED'].indexOf(status) < 0) throw apiError_('สถานะไม่ถูกต้อง','BAD_REQUEST');
-  if (id === configValue_('REGISTRATION_REVIEW_AGENCY_ID')) throw apiError_('ไม่สามารถระงับหน่วยงานหลักของระบบ','ACCESS_DENIED');
+  if (id === configValue_('REGISTRATION_REVIEW_AGENCY_ID')) throw apiError_('ไม่สามารถระงับหรือแก้สถานะหน่วยงานหลักของระบบ','ACCESS_DENIED');
   const lock = LockService.getScriptLock();lock.waitLock(20000);
   try {
     const row = agencyById_(id);
     if (!row) throw apiError_('ไม่พบหน่วยงาน','NOT_FOUND');
+    if (['ACTIVE','SUSPENDED'].indexOf(row.status) < 0) throw apiError_('หน่วยงานยังอยู่ระหว่างจัดเตรียม','BAD_REQUEST');
     sheet_('AGENCIES').getRange(row._row,headerIndex_('AGENCIES','status')).setValue(status);
     sheet_('AGENCIES').getRange(row._row,headerIndex_('AGENCIES','updated_at')).setValue(new Date());
     appendAudit_(actor.email,id,'SYSTEM_AGENCY_STATUS','AGENCY',id,'SUCCESS',status);
@@ -115,7 +113,7 @@ function requestAccess_(input) {
       const province = cleanText_(input.province,100);
       const details = cleanText_(input.details,500);
       if (!agencyName || !province) throw apiError_('กรุณาระบุชื่อหน่วยงานและจังหวัด','BAD_REQUEST');
-      if (rows_('AGENCIES').some(function(row){return row.status === 'ACTIVE' && normalizeName_(row.agency_name) === normalizeName_(agencyName);})) throw apiError_('มีหน่วยงานชื่อนี้อยู่แล้ว','AGENCY_EXISTS');
+      if (rows_('AGENCIES').some(function(row){return normalizeName_(row.agency_name) === normalizeName_(agencyName);})) throw apiError_('มีหน่วยงานชื่อนี้อยู่แล้ว','AGENCY_EXISTS');
       const pending = rows_('REGISTRATION_REQUESTS').find(function(row){return row.status === 'PENDING' && row.request_type === 'NEW_AGENCY' && (normalizeEmail_(row.email) === claims.email || String(row.google_sub || '') === claims.sub);});
       if (pending) return {id:pending.request_id,status:'PENDING',requestType:'NEW_AGENCY'};
       const id = newId_('REQ');
@@ -137,14 +135,14 @@ function requestAccess_(input) {
     return {id:id,status:'PENDING',email:claims.email,agencyId:agencyId,requestType:'EXISTING_AGENCY'};
   } finally {lock.releaseLock();}
 }
-function listRegistrationRequests_(input) {
-  const auth = authorize_(input,['ADMIN']);
-  return rows_('REGISTRATION_REQUESTS').filter(function(row){return String(row.request_type || 'EXISTING_AGENCY').toUpperCase() === 'EXISTING_AGENCY' && row.requested_agency_id === auth.agency.id;}).map(registrationOutput_).sort(requestSort_);
-}
 function requestSort_(a,b) {
   if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
   if (a.status !== 'PENDING' && b.status === 'PENDING') return 1;
   return String(b.requestedAt).localeCompare(String(a.requestedAt));
+}
+function listRegistrationRequests_(input) {
+  const auth = authorize_(input,['ADMIN']);
+  return rows_('REGISTRATION_REQUESTS').filter(function(row){return String(row.request_type || 'EXISTING_AGENCY').toUpperCase() === 'EXISTING_AGENCY' && row.requested_agency_id === auth.agency.id;}).map(registrationOutput_).sort(requestSort_);
 }
 function systemListRegistrationRequests_(input) {
   authorizeSystem_(input);
@@ -175,13 +173,30 @@ function reviewRegistrationCore_(input,actor,system,agencyId) {
     if (decision === 'APPROVE' && system) {
       const name = cleanText_(request.requested_agency_name,200);
       if (!name) throw apiError_('คำขอไม่มีชื่อหน่วยงาน','BAD_REQUEST');
-      if (rows_('AGENCIES').some(function(row){return row.status === 'ACTIVE' && normalizeName_(row.agency_name) === normalizeName_(name);})) throw apiError_('มีหน่วยงานชื่อนี้อยู่แล้ว','AGENCY_EXISTS');
       const email = normalizeEmail_(request.email);const sub = String(request.google_sub || '');
       if (!sub) throw apiError_('คำขอไม่มีข้อมูลยืนยันบัญชี Google','BAD_REQUEST');
-      createdAgencyId = newId_('AGY');
-      sheet_('AGENCIES').appendRow([createdAgencyId,name,email,'','OWNER_DRIVE','ACTIVE',now,now]);
-      sheet_('USERS').appendRow([sub,email,cleanText_(request.display_name || email,160),createdAgencyId,'ADMIN','ACTIVE',now,'']);
+      // Persist the provisioning ID first so retries cannot create a second agency.
+      createdAgencyId = String(request.created_agency_id || '') || 'AGY-'+id.replace(/^REQ-/,'');
+      if (!/^AGY-[A-Za-z0-9_-]{8,120}$/.test(createdAgencyId)) throw apiError_('รหัสหน่วยงานไม่ถูกต้อง','BAD_REQUEST');
+      if (rows_('AGENCIES').some(function(row){return row.agency_id !== createdAgencyId && normalizeName_(row.agency_name) === normalizeName_(name);})) throw apiError_('มีหน่วยงานชื่อนี้อยู่แล้ว','AGENCY_EXISTS');
+      const requestSheet = sheet_('REGISTRATION_REQUESTS');
+      requestSheet.getRange(request._row,headerIndex_('REGISTRATION_REQUESTS','created_agency_id')).setValue(createdAgencyId);
+      let agency = agencyById_(createdAgencyId);
+      if (!agency) {
+        sheet_('AGENCIES').appendRow([createdAgencyId,name,email,'','OWNER_DRIVE','PROVISIONING',now,now]);
+        agency = agencyById_(createdAgencyId);
+      }
+      if (normalizeName_(agency.agency_name) !== normalizeName_(name)) throw apiError_('ข้อมูลหน่วยงานไม่ตรงกับคำขอ','BAD_REQUEST');
+      const current = rows_('USERS').find(function(row){return row.agency_id === createdAgencyId && (normalizeEmail_(row.email) === email || String(row.user_id) === sub);});
+      if (current && (normalizeEmail_(current.email) !== email || (String(current.user_id) !== sub && String(current.user_id) !== 'PENDING:'+email))) throw apiError_('ข้อมูลบัญชีเดิมไม่ตรงกับคำขอ','BAD_REQUEST');
+      if (current && current.status === 'DISABLED') throw apiError_('บัญชีถูกระงับ กรุณาตรวจสอบข้อมูลก่อนดำเนินการ','ACCOUNT_DISABLED');
+      if (!current) sheet_('USERS').appendRow([sub,email,cleanText_(request.display_name || email,160),createdAgencyId,'ADMIN','ACTIVE',now,'']);
+      else if (current.status !== 'ACTIVE' || current.role !== 'ADMIN') sheet_('USERS').getRange(current._row,1,1,8).setValues([[sub,email,cleanText_(request.display_name || email,160),createdAgencyId,'ADMIN','ACTIVE',current.registered_at || now,current.last_login_at || '']]);
       assignedRole = 'ADMIN';
+      if (agency.status === 'PROVISIONING') {
+        sheet_('AGENCIES').getRange(agency._row,headerIndex_('AGENCIES','status')).setValue('ACTIVE');
+        sheet_('AGENCIES').getRange(agency._row,headerIndex_('AGENCIES','updated_at')).setValue(now);
+      } else if (agency.status !== 'ACTIVE') throw apiError_('หน่วยงานถูกระงับ กรุณาตรวจสอบก่อนดำเนินการ','ACCOUNT_DISABLED');
       appendAudit_(actor.email,createdAgencyId,'AGENCY_CREATE','AGENCY',createdAgencyId,'SUCCESS',name);
     } else if (decision === 'APPROVE') {
       if (USER_ROLES.indexOf(role) < 0) throw apiError_('บทบาทไม่ถูกต้อง','BAD_REQUEST');
@@ -189,17 +204,17 @@ function reviewRegistrationCore_(input,actor,system,agencyId) {
       const current = rows_('USERS').find(function(row){return row.agency_id === agencyId && (normalizeEmail_(row.email) === email || (sub && String(row.user_id) === sub));});
       if (current && current.status === 'DISABLED') throw apiError_('บัญชีนี้ถูกระงับ กรุณาจัดการสิทธิ์เดิมโดยตรง','ACCOUNT_DISABLED');
       if (current && current.status === 'ACTIVE') throw apiError_('บัญชีนี้มีสิทธิ์อยู่แล้ว','ALREADY_MEMBER');
-      const values = [sub || 'PENDING:' + email,email,cleanText_(request.display_name || email,160),agencyId,role,'ACTIVE',now,''];
+      const values = [sub || 'PENDING:'+email,email,cleanText_(request.display_name || email,160),agencyId,role,'ACTIVE',now,''];
       if (current) sheet_('USERS').getRange(current._row,1,1,values.length).setValues([values]);else sheet_('USERS').appendRow(values);
       assignedRole = role;
     }
     sheet_('REGISTRATION_REQUESTS').getRange(request._row,5,1,5).setValues([[decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',now,actor.email,assignedRole,note]]);
-    if (createdAgencyId) sheet_('REGISTRATION_REQUESTS').getRange(request._row,headerIndex_('REGISTRATION_REQUESTS','created_agency_id')).setValue(createdAgencyId);
     appendAudit_(actor.email,createdAgencyId || agencyId,system ? 'SYSTEM_REGISTRATION_REVIEW' : 'REGISTRATION_REVIEW',system ? 'AGENCY' : 'USER',id,'SUCCESS',decision);
     return {id:id,status:decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',role:assignedRole,createdAgencyId:createdAgencyId};
   } finally {lock.releaseLock();}
 }
 
+// Existing project and settings APIs retain their agency and owner isolation.
 function listProjects_(input) {
   const auth = authorize_(input,[]);
   return rows_('PROJECTS').filter(function(row){return row.agency_id === auth.agency.id && normalizeEmail_(row.owner_email) === auth.user.email && row.status !== 'ARCHIVED' && String(row.project_id).indexOf('CFG-') !== 0;}).map(projectOutput_).sort(function(a,b){return String(b.updatedAt).localeCompare(String(a.updatedAt));});
@@ -247,8 +262,8 @@ function listMembers_(input) {
   return rows_('USERS').filter(function(row){return row.agency_id === auth.agency.id;}).map(memberOutput_);
 }
 function memberOutput_(row) {return {id:row.user_id,email:row.email,displayName:row.display_name,role:row.role,status:row.status};}
-function protectedMember_(row) {
-  return row && row.agency_id === configValue_('REGISTRATION_REVIEW_AGENCY_ID') && systemAdminEmails_().indexOf(normalizeEmail_(row.email)) >= 0;
+function protectedMemberEmail_(email,agencyId) {
+  return agencyId === configValue_('REGISTRATION_REVIEW_AGENCY_ID') && systemAdminEmails_().indexOf(normalizeEmail_(email)) >= 0;
 }
 function ensureLastAdmin_(row,role,status) {
   if (!row || row.status !== 'ACTIVE' || row.role !== 'ADMIN' || (status === 'ACTIVE' && role === 'ADMIN')) return;
@@ -279,14 +294,18 @@ function setMemberCore_(member,agencyId,actor,system) {
   const lock = LockService.getScriptLock();lock.waitLock(20000);
   try {
     const agency = agencyById_(agencyId);
-    if (!agency || (agency.status !== 'ACTIVE' && !system)) throw apiError_('หน่วยงานไม่พร้อมใช้งาน','ACCESS_DENIED');
+    if (!agency || (agency.status !== 'ACTIVE' && !system) || agency.status === 'PROVISIONING') throw apiError_('หน่วยงานไม่พร้อมใช้งาน','ACCESS_DENIED');
     const current = rows_('USERS').find(function(row){return normalizeEmail_(row.email) === email && row.agency_id === agencyId;});
-    if (protectedMember_(current) && !system) throw apiError_('บัญชีผู้ดูแลระบบส่วนกลางต้องจัดการผ่านศูนย์ผู้ดูแลระบบ','ACCESS_DENIED');
+    const protectedIdentity = protectedMemberEmail_(email,agencyId);
+    if (protectedIdentity && !system) throw apiError_('บัญชีผู้ดูแลระบบส่วนกลางต้องจัดการผ่านศูนย์ผู้ดูแลระบบ','ACCESS_DENIED');
     if (email === actor.email && member.status === 'DISABLED') throw apiError_('ไม่สามารถระงับบัญชีตนเอง','BAD_REQUEST');
     const role = member.role ? String(member.role).toUpperCase() : current ? current.role : 'VIEWER';
     const status = member.status ? String(member.status).toUpperCase() : 'ACTIVE';
     if (USER_ROLES.indexOf(role) < 0 || ['ACTIVE','DISABLED'].indexOf(status) < 0) throw apiError_('บทบาทหรือสถานะไม่ถูกต้อง','BAD_REQUEST');
     if (status === 'DISABLED' && !current) throw apiError_('ไม่พบสมาชิก','NOT_FOUND');
+    // The trusted identity registry is managed separately from ordinary memberships.
+    // No member-edit API may demote or disable an allowlisted central administrator.
+    if (protectedIdentity && (role !== 'ADMIN' || status !== 'ACTIVE')) throw apiError_('ไม่สามารถลดสิทธิ์หรือระงับผู้ดูแลระบบส่วนกลาง','ACCESS_DENIED');
     ensureLastAdmin_(current,role,status);
     const values = [current ? current.user_id : 'PENDING:'+email,email,cleanText_(member.displayName || (current && current.display_name) || email,160),agencyId,role,status,current ? current.registered_at : new Date(),current ? current.last_login_at : ''];
     if (current) sheet_('USERS').getRange(current._row,1,1,values.length).setValues([values]);else sheet_('USERS').appendRow(values);
