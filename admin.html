@@ -1,116 +1,19 @@
 <!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>จัดการสมาชิกหน่วยงาน</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box}body{margin:0;background:#eef4f6;color:#173347;font-family:Sarabun,sans-serif}header{padding:20px 26px;color:#fff;background:#173347}main{width:min(1000px,calc(100% - 28px));margin:24px auto;padding:24px;border-radius:15px;background:#fff;box-shadow:0 10px 30px rgba(22,50,74,.12)}h1,h2{margin-top:0}.grid{display:grid;grid-template-columns:1.3fr 1fr 180px auto;gap:8px;align-items:end}label{display:block;font-size:13px;font-weight:600}input,select,button{width:100%;margin-top:5px;padding:9px;border:1px solid #afc1ca;border-radius:8px;font:inherit}button{border:0;color:#fff;background:#0e7c7b;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.secondary{width:auto;color:#173347;background:#fff;border:1px solid #afc1ca}.danger{width:auto;background:#d84835}.member{display:grid;grid-template-columns:1.4fr 150px 110px auto;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #e3eaee}.member small{display:block;color:#627987}.status{font-weight:700;color:#08745e}.status.disabled{color:#9b3b31}.note{margin:12px 0;color:#627987;font-size:13px;line-height:1.55}.error{color:#b42318}.ok{color:#08745e}.card{padding:15px;margin:12px 0;border:1px solid #d6e0e5;border-radius:10px}.card small{display:block;color:#627987;margin-top:4px}.card.new-agency{border-color:#e0b45d;background:#fffaf0}.badge{display:inline-block;margin-left:8px;padding:3px 8px;border-radius:999px;background:#f3e2b8;color:#76520a;font-size:12px;font-weight:700}.agency-info{margin-top:9px;padding:10px;border-radius:8px;background:#fff;border:1px solid #ead9ae;line-height:1.6}.review{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-top:10px}.review label{min-width:180px}.review button{width:auto}.divider{margin:28px 0;border:0;border-top:1px solid #e3eaee}@media(max-width:700px){.grid,.member{grid-template-columns:1fr}.secondary,.danger{width:100%}.review{display:grid}.review button{width:100%}}
-</style>
-</head>
-<body>
-<header><h1>จัดการสมาชิกหน่วยงาน</h1><div id="orgName">กำลังตรวจสอบสิทธิ์...</div></header>
-<main>
-<button class="secondary" id="backButton" type="button">← กลับพื้นที่ทำงาน</button>
-<h2 style="margin-top:24px">คำขอเข้าใช้งาน <span id="pendingCount"></span></h2>
-<p class="note">ตรวจสอบตัวตนและความเกี่ยวข้องกับหน่วยงานก่อนอนุมัติ คำขอสร้างหน่วยงานใหม่ที่แสดงในหน้านี้จะสร้างหน่วยงานจริงและให้ผู้ยื่นคำขอเป็น ADMIN คนแรกเมื่ออนุมัติ</p>
-<div id="requests">กำลังโหลด...</div>
-<hr class="divider">
-<h2>เพิ่มหรือเปลี่ยนสิทธิ์สมาชิก</h2>
-<p class="note">ผู้ดูแลสามารถเพิ่มอีเมล Google โดยตรงได้เหมือนเดิม เมื่อผู้ใช้เข้าสู่ระบบครั้งแรก ระบบจะผูกบัญชีกับทะเบียนอัตโนมัติ</p>
-<form id="memberForm" class="grid">
-<label>อีเมล Google<input id="memberEmail" type="email" required></label>
-<label>ชื่อที่แสดง<input id="memberName" required></label>
-<label>บทบาท<select id="memberRole"><option value="VIEWER">ผู้ดูข้อมูล</option><option value="EDITOR">ผู้แก้ไข</option><option value="ADMIN">ผู้ดูแลหน่วยงาน</option></select></label>
-<button id="saveButton" type="submit">บันทึกสิทธิ์</button>
-</form>
-<div id="message" class="note" role="status"></div>
-<h2>สมาชิกปัจจุบัน</h2><div id="members">กำลังโหลด...</div>
-</main>
-<script src="config.js"></script><script src="auth-client.js"></script>
-<script>
-const orgId=new URLSearchParams(location.search).get('org');
-const auth=window.PollutionMapAuth;const $=id=>document.getElementById(id);const message=$('message');let currentEmail='';let requests=[];
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>จัดการหน่วยงาน — Pollution Map</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet"><style>
+*{box-sizing:border-box}body{margin:0;background:#eef4f6;color:#173347;font-family:Sarabun,sans-serif}header{padding:20px 26px;color:#fff;background:#173347}main{width:min(1000px,calc(100% - 28px));margin:24px auto;padding:24px;border-radius:15px;background:#fff;box-shadow:0 10px 30px #16324a1f}h1,h2{margin-top:0}.grid{display:grid;grid-template-columns:1.3fr 1fr 180px auto;gap:8px;align-items:end}label{display:block;font-size:13px;font-weight:600}input,select,button{width:100%;margin-top:5px;padding:9px;border:1px solid #afc1ca;border-radius:8px;font:inherit}button{border:0;color:#fff;background:#0e7c7b;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.secondary{width:auto;color:#173347;background:#fff;border:1px solid #afc1ca}.danger{width:auto;background:#d84835}.member{display:grid;grid-template-columns:1.4fr 150px 110px auto;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #e3eaee}.member small{display:block;color:#627987}.status{font-weight:700;color:#08745e}.status.disabled{color:#9b3b31}.note{margin:12px 0;color:#627987;font-size:13px;line-height:1.55}.error{color:#b42318}.ok{color:#08745e}.card{padding:15px;margin:12px 0;border:1px solid #d6e0e5;border-radius:10px}.card small{display:block;color:#627987;margin-top:4px}.review{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-top:10px}.review label{min-width:180px}.review button{width:auto}.divider{margin:28px 0;border:0;border-top:1px solid #e3eaee}@media(max-width:700px){.grid,.member{grid-template-columns:1fr}.secondary,.danger{width:100%}.review{display:grid}.review button{width:100%}}
+</style></head><body><header><h1>👥 จัดการหน่วยงาน</h1><div id="orgName">กำลังตรวจสอบสิทธิ์...</div></header><main>
+<button class="secondary" id="backButton" type="button">← กลับหน้าเลือกพื้นที่ทำงาน</button><h2 style="margin-top:24px">คำขอเข้าหน่วยงาน <span id="pendingCount"></span></h2><p class="note">หน้านี้แสดงเฉพาะคำขอเข้าหน่วยงานของคุณ การขอสร้างหน่วยงานใหม่ต้องให้ผู้ดูแลระบบส่วนกลางพิจารณา</p><div id="requests">กำลังโหลด...</div><hr class="divider"><h2>เพิ่มหรือเปลี่ยนสิทธิ์สมาชิก</h2><p class="note">ผู้ดูแลสามารถเพิ่มอีเมล Google โดยตรงได้เหมือนเดิม เมื่อผู้ใช้เข้าสู่ระบบครั้งแรก ระบบจะผูกบัญชีกับทะเบียนอัตโนมัติ</p><form id="memberForm" class="grid"><label>อีเมล Google<input id="memberEmail" type="email" required></label><label>ชื่อที่แสดง<input id="memberName" required></label><label>บทบาท<select id="memberRole"><option value="VIEWER">ผู้ดูข้อมูล</option><option value="EDITOR">ผู้แก้ไข</option><option value="ADMIN">ผู้ดูแลหน่วยงาน</option></select></label><button id="saveButton" type="submit">บันทึกสิทธิ์</button></form><div id="message" class="note" role="status"></div><h2>สมาชิกปัจจุบัน</h2><div id="members">กำลังโหลด...</div></main><script src="config.js"></script><script src="auth-client.js"></script><script>
+const orgId=new URLSearchParams(location.search).get('org');const auth=window.PollutionMapAuth;const $=id=>document.getElementById(id);const message=$('message');let currentEmail='';
 function roleName(role){return({ADMIN:'ผู้ดูแลหน่วยงาน',EDITOR:'ผู้แก้ไข',VIEWER:'ผู้ดูข้อมูล'})[String(role).toUpperCase()]||role;}
 function show(text,error=false){message.textContent=text;message.className='note '+(error?'error':'ok');}
 function escapeHtml(value){const div=document.createElement('div');div.textContent=String(value??'');return div.innerHTML;}
 function formatDate(value){if(!value)return '—';const date=new Date(value);return isNaN(date.getTime())?String(value):date.toLocaleString('th-TH');}
-async function loadRequests(){
- try{
-  requests=await auth.api('listRegistrationRequests',{agencyId:orgId});
-  const pending=requests.filter(item=>item.status==='PENDING');$('pendingCount').textContent=`(${pending.length})`;
-  $('requests').replaceChildren();
-  if(!pending.length){$('requests').textContent='ไม่มีคำขอที่รอพิจารณา';return;}
-  pending.forEach(item=>{
-   const isNew=item.requestType==='NEW_AGENCY';
-   const card=document.createElement('div');card.className='card'+(isNew?' new-agency':'');
-   const name=document.createElement('strong');name.textContent=item.displayName||item.email;card.append(name);
-   if(isNew){const badge=document.createElement('span');badge.className='badge';badge.textContent='ขอสร้างหน่วยงานใหม่';card.append(badge);}
-   const info=document.createElement('small');info.textContent=`${item.email} • ส่งคำขอ ${formatDate(item.requestedAt)}`;card.append(info);
-   if(isNew){
-    const agencyInfo=document.createElement('div');agencyInfo.className='agency-info';
-    const title=document.createElement('strong');title.textContent=item.agencyName||'ไม่ระบุชื่อหน่วยงาน';agencyInfo.append(title);
-    const province=document.createElement('div');province.textContent='จังหวัด: '+(item.province||'—');agencyInfo.append(province);
-    if(item.details){const details=document.createElement('div');details.textContent='รายละเอียด: '+item.details;agencyInfo.append(details);}
-    card.append(agencyInfo);
-   }
-   const controls=document.createElement('div');controls.className='review';
-   let roleValue='ADMIN';
-   if(isNew){
-    const roleText=document.createElement('div');roleText.className='note';roleText.textContent='เมื่ออนุมัติ ผู้สมัครจะเป็นผู้ดูแล (ADMIN) คนแรกของหน่วยงานใหม่';controls.append(roleText);
-   }else{
-    const label=document.createElement('label');label.textContent='บทบาทที่จะอนุมัติ';
-    const role=document.createElement('select');[['VIEWER','ผู้ดูข้อมูล'],['EDITOR','ผู้แก้ไข'],['ADMIN','ผู้ดูแลหน่วยงาน']].forEach(([value,text])=>role.add(new Option(text,value)));label.append(role);controls.append(label);
-    role.onchange=()=>roleValue=role.value;roleValue=role.value;
-   }
-   const approve=document.createElement('button');approve.textContent=isNew?'อนุมัติและสร้างหน่วยงาน':'อนุมัติ';approve.type='button';
-   const reject=document.createElement('button');reject.textContent='ปฏิเสธ';reject.type='button';reject.className='danger';
-   approve.onclick=()=>review(item,'APPROVE',roleValue,approve,reject);
-   reject.onclick=()=>review(item,'REJECT',roleValue,approve,reject);
-   controls.append(approve,reject);card.append(controls);$('requests').append(card);
-  });
- }catch(error){$('requests').textContent='โหลดคำขอไม่สำเร็จ';show(error.message||'โหลดคำขอไม่สำเร็จ',true);}
-}
-async function review(item,decision,role,...buttons){
- const verb=decision==='APPROVE'?'อนุมัติ':'ปฏิเสธ';
- const isNew=item.requestType==='NEW_AGENCY';
- const target=isNew?`การสร้างหน่วยงาน “${item.agencyName}” ของ ${item.email}`:`คำขอของ ${item.email}${decision==='APPROVE'?' เป็น '+roleName(role):''}`;
- if(!confirm(`${verb}${target} หรือไม่?`))return;
- buttons.forEach(button=>button.disabled=true);show('กำลังบันทึกผลการพิจารณา...');
- try{
-  const result=await auth.api('reviewRegistration',{agencyId:orgId,requestId:item.id,decision,role});
-  show(isNew&&decision==='APPROVE'?`สร้างหน่วยงานใหม่แล้ว (${result.createdAgencyId})`:verb+'คำขอเรียบร้อยแล้ว');
-  await loadRequests();await loadMembers();
- }catch(error){show(error.message||'พิจารณาคำขอไม่สำเร็จ',true);}finally{buttons.forEach(button=>button.disabled=false);}
-}
-async function loadMembers(){
- try{
-  const data=await auth.api('listMembers',{agencyId:orgId});
-  $('members').innerHTML=data.map(item=>`<div class="member"><div><strong>${escapeHtml(item.displayName||item.email)}</strong><small>${escapeHtml(item.email)}</small></div><div>${roleName(item.role)}</div><div class="status ${item.status==='ACTIVE'?'':'disabled'}">${item.status==='ACTIVE'?'ใช้งาน':'ระงับ'}</div>${item.email===currentEmail?'<small>บัญชีของคุณ</small>':item.status==='ACTIVE'?`<button class="danger" type="button" data-email="${encodeURIComponent(item.email)}">ระงับสิทธิ์</button>`:'<small>—</small>'}</div>`).join('')||'ยังไม่มีสมาชิก';
-  document.querySelectorAll('[data-email]').forEach(button=>button.addEventListener('click',()=>disableMember(decodeURIComponent(button.dataset.email))));
- }catch(error){show(error.message||'โหลดรายชื่อสมาชิกไม่สำเร็จ',true);$('members').textContent='';}
-}
-async function disableMember(email){
- if(!confirm(`ระงับสิทธิ์ ${email} หรือไม่?`))return;
- try{await auth.api('disableMember',{agencyId:orgId,email});show('ระงับสิทธิ์แล้ว');await loadMembers();}
- catch(error){show(error.message||'ระงับสิทธิ์ไม่สำเร็จ',true);}
-}
-async function boot(){
- if(!orgId||!auth.configured()||!auth.credential()){location.replace('login.html');return;}
- try{
-  const data=await auth.api('session',{agencyId:orgId});
-  if(String(data.membership.role).toUpperCase()!=='ADMIN')throw new Error('บัญชีนี้ไม่มีสิทธิ์จัดการสมาชิก');
-  currentEmail=data.user.email;$('orgName').textContent=data.agency.name;await Promise.all([loadRequests(),loadMembers()]);
- }catch(error){show(error.message||'ตรวจสอบสิทธิ์ไม่สำเร็จ',true);setTimeout(()=>location.replace('login.html'),1600);}
-}
-$('backButton').onclick=()=>location.href=`index.html?secure=1&org=${encodeURIComponent(orgId||'')}`;
-$('memberForm').addEventListener('submit',async event=>{
- event.preventDefault();const button=$('saveButton');button.disabled=true;show('กำลังบันทึก...');
- try{
-  await auth.api('upsertMember',{agencyId:orgId,member:{email:$('memberEmail').value.trim(),displayName:$('memberName').value.trim(),role:$('memberRole').value}});
-  show('บันทึกสิทธิ์สมาชิกแล้ว');event.target.reset();await loadMembers();
- }catch(error){show(error.message||'บันทึกสิทธิ์ไม่สำเร็จ',true);}finally{button.disabled=false;}
-});
+async function loadRequests(){try{const data=await auth.api('listRegistrationRequests',{agencyId:orgId});const pending=data.filter(item=>item.status==='PENDING');$('pendingCount').textContent='('+pending.length+')';$('requests').replaceChildren();if(!pending.length){$('requests').textContent='ไม่มีคำขอที่รอพิจารณา';return;}pending.forEach(item=>{const card=document.createElement('div');card.className='card';const name=document.createElement('strong');name.textContent=item.displayName||item.email;card.append(name);const info=document.createElement('small');info.textContent=item.email+' • ส่งคำขอ '+formatDate(item.requestedAt);card.append(info);const controls=document.createElement('div');controls.className='review';const label=document.createElement('label');label.textContent='บทบาทที่จะอนุมัติ';const role=document.createElement('select');[['VIEWER','ผู้ดูข้อมูล'],['EDITOR','ผู้แก้ไข'],['ADMIN','ผู้ดูแลหน่วยงาน']].forEach(([value,text])=>role.add(new Option(text,value)));label.append(role);const approve=document.createElement('button');approve.textContent='อนุมัติ';approve.type='button';const reject=document.createElement('button');reject.textContent='ปฏิเสธ';reject.type='button';reject.className='danger';approve.onclick=()=>review(item,'APPROVE',role.value,approve,reject);reject.onclick=()=>review(item,'REJECT',role.value,approve,reject);controls.append(label,approve,reject);card.append(controls);$('requests').append(card);});}catch(error){$('requests').textContent='โหลดคำขอไม่สำเร็จ';show(error.message||'โหลดคำขอไม่สำเร็จ',true);}}
+async function review(item,decision,role,...buttons){const verb=decision==='APPROVE'?'อนุมัติ':'ปฏิเสธ';if(!confirm(verb+'คำขอของ '+item.email+(decision==='APPROVE'?' เป็น '+roleName(role):'')+' หรือไม่?'))return;buttons.forEach(button=>button.disabled=true);show('กำลังบันทึกผลการพิจารณา...');try{await auth.api('reviewRegistration',{agencyId:orgId,requestId:item.id,decision,role});show(verb+'คำขอเรียบร้อยแล้ว');await loadRequests();await loadMembers();}catch(error){show(error.message||'พิจารณาคำขอไม่สำเร็จ',true);}finally{buttons.forEach(button=>button.disabled=false);}}
+async function loadMembers(){try{const data=await auth.api('listMembers',{agencyId:orgId});$('members').innerHTML=data.map(item=>`<div class="member"><div><strong>${escapeHtml(item.displayName||item.email)}</strong><small>${escapeHtml(item.email)}</small></div><div>${roleName(item.role)}</div><div class="status ${item.status==='ACTIVE'?'':'disabled'}">${item.status==='ACTIVE'?'ใช้งาน':'ระงับ'}</div>${item.email===currentEmail?'<small>บัญชีของคุณ</small>':item.status==='ACTIVE'?`<button class="danger" type="button" data-email="${encodeURIComponent(item.email)}">ระงับสิทธิ์</button>`:'<small>—</small>'}</div>`).join('')||'ยังไม่มีสมาชิก';document.querySelectorAll('[data-email]').forEach(button=>button.addEventListener('click',()=>disableMember(decodeURIComponent(button.dataset.email))));}catch(error){show(error.message||'โหลดรายชื่อสมาชิกไม่สำเร็จ',true);$('members').textContent='';}}
+async function disableMember(email){if(!confirm('ระงับสิทธิ์ '+email+' หรือไม่?'))return;try{await auth.api('disableMember',{agencyId:orgId,email});show('ระงับสิทธิ์แล้ว');await loadMembers();}catch(error){show(error.message||'ระงับสิทธิ์ไม่สำเร็จ',true);}}
+async function boot(){if(!orgId||!auth.configured()||!auth.credential()){location.replace('login.html');return;}try{const data=await auth.api('session',{agencyId:orgId});if(String(data.membership.role).toUpperCase()!=='ADMIN')throw new Error('บัญชีนี้ไม่มีสิทธิ์จัดการสมาชิก');currentEmail=data.user.email;$('orgName').textContent=data.agency.name;await Promise.all([loadRequests(),loadMembers()]);}catch(error){show(error.message||'ตรวจสอบสิทธิ์ไม่สำเร็จ',true);}}
+$('backButton').onclick=()=>location.href='login.html';
+$('memberForm').addEventListener('submit',async event=>{event.preventDefault();const button=$('saveButton');button.disabled=true;show('กำลังบันทึก...');try{await auth.api('upsertMember',{agencyId:orgId,member:{email:$('memberEmail').value.trim(),displayName:$('memberName').value.trim(),role:$('memberRole').value}});show('บันทึกสิทธิ์สมาชิกแล้ว');event.target.reset();await loadMembers();}catch(error){show(error.message||'บันทึกสิทธิ์ไม่สำเร็จ',true);}finally{button.disabled=false;}});
 boot();
-</script>
-</body></html>
+</script></body></html>

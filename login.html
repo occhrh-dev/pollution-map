@@ -1,85 +1,60 @@
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>เข้าสู่ระบบ — แผนที่ควบคุมมลพิษ</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;background:linear-gradient(145deg,#e8f4f3,#eef2f7);color:#173347;font-family:Sarabun,sans-serif}.shell{width:min(940px,100%);display:grid;grid-template-columns:minmax(260px,.9fr) minmax(300px,1.1fr);overflow:hidden;border-radius:20px;background:#fff;box-shadow:0 20px 55px rgba(22,50,74,.18)}.brand{padding:42px 36px;color:white;background:#173347}.brand h1{margin:0 0 14px;font-size:28px}.brand p{line-height:1.7;opacity:.88}.panel{padding:38px 36px}h2{margin:0 0 18px}.button{width:100%;margin-top:18px;padding:11px;border:0;border-radius:9px;color:white;background:#0e7c7b;font:inherit;font-weight:700;cursor:pointer}.button.secondary{width:auto;margin:8px 6px 0 0;padding:9px 12px;color:#173347;background:#edf4f5}.button.admin{width:auto;margin:8px 6px 0 0;padding:9px 12px;color:#fff;background:#173347}.button:disabled{opacity:.55;cursor:not-allowed}.message{min-height:24px;margin-top:12px;font-size:14px}.error{color:#b42318}.ok{color:#08745e}.orgs{display:grid;gap:10px;margin-top:14px}.org{padding:13px;border:1px solid #d6e0e5;border-radius:11px}.org strong{display:block}.org small{color:#627987}.org-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.setup{padding:12px;border-left:4px solid #d88b00;background:#fff4d6;line-height:1.55;font-size:14px}.privacy{margin-top:18px;color:#627987;font-size:13px;line-height:1.55}.hidden{display:none!important}#googleButton{min-height:44px}@media(max-width:700px){.shell{grid-template-columns:1fr}.brand{padding:26px}.panel{padding:27px}.org-actions .button{width:100%;margin-right:0}}
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>เข้าสู่ระบบ — แผนที่ควบคุมมลพิษ</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;background:linear-gradient(145deg,#e8f4f3,#eef2f7);color:#173347;font-family:Sarabun,sans-serif}.shell{width:min(940px,100%);display:grid;grid-template-columns:minmax(260px,.9fr) minmax(300px,1.1fr);overflow:hidden;border-radius:20px;background:#fff;box-shadow:0 20px 55px #16324a2e}.brand{padding:42px 36px;color:white;background:#173347}.brand h1{margin:0 0 14px;font-size:28px}.brand p{line-height:1.7;opacity:.88}.panel{padding:38px 36px}h2{margin:0 0 18px}.button{width:100%;margin-top:18px;padding:11px;border:0;border-radius:9px;color:white;background:#0e7c7b;font:inherit;font-weight:700;cursor:pointer}.button.secondary{width:auto;margin:8px 6px 0 0;padding:9px 12px;color:#173347;background:#edf4f5}.button.admin{width:auto;margin:8px 6px 0 0;padding:9px 12px;color:#fff;background:#173347}.button:disabled{opacity:.55;cursor:not-allowed}.message{min-height:24px;margin-top:12px;font-size:14px}.error{color:#b42318}.ok{color:#08745e}.orgs{display:grid;gap:10px;margin-top:14px}.org{padding:13px;border:1px solid #d6e0e5;border-radius:11px}.org strong{display:block}.org small{color:#627987}.org-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.setup{padding:12px;border-left:4px solid #d88b00;background:#fff4d6;line-height:1.55;font-size:14px}.privacy{margin-top:18px;color:#627987;font-size:13px;line-height:1.55}.hidden{display:none!important}#googleButton{min-height:44px}.system-card{margin-top:16px;padding:15px;border:1px solid #a9ccc9;border-radius:11px;background:#eef8f7}.system-card p{font-size:13px;line-height:1.6;margin:7px 0}@media(max-width:700px){.shell{grid-template-columns:1fr}.brand{padding:26px}.panel{padding:27px}.org-actions .button{width:100%;margin-right:0}}
+</style>
 </head>
-<body>
-  <main class="shell">
-    <section class="brand"><h1>🗺️ แผนที่ควบคุมมลพิษ</h1><p>ระบบบริหารข้อมูลแผนที่แยกตามหน่วยงาน เข้าสู่ระบบด้วยบัญชี Google และตรวจสิทธิ์จากทะเบียนกลาง</p></section>
-    <section class="panel">
-      <div id="setup" class="setup hidden"><strong>ระบบ Google Login ยังไม่ถูกเชื่อมต่อ</strong><br>ผู้ดูแลระบบต้องใส่ Google Client ID และ Apps Script Web App URL ในไฟล์ config.js</div>
-      <section id="loginPanel">
-        <h2>เข้าสู่ระบบ</h2>
-        <div id="googleButton"></div>
-        <p class="privacy">ระบบไม่เก็บรหัสผ่าน เมื่อเปิดพื้นที่ทำงาน ระบบจะขอสิทธิ์สร้างและเปิดเฉพาะไฟล์ที่ระบบสร้างใน Google Drive ของบัญชีนี้</p>
-        <p class="privacy">ยังไม่มีสิทธิ์ใช้งาน? <a href="registration.html">ขอสิทธิ์เข้าใช้งาน</a></p>
-      </section>
-      <section id="workspacePanel" class="hidden"><h2>เลือกพื้นที่ทำงาน</h2><div id="accountText"></div><div class="orgs" id="organizations"></div><button class="button secondary" id="logoutButton" type="button">ออกจากระบบ</button></section>
-      <div class="message" id="message" role="status"></div>
-    </section>
-  </main>
-  <script src="https://accounts.google.com/gsi/client?hl=th" async defer></script>
-  <script src="config.js"></script>
-  <script src="auth-client.js"></script>
-  <script>
-    const auth = window.PollutionMapAuth;
-    const loginPanel = document.getElementById('loginPanel');
-    const workspacePanel = document.getElementById('workspacePanel');
-    const message = document.getElementById('message');
-    function setMessage(text, error=false){message.textContent=text;message.className='message '+(error?'error':'ok');}
-    function escapeHtml(value){const div=document.createElement('div');div.textContent=String(value??'');return div.innerHTML;}
-    function roleName(role){return ({ADMIN:'ผู้ดูแลหน่วยงาน',EDITOR:'ผู้แก้ไข',VIEWER:'ผู้ดูข้อมูล',admin:'ผู้ดูแลหน่วยงาน',editor:'ผู้แก้ไข',viewer:'ผู้ดูข้อมูล'})[role]||role;}
-    function isAdmin(role){return String(role||'').toUpperCase()==='ADMIN';}
-    function showOrganizations(data){
-      loginPanel.classList.add('hidden'); workspacePanel.classList.remove('hidden');
-      document.getElementById('accountText').textContent=`เข้าสู่ระบบด้วย ${data.user.email}`;
-      const list=document.getElementById('organizations');
-      list.innerHTML=(data.agencies||[]).map(item=>{
-        const adminButton=isAdmin(item.role)?`<button class="button admin" type="button" data-admin="${encodeURIComponent(item.id)}">⚙️ ศูนย์ผู้ดูแลระบบ</button>`:'';
-        return `<div class="org"><strong>${escapeHtml(item.name)}</strong><small>สิทธิ์: ${roleName(item.role)}</small><div class="org-actions"><button class="button secondary" type="button" data-agency="${encodeURIComponent(item.id)}">อนุญาต Drive และเปิดพื้นที่ทำงาน</button>${adminButton}</div></div>`;
-      }).join('')||'<div class="setup">บัญชีนี้ยังไม่ได้รับสิทธิ์ กรุณาติดต่อผู้ดูแลระบบ</div>';
-      list.querySelectorAll('[data-agency]').forEach(button=>button.addEventListener('click',()=>openWorkspace(decodeURIComponent(button.dataset.agency))));
-      list.querySelectorAll('[data-admin]').forEach(button=>button.addEventListener('click',()=>openAdmin(decodeURIComponent(button.dataset.admin))));
-    }
-    async function handleCredential(response){
-      setMessage('กำลังตรวจสอบบัญชี...');
-      try {
-        sessionStorage.setItem('pollution-map-google-credential-v1',response.credential);
-        const data=await auth.api('login'); auth.setLogin(response.credential,data); showOrganizations(data); setMessage('เข้าสู่ระบบสำเร็จ');
-      } catch(error){auth.clearLogin();setMessage(error.message||'เข้าสู่ระบบไม่สำเร็จ',true);}
-    }
-    async function openWorkspace(id){
-      setMessage('กำลังขอสิทธิ์ Google Drive...');
-      try { await auth.requestDriveToken(); location.href=`index.html?secure=1&org=${encodeURIComponent(id)}`; }
-      catch(error){ setMessage(error.message||'ไม่ได้รับสิทธิ์ Google Drive',true); }
-    }
-    function openAdmin(id){
-      location.href=`admin.html?org=${encodeURIComponent(id)}`;
-    }
-    async function boot(){
-      if(!auth.configured()){document.getElementById('setup').classList.remove('hidden');return;}
-      const existing=auth.session();
-      if(existing&&auth.credential()){
-        try { const data=await auth.api('login'); auth.setLogin(auth.credential(),data); showOrganizations(data); return; }
-        catch(_){ auth.clearLogin(); }
-      }
-      const timer=setInterval(()=>{
-        if(!window.google?.accounts?.id)return;
-        clearInterval(timer);
-        google.accounts.id.initialize({client_id:window.POLLUTION_MAP_CONFIG.googleClientId,callback:handleCredential,auto_select:false,cancel_on_tap_outside:true});
-        google.accounts.id.renderButton(document.getElementById('googleButton'),{theme:'outline',size:'large',shape:'rectangular',text:'signin_with',locale:'th',width:300});
-      },100);
-    }
-    document.getElementById('logoutButton').addEventListener('click',()=>{auth.clearLogin();if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();location.reload();});
-    boot().catch(error=>setMessage(error.message||'เปิดระบบเข้าสู่ระบบไม่สำเร็จ',true));
-  </script>
-</body>
-</html>
+<body><main class="shell"><section class="brand"><h1>🗺️ แผนที่ควบคุมมลพิษ</h1><p>ระบบบริหารข้อมูลแผนที่แยกตามหน่วยงาน เข้าสู่ระบบด้วยบัญชี Google และตรวจสิทธิ์จากทะเบียนกลาง</p></section><section class="panel">
+<div id="setup" class="setup hidden">ระบบ Google Login ยังไม่ถูกเชื่อมต่อ กรุณาตรวจสอบ config.js</div>
+<section id="loginPanel"><h2>เข้าสู่ระบบ</h2><div id="googleButton"></div><p class="privacy">ระบบไม่เก็บรหัสผ่าน การเปิดพื้นที่ทำงานจะขอสิทธิ์ Google Drive เฉพาะไฟล์ที่ระบบสร้าง</p><p class="privacy">ยังไม่มีสิทธิ์ใช้งาน? <a href="registration.html">ขอสิทธิ์เข้าใช้งาน</a></p></section>
+<section id="workspacePanel" class="hidden"><h2>เลือกพื้นที่ทำงาน</h2><div id="accountText"></div><div class="orgs" id="organizations"></div><section id="systemPanel" class="system-card hidden"><strong>⚙️ การบริหารระบบส่วนกลาง</strong><p>จัดการคำขอสร้างหน่วยงานใหม่และทะเบียนหน่วยงานทั้งหมด</p><button class="button admin" id="systemButton" type="button">ศูนย์ผู้ดูแลระบบ</button></section><button class="button secondary" id="logoutButton" type="button">ออกจากระบบ</button></section>
+<div class="message" id="message" role="status"></div></section></main>
+<script src="https://accounts.google.com/gsi/client?hl=th" async defer></script><script src="config.js"></script><script src="auth-client.js"></script>
+<script>
+const auth=window.PollutionMapAuth;
+const $=id=>document.getElementById(id);
+function setMessage(text,error=false){$('message').textContent=text;$('message').className='message '+(error?'error':'ok');}
+function roleName(role){return({ADMIN:'ผู้ดูแลหน่วยงาน',EDITOR:'ผู้แก้ไข',VIEWER:'ผู้ดูข้อมูล'})[String(role).toUpperCase()]||role;}
+function showOrganizations(data){
+ $('loginPanel').classList.add('hidden');$('workspacePanel').classList.remove('hidden');
+ $('accountText').textContent='เข้าสู่ระบบด้วย '+data.user.email;
+ const list=$('organizations');list.replaceChildren();
+ (data.agencies||[]).forEach(item=>{
+  const card=document.createElement('div');card.className='org';
+  const title=document.createElement('strong');title.textContent=item.name;
+  const role=document.createElement('small');role.textContent='สิทธิ์: '+roleName(item.role);
+  const actions=document.createElement('div');actions.className='org-actions';
+  const open=document.createElement('button');open.className='button secondary';open.textContent='อนุญาต Drive และเปิดพื้นที่ทำงาน';open.onclick=()=>openWorkspace(item.id);actions.append(open);
+  if(String(item.role).toUpperCase()==='ADMIN'){
+   const manage=document.createElement('button');manage.className='button admin';manage.textContent='👥 จัดการหน่วยงาน';manage.onclick=()=>location.href='admin.html?org='+encodeURIComponent(item.id);actions.append(manage);
+  }
+  card.append(title,role,actions);list.append(card);
+ });
+ if(!list.children.length)list.textContent='บัญชีนี้ยังไม่มีพื้นที่ทำงาน';
+ $('systemPanel').classList.toggle('hidden',data.systemAdmin!==true);
+}
+async function handleCredential(response){
+ setMessage('กำลังตรวจสอบบัญชี...');
+ try{const data=await auth.api('login',{credential:response.credential});auth.setLogin(response.credential,data);showOrganizations(data);setMessage('เข้าสู่ระบบสำเร็จ');}
+ catch(error){auth.clearLogin();setMessage(error.message||'เข้าสู่ระบบไม่สำเร็จ',true);}
+}
+async function openWorkspace(id){
+ setMessage('กำลังขอสิทธิ์ Google Drive...');
+ try{await auth.requestDriveToken();location.href='index.html?secure=1&org='+encodeURIComponent(id);}
+ catch(error){setMessage(error.message||'ไม่ได้รับสิทธิ์ Google Drive',true);}
+}
+async function boot(){
+ if(!auth.configured()){$('setup').classList.remove('hidden');return;}
+ if(auth.session()&&auth.credential()){
+  try{const data=await auth.api('login');auth.setLogin(auth.credential(),data);showOrganizations(data);return;}catch(_){auth.clearLogin();}
+ }
+ const timer=setInterval(()=>{if(!window.google?.accounts?.id)return;clearInterval(timer);google.accounts.id.initialize({client_id:window.POLLUTION_MAP_CONFIG.googleClientId,callback:handleCredential,auto_select:false,cancel_on_tap_outside:true});google.accounts.id.renderButton($('googleButton'),{theme:'outline',size:'large',text:'signin_with',locale:'th',width:300});},100);
+}
+$('systemButton').onclick=()=>location.href='system-admin.html';
+$('logoutButton').onclick=()=>{auth.clearLogin();if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();location.reload();};
+boot().catch(error=>setMessage(error.message||'เปิดระบบเข้าสู่ระบบไม่สำเร็จ',true));
+</script></body></html>
