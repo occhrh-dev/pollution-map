@@ -10,6 +10,7 @@ on:
       - 'system-admin.html'
       - 'registration.html'
       - 'scripts/test-rbac.js'
+      - 'scripts/test-backup-alerts.js'
       - '.github/workflows/rbac-tests.yml'
   workflow_dispatch:
 permissions:
@@ -24,3 +25,4 @@ jobs:
         with:
           node-version: '22'
       - run: node scripts/test-rbac.js
+      - run: node scripts/test-backup-alerts.js
