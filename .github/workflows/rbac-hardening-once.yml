@@ -1,0 +1,31 @@
+name: Apply RBAC hardening once
+on:
+  push:
+    branches: [feature/system-admin-rbac]
+    paths:
+      - scripts/apply-rbac-hardening.js
+      - .github/workflows/rbac-hardening-once.yml
+permissions:
+  contents: write
+jobs:
+  migrate:
+    if: github.ref == 'refs/heads/feature/system-admin-rbac'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply exact-source migration
+        run: node scripts/apply-rbac-hardening.js
+      - name: Verify syntax and access-control behavior
+        run: node scripts/test-rbac.js
+      - name: Commit verified changes to this feature branch
+        run: |
+          git diff --check
+          git add apps-script/Code.gs scripts/test-rbac.js
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Guard trusted identities and verify RBAC isolation'
+          git push origin HEAD:refs/heads/feature/system-admin-rbac
