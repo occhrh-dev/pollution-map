@@ -11,6 +11,7 @@ on:
       - 'registration.html'
       - 'scripts/test-rbac.js'
       - 'scripts/test-backup-alerts.js'
+      - 'scripts/test-change-aware-backup.js'
       - '.github/workflows/rbac-tests.yml'
   workflow_dispatch:
 permissions:
@@ -26,3 +27,4 @@ jobs:
           node-version: '22'
       - run: node scripts/test-rbac.js
       - run: node scripts/test-backup-alerts.js
+      - run: node scripts/test-change-aware-backup.js
