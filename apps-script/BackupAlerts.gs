@@ -1,5 +1,7 @@
 // Pollution Map backup health monitor.
 // Sends email alerts to both SYSTEM OWNER and the backup execution account.
+// Health is based on the latest scheduled CHECK, not the age of the last Drive copy,
+// because an unchanged registry can legitimately skip creating a new backup file.
 
 const BACKUP_HEALTH_TRIGGER_HANDLER = 'checkBackupHealth';
 const BACKUP_HEALTH_TRIGGER_HOUR = 4;
@@ -28,17 +30,22 @@ function verifyBackupAlertSetup() {
     return trigger.getHandlerFunction() === BACKUP_HEALTH_TRIGGER_HANDLER;
   });
   const health = backupHealthSnapshot_();
-  return {
+  const result = {
     triggerInstalled: triggers.length === 1,
     triggerCount: triggers.length,
     recipients: backupAlertRecipients_(),
     healthStatus: health.status,
     ageHours: health.ageHours,
+    backupAgeHours: health.backupAgeHours,
+    lastCheckAt: health.lastCheckAt,
+    lastCheckResult: health.lastCheckResult,
     lastSuccessAt: health.lastSuccessAt,
     lastErrorAt: health.lastErrorAt,
     lastAlertAt: health.lastAlertAt,
     staleAfterHours: BACKUP_STALE_HOURS
   };
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 function installBackupHealthTrigger() {
@@ -88,10 +95,10 @@ function checkBackupHealth() {
   if (shouldAlert) {
     const subject = health.status === 'FAILED'
       ? '[Pollution Map] Backup ล่าสุดล้มเหลว'
-      : '[Pollution Map] ไม่พบ Backup ใหม่เกิน ' + BACKUP_STALE_HOURS + ' ชั่วโมง';
+      : '[Pollution Map] ระบบไม่ได้ตรวจ Backup เกิน ' + BACKUP_STALE_HOURS + ' ชั่วโมง';
     const details = health.status === 'FAILED'
-      ? 'พบข้อผิดพลาดหลัง Backup ที่สำเร็จล่าสุด\nข้อผิดพลาดล่าสุด: ' + (health.lastError || 'ไม่ระบุ')
-      : 'Backup ล่าสุดเก่ากว่าเกณฑ์ที่กำหนด\nอายุ Backup ล่าสุด: ' + (health.ageHours === null ? 'ไม่พบข้อมูล' : health.ageHours.toFixed(1) + ' ชั่วโมง');
+      ? 'การตรวจ Backup ล่าสุดล้มเหลว\nผลการตรวจล่าสุด: ' + (health.lastCheckResult || 'FAILED') + '\nข้อผิดพลาดล่าสุด: ' + (health.lastError || 'ไม่ระบุ')
+      : 'ไม่พบการตรวจ Backup ตามรอบเวลาที่กำหนด\nอายุการตรวจล่าสุด: ' + (health.ageHours === null ? 'ไม่พบข้อมูล' : health.ageHours.toFixed(1) + ' ชั่วโมง');
     sendBackupAlert_(subject, details, health.status);
   }
   return health;
@@ -106,7 +113,7 @@ function notifyBackupFailure_(error, mode) {
   props.setProperty('BACKUP_ALERT_STATE', 'FAILED');
 
   if (previousState !== 'FAILED' || !lastAlertAt || now - lastAlertAt >= repeatMs) {
-    const message = 'การสร้าง Backup ไม่สำเร็จ\nโหมด: ' + String(mode || 'UNKNOWN') + '\nข้อผิดพลาด: ' + String(error && error.message || error);
+    const message = 'การสร้าง/ตรวจ Backup ไม่สำเร็จ\nโหมด: ' + String(mode || 'UNKNOWN') + '\nข้อผิดพลาด: ' + String(error && error.message || error);
     sendBackupAlert_('[Pollution Map] Backup ล้มเหลว', message, 'FAILED');
   }
 }
@@ -121,7 +128,7 @@ function markBackupHealthy_(source) {
       MailApp.sendEmail({
         to: backupAlertRecipients_(),
         subject: '[Pollution Map] Backup กลับมาทำงานปกติแล้ว',
-        body: 'ระบบ Backup กลับมาทำงานปกติแล้ว\nแหล่งตรวจสอบ: ' + String(source || 'BACKUP') + '\nBackup ล่าสุด: ' + (props.getProperty('BACKUP_LAST_FILE_NAME') || 'ไม่ระบุ'),
+        body: 'ระบบ Backup กลับมาทำงานปกติแล้ว\nแหล่งตรวจสอบ: ' + String(source || 'BACKUP') + '\nผลการตรวจล่าสุด: ' + (props.getProperty('BACKUP_LAST_CHECK_RESULT') || 'ไม่ระบุ') + '\nBackup ล่าสุด: ' + (props.getProperty('BACKUP_LAST_FILE_NAME') || 'ไม่ระบุ'),
         name: 'Pollution Map Backup Monitor'
       });
       appendAudit_(BACKUP_EXECUTION_EMAIL, '', 'SYSTEM_BACKUP_ALERT', 'BACKUP', '', 'RECOVERED', String(source || 'BACKUP'));
@@ -136,17 +143,24 @@ function backupHealthSnapshot_() {
   const now = Date.now();
   const successText = props.getProperty('BACKUP_LAST_SUCCESS_AT') || '';
   const errorText = props.getProperty('BACKUP_LAST_ERROR_AT') || '';
+  const checkText = props.getProperty('BACKUP_LAST_CHECK_AT') || successText;
+  const checkResult = props.getProperty('BACKUP_LAST_CHECK_RESULT') || (successText ? 'BACKED_UP' : '');
   const successMs = parseDateMs_(successText);
   const errorMs = parseDateMs_(errorText);
-  const ageHours = successMs ? (now - successMs) / (60 * 60 * 1000) : null;
+  const checkMs = parseDateMs_(checkText);
+  const ageHours = checkMs ? (now - checkMs) / (60 * 60 * 1000) : null;
+  const backupAgeHours = successMs ? (now - successMs) / (60 * 60 * 1000) : null;
 
   let status = 'HEALTHY';
-  if (errorMs && (!successMs || errorMs > successMs)) status = 'FAILED';
-  else if (!successMs || ageHours > BACKUP_STALE_HOURS) status = 'STALE';
+  if (checkResult === 'FAILED' || (errorMs && (!checkMs || errorMs >= checkMs))) status = 'FAILED';
+  else if (!checkMs || ageHours > BACKUP_STALE_HOURS) status = 'STALE';
 
   return {
     status: status,
     ageHours: ageHours,
+    backupAgeHours: backupAgeHours,
+    lastCheckAt: checkText,
+    lastCheckResult: checkResult,
     lastSuccessAt: successText,
     lastFileId: props.getProperty('BACKUP_LAST_FILE_ID') || '',
     lastFileName: props.getProperty('BACKUP_LAST_FILE_NAME') || '',
