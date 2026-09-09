@@ -20,6 +20,7 @@
         <h2>เข้าสู่ระบบ</h2>
         <div id="googleButton"></div>
         <p class="privacy">ระบบไม่เก็บรหัสผ่าน เมื่อเปิดพื้นที่ทำงาน ระบบจะขอสิทธิ์สร้างและเปิดเฉพาะไฟล์ที่ระบบสร้างใน Google Drive ของบัญชีนี้</p>
+        <p class="privacy">ยังไม่มีสิทธิ์ใช้งาน? <a href="registration.html">ขอสิทธิ์เข้าใช้งาน</a></p>
       </section>
       <section id="workspacePanel" class="hidden"><h2>เลือกพื้นที่ทำงาน</h2><div id="accountText"></div><div class="orgs" id="organizations"></div><button class="button secondary" id="logoutButton" type="button">ออกจากระบบ</button></section>
       <div class="message" id="message" role="status"></div>
@@ -52,7 +53,7 @@
     }
     async function openWorkspace(id){
       setMessage('กำลังขอสิทธิ์ Google Drive...');
-      try { await auth.requestDriveToken(); location.href=`index.html?secure=1&org=${id}`; }
+      try { await auth.requestDriveToken(); location.href=`index.html?secure=1&org=${encodeURIComponent(id)}`; }
       catch(error){ setMessage(error.message||'ไม่ได้รับสิทธิ์ Google Drive',true); }
     }
     async function boot(){
