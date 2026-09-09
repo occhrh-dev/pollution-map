@@ -66,21 +66,65 @@ function listRegistrationAgencies_() {
 
 function registrationOutput_(row) {
   function date(value) { return value instanceof Date ? value.toISOString() : String(value || ''); }
-  return { id: row.request_id, email: row.email, displayName: row.display_name,
-    agencyId: row.requested_agency_id, status: row.status, requestedAt: date(row.requested_at),
-    reviewedAt: date(row.reviewed_at), reviewedBy: row.reviewed_by || '',
-    assignedRole: row.assigned_role || '', note: row.note || '' };
+  return {
+    id: row.request_id,
+    email: row.email,
+    displayName: row.display_name,
+    agencyId: row.requested_agency_id,
+    status: row.status,
+    requestedAt: date(row.requested_at),
+    reviewedAt: date(row.reviewed_at),
+    reviewedBy: row.reviewed_by || '',
+    assignedRole: row.assigned_role || '',
+    note: row.note || '',
+    requestType: row.request_type || 'EXISTING_AGENCY',
+    agencyName: row.requested_agency_name || '',
+    province: row.province || '',
+    details: row.details || '',
+    createdAgencyId: row.created_agency_id || ''
+  };
 }
 
 function requestAccess_(input) {
   const claims = verifyCredential_(input.credential);
-  const agencyId = cleanText_(input.agencyId, 120);
+  const requestType = String(input.requestType || 'EXISTING_AGENCY').toUpperCase();
   const displayName = cleanText_(input.displayName || claims.name || claims.email, 160);
   if (!displayName) throw apiError_('กรุณาระบุชื่อผู้สมัคร', 'BAD_REQUEST');
-  const agency = agencyById_(agencyId);
-  if (!agency || agency.status !== 'ACTIVE') throw apiError_('ไม่พบหน่วยงานที่เลือก', 'BAD_REQUEST');
-  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  if (['EXISTING_AGENCY', 'NEW_AGENCY'].indexOf(requestType) < 0) throw apiError_('ประเภทรายการลงทะเบียนไม่ถูกต้อง', 'BAD_REQUEST');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
   try {
+    if (requestType === 'NEW_AGENCY') {
+      const agencyName = cleanText_(input.agencyName, 200);
+      const province = cleanText_(input.province, 100);
+      const details = cleanText_(input.details, 500);
+      if (!agencyName || !province) throw apiError_('กรุณาระบุชื่อหน่วยงานและจังหวัด', 'BAD_REQUEST');
+
+      const duplicateAgency = rows_('AGENCIES').find(function (row) {
+        return String(row.agency_name || '').trim().toLowerCase() === agencyName.toLowerCase() && row.status === 'ACTIVE';
+      });
+      if (duplicateAgency) throw apiError_('มีหน่วยงานชื่อนี้อยู่แล้ว กรุณาเลือกจากรายการหน่วยงาน', 'AGENCY_EXISTS');
+
+      const pendingNew = rows_('REGISTRATION_REQUESTS').find(function (row) {
+        return row.status === 'PENDING' && String(row.request_type || '').toUpperCase() === 'NEW_AGENCY' &&
+          (normalizeEmail_(row.email) === claims.email || String(row.google_sub || '') === claims.sub) &&
+          String(row.requested_agency_name || '').trim().toLowerCase() === agencyName.toLowerCase();
+      });
+      if (pendingNew) return { id: pendingNew.request_id, status: 'PENDING', requestType: 'NEW_AGENCY' };
+
+      const requestId = newId_('REQ');
+      sheet_('REGISTRATION_REQUESTS').appendRow([
+        requestId, claims.email, displayName, '', 'PENDING', new Date(), '', '', '', '', claims.sub,
+        'NEW_AGENCY', agencyName, province, details, ''
+      ]);
+      appendAudit_(claims.email, '', 'AGENCY_REGISTRATION_REQUEST', 'AGENCY', requestId, 'SUCCESS', agencyName);
+      return { id: requestId, status: 'PENDING', requestType: 'NEW_AGENCY' };
+    }
+
+    const agencyId = cleanText_(input.agencyId, 120);
+    const agency = agencyById_(agencyId);
+    if (!agency || agency.status !== 'ACTIVE') throw apiError_('ไม่พบหน่วยงานที่เลือก', 'BAD_REQUEST');
     const members = rows_('USERS').filter(function (row) {
       return row.agency_id === agencyId && (String(row.user_id) === claims.sub || normalizeEmail_(row.email) === claims.email);
     });
@@ -95,16 +139,20 @@ function requestAccess_(input) {
     if (pending) return { id: pending.request_id, status: 'PENDING', email: claims.email, agencyId: agencyId };
     const requestId = newId_('REQ');
     sheet_('REGISTRATION_REQUESTS').appendRow([
-      requestId, claims.email, displayName, agencyId, 'PENDING', new Date(), '', '', '', '', claims.sub
+      requestId, claims.email, displayName, agencyId, 'PENDING', new Date(), '', '', '', '', claims.sub,
+      'EXISTING_AGENCY', '', '', '', ''
     ]);
     appendAudit_(claims.email, agencyId, 'REGISTRATION_REQUEST', 'USER', requestId, 'SUCCESS', displayName);
-    return { id: requestId, status: 'PENDING', email: claims.email, agencyId: agencyId };
+    return { id: requestId, status: 'PENDING', email: claims.email, agencyId: agencyId, requestType: 'EXISTING_AGENCY' };
   } finally { lock.releaseLock(); }
 }
 
 function listRegistrationRequests_(input) {
   const auth = authorize_(input, ['ADMIN']);
+  const reviewAgencyId = configValue_('REGISTRATION_REVIEW_AGENCY_ID');
   return rows_('REGISTRATION_REQUESTS').filter(function (row) {
+    const type = String(row.request_type || 'EXISTING_AGENCY').toUpperCase();
+    if (type === 'NEW_AGENCY') return auth.agency.id === reviewAgencyId;
     return row.requested_agency_id === auth.agency.id;
   }).map(registrationOutput_).sort(function (a, b) {
     if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
@@ -117,19 +165,50 @@ function reviewRegistration_(input) {
   const auth = authorize_(input, ['ADMIN']);
   const requestId = cleanText_(input.requestId, 120);
   const decision = String(input.decision || '').toUpperCase();
-  const role = String(input.role || 'VIEWER').toUpperCase();
+  const requestedRole = String(input.role || 'VIEWER').toUpperCase();
   const note = cleanText_(input.note || '', 500);
   if (['APPROVE', 'REJECT'].indexOf(decision) < 0) throw apiError_('ผลการพิจารณาไม่ถูกต้อง', 'BAD_REQUEST');
-  if (decision === 'APPROVE' && USER_ROLES.indexOf(role) < 0) throw apiError_('บทบาทไม่ถูกต้อง', 'BAD_REQUEST');
-  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
   try {
+    const reviewAgencyId = configValue_('REGISTRATION_REVIEW_AGENCY_ID');
     const request = rows_('REGISTRATION_REQUESTS').find(function (row) {
-      return row.request_id === requestId && row.requested_agency_id === auth.agency.id;
+      if (row.request_id !== requestId) return false;
+      const type = String(row.request_type || 'EXISTING_AGENCY').toUpperCase();
+      return type === 'NEW_AGENCY' ? auth.agency.id === reviewAgencyId : row.requested_agency_id === auth.agency.id;
     });
     if (!request) throw apiError_('ไม่พบคำขอลงทะเบียน', 'NOT_FOUND');
     if (request.status !== 'PENDING') throw apiError_('คำขอนี้ถูกพิจารณาแล้ว', 'ALREADY_REVIEWED');
+
+    const requestType = String(request.request_type || 'EXISTING_AGENCY').toUpperCase();
     const reviewedAt = new Date();
-    if (decision === 'APPROVE') {
+    let assignedRole = '';
+    let createdAgencyId = '';
+
+    if (decision === 'APPROVE' && requestType === 'NEW_AGENCY') {
+      if (auth.agency.id !== reviewAgencyId) throw apiError_('ไม่มีสิทธิ์อนุมัติการสร้างหน่วยงานใหม่', 'ACCESS_DENIED');
+      const agencyName = cleanText_(request.requested_agency_name, 200);
+      if (!agencyName) throw apiError_('คำขอนี้ไม่มีชื่อหน่วยงาน', 'BAD_REQUEST');
+      const duplicateAgency = rows_('AGENCIES').find(function (row) {
+        return String(row.agency_name || '').trim().toLowerCase() === agencyName.toLowerCase() && row.status === 'ACTIVE';
+      });
+      if (duplicateAgency) throw apiError_('มีหน่วยงานชื่อนี้อยู่แล้ว กรุณาปฏิเสธคำขอหรือให้ผู้สมัครเลือกหน่วยงานเดิม', 'AGENCY_EXISTS');
+
+      const email = normalizeEmail_(request.email);
+      const sub = String(request.google_sub || '');
+      createdAgencyId = newId_('AGY');
+      sheet_('AGENCIES').appendRow([
+        createdAgencyId, agencyName, email, '', 'OWNER_DRIVE', 'ACTIVE', reviewedAt, reviewedAt
+      ]);
+      sheet_('USERS').appendRow([
+        sub || 'PENDING:' + email, email, cleanText_(request.display_name || email, 160), createdAgencyId,
+        'ADMIN', 'ACTIVE', reviewedAt, ''
+      ]);
+      assignedRole = 'ADMIN';
+      appendAudit_(auth.user.email, createdAgencyId, 'AGENCY_CREATE', 'AGENCY', createdAgencyId, 'SUCCESS', agencyName);
+    } else if (decision === 'APPROVE') {
+      if (USER_ROLES.indexOf(requestedRole) < 0) throw apiError_('บทบาทไม่ถูกต้อง', 'BAD_REQUEST');
       const email = normalizeEmail_(request.email);
       const sub = String(request.google_sub || '');
       const current = rows_('USERS').find(function (row) {
@@ -138,17 +217,23 @@ function reviewRegistration_(input) {
       if (current && current.status === 'DISABLED') throw apiError_('บัญชีนี้ถูกระงับ กรุณาจัดการสิทธิ์เดิมโดยตรง', 'ACCOUNT_DISABLED');
       if (current && current.status === 'ACTIVE') throw apiError_('บัญชีนี้มีสิทธิ์อยู่แล้ว', 'ALREADY_MEMBER');
       const values = [sub || 'PENDING:' + email, email, cleanText_(request.display_name || email, 160), auth.agency.id,
-        role, 'ACTIVE', reviewedAt, ''];
+        requestedRole, 'ACTIVE', reviewedAt, ''];
       if (current) sheet_('USERS').getRange(current._row, 1, 1, values.length).setValues([values]);
       else sheet_('USERS').appendRow(values);
+      assignedRole = requestedRole;
     }
+
     const requestSheet = sheet_('REGISTRATION_REQUESTS');
-    const values = [decision === 'APPROVE' ? 'APPROVED' : 'REJECTED', reviewedAt, auth.user.email,
-      decision === 'APPROVE' ? role : '', note];
-    requestSheet.getRange(request._row, 5, 1, values.length).setValues([values]);
-    appendAudit_(auth.user.email, auth.agency.id, decision === 'APPROVE' ? 'REGISTRATION_APPROVE' : 'REGISTRATION_REJECT',
-      'USER', request.email, 'SUCCESS', decision === 'APPROVE' ? role : note);
-    return { id: requestId, status: values[0], role: values[3] };
+    const reviewValues = [decision === 'APPROVE' ? 'APPROVED' : 'REJECTED', reviewedAt, auth.user.email, assignedRole, note];
+    requestSheet.getRange(request._row, 5, 1, reviewValues.length).setValues([reviewValues]);
+    if (createdAgencyId) requestSheet.getRange(request._row, headerIndex_('REGISTRATION_REQUESTS', 'created_agency_id')).setValue(createdAgencyId);
+
+    appendAudit_(auth.user.email, requestType === 'NEW_AGENCY' ? createdAgencyId : auth.agency.id,
+      decision === 'APPROVE' ? (requestType === 'NEW_AGENCY' ? 'AGENCY_REGISTRATION_APPROVE' : 'REGISTRATION_APPROVE') :
+      (requestType === 'NEW_AGENCY' ? 'AGENCY_REGISTRATION_REJECT' : 'REGISTRATION_REJECT'),
+      requestType === 'NEW_AGENCY' ? 'AGENCY' : 'USER', request.email, 'SUCCESS',
+      decision === 'APPROVE' ? assignedRole : note);
+    return { id: requestId, status: reviewValues[0], role: assignedRole, createdAgencyId: createdAgencyId };
   } finally { lock.releaseLock(); }
 }
 
@@ -287,6 +372,11 @@ function claimPendingUserId_(user, sub) {
 
 function updateLastLogin_(row) { sheet_('USERS').getRange(row, headerIndex_('USERS', 'last_login_at')).setValue(new Date()); }
 function agencyById_(id) { return rows_('AGENCIES').find(function (row) { return row.agency_id === id; }); }
+
+function configValue_(key) {
+  const row = rows_('CONFIG').find(function (item) { return String(item.config_key || '') === key; });
+  return row ? String(row.config_value || '') : '';
+}
 
 function rows_(name) {
   const sheet = sheet_(name);
