@@ -1,7 +1,7 @@
 // Pollution Map central registry backup service.
 // Add this file to the SAME Apps Script project as Code.gs.
-// Backups are copies of the entire central registry spreadsheet.
-// There is intentionally NO automatic restore function.
+// Scheduled backups are change-aware: if meaningful registry data has not changed,
+// no duplicate Drive copy is created. There is intentionally NO automatic restore.
 
 const BACKUP_FOLDER_ID = '1xkf1K0S-zaB4Xr_IXqeblWzdDR_jU3Ow';
 const BACKUP_RETENTION_DAYS = 30;
@@ -9,9 +9,12 @@ const BACKUP_OWNER_EMAIL = 'choksayam.kleaw@gmail.com';
 const BACKUP_EXECUTION_EMAIL = 'occ.hrh@gmail.com';
 const BACKUP_TRIGGER_HOUR = 2;
 const BACKUP_TRIGGER_HANDLER = 'createDailyBackup';
+const BACKUP_FINGERPRINT_PROPERTY = 'BACKUP_LAST_FINGERPRINT';
+const BACKUP_LAST_CHECK_AT_PROPERTY = 'BACKUP_LAST_CHECK_AT';
+const BACKUP_LAST_CHECK_RESULT_PROPERTY = 'BACKUP_LAST_CHECK_RESULT';
 
 function createDailyBackup() {
-  return createRegistryBackup_('DAILY', 'scheduler');
+  return createRegistryBackup_('DAILY', 'scheduler', {skipIfUnchanged:true});
 }
 
 function runBackupSetup() {
@@ -23,7 +26,7 @@ function runBackupSetup() {
   folder.addEditor(BACKUP_OWNER_EMAIL);
   installDailyBackupTrigger();
   if (typeof installBackupHealthTrigger === 'function') installBackupHealthTrigger();
-  const firstBackup = createRegistryBackup_('SETUP', email);
+  const firstBackup = createRegistryBackup_('SETUP', email, {skipIfUnchanged:false});
   return {
     installed: true,
     folderId: BACKUP_FOLDER_ID,
@@ -49,10 +52,13 @@ function verifyBackupSetup() {
     lastFileId: props.getProperty('BACKUP_LAST_FILE_ID') || '',
     lastFileName: props.getProperty('BACKUP_LAST_FILE_NAME') || '',
     lastMode: props.getProperty('BACKUP_LAST_MODE') || '',
+    lastCheckAt: props.getProperty(BACKUP_LAST_CHECK_AT_PROPERTY) || '',
+    lastCheckResult: props.getProperty(BACKUP_LAST_CHECK_RESULT_PROPERTY) || '',
     lastErrorAt: props.getProperty('BACKUP_LAST_ERROR_AT') || '',
     lastError: props.getProperty('BACKUP_LAST_ERROR') || '',
     healthStatus: health ? health.status : '',
     ageHours: health ? health.ageHours : null,
+    backupAgeHours: health ? health.backupAgeHours : null,
     lastAlertAt: health ? health.lastAlertAt : ''
   };
 }
@@ -62,7 +68,8 @@ function createManualBackupForOwner_(actorEmail) {
   if (!actor || actor !== systemOwnerEmail_()) {
     throw apiError_('เฉพาะ SYSTEM OWNER เท่านั้นที่สร้าง Backup ด้วยตนเองได้', 'ACCESS_DENIED');
   }
-  return createRegistryBackup_('MANUAL', actor);
+  // An explicit owner request always creates a copy, even when data is unchanged.
+  return createRegistryBackup_('MANUAL', actor, {skipIfUnchanged:false});
 }
 
 function getBackupStatusForOwner_(actorEmail) {
@@ -77,6 +84,8 @@ function getBackupStatusForOwner_(actorEmail) {
     lastFileId: props.getProperty('BACKUP_LAST_FILE_ID') || '',
     lastFileName: props.getProperty('BACKUP_LAST_FILE_NAME') || '',
     lastMode: props.getProperty('BACKUP_LAST_MODE') || '',
+    lastCheckAt: props.getProperty(BACKUP_LAST_CHECK_AT_PROPERTY) || '',
+    lastCheckResult: props.getProperty(BACKUP_LAST_CHECK_RESULT_PROPERTY) || '',
     lastErrorAt: props.getProperty('BACKUP_LAST_ERROR_AT') || '',
     lastError: props.getProperty('BACKUP_LAST_ERROR') || '',
     retentionDays: BACKUP_RETENTION_DAYS,
@@ -84,18 +93,42 @@ function getBackupStatusForOwner_(actorEmail) {
     folderId: BACKUP_FOLDER_ID,
     healthStatus: health ? health.status : '',
     ageHours: health ? health.ageHours : null,
+    backupAgeHours: health ? health.backupAgeHours : null,
     lastAlertAt: health ? health.lastAlertAt : '',
     alertRecipients: typeof backupAlertRecipients_ === 'function' ? backupAlertRecipients_() : ''
   };
 }
 
-function createRegistryBackup_(mode, actorEmail) {
+function createRegistryBackup_(mode, actorEmail, options) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
     const now = new Date();
     const props = PropertiesService.getScriptProperties();
+    const opts = options || {};
     try {
+      const fingerprint = registryFingerprint_();
+      const previousFingerprint = props.getProperty(BACKUP_FINGERPRINT_PROPERTY) || '';
+
+      props.setProperty(BACKUP_LAST_CHECK_AT_PROPERTY, now.toISOString());
+
+      if (opts.skipIfUnchanged && previousFingerprint && fingerprint === previousFingerprint) {
+        props.setProperty(BACKUP_LAST_CHECK_RESULT_PROPERTY, 'SKIPPED_NO_CHANGE');
+        props.deleteProperty('BACKUP_LAST_ERROR');
+        props.deleteProperty('BACKUP_LAST_ERROR_AT');
+        appendAudit_(normalizeEmail_(actorEmail || 'scheduler'), '', 'SYSTEM_BACKUP_CHECK', 'BACKUP', '', 'SKIPPED_NO_CHANGE', 'ข้อมูลทะเบียนกลางไม่เปลี่ยนแปลง');
+        if (typeof markBackupHealthy_ === 'function') markBackupHealthy_('NO_CHANGE');
+        cleanupOldBackups_();
+        return {
+          skipped: true,
+          reason: 'NO_CHANGE',
+          checkedAt: now.toISOString(),
+          mode: mode,
+          lastFileId: props.getProperty('BACKUP_LAST_FILE_ID') || '',
+          lastFileName: props.getProperty('BACKUP_LAST_FILE_NAME') || ''
+        };
+      }
+
       const source = DriveApp.getFileById(SPREADSHEET_ID);
       const folder = DriveApp.getFolderById(BACKUP_FOLDER_ID);
       const stamp = Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd_HHmmss');
@@ -107,6 +140,8 @@ function createRegistryBackup_(mode, actorEmail) {
       folder.addEditor(BACKUP_OWNER_EMAIL);
       copy.addEditor(BACKUP_OWNER_EMAIL);
 
+      props.setProperty(BACKUP_FINGERPRINT_PROPERTY, fingerprint);
+      props.setProperty(BACKUP_LAST_CHECK_RESULT_PROPERTY, 'BACKED_UP');
       props.setProperty('BACKUP_LAST_SUCCESS_AT', now.toISOString());
       props.setProperty('BACKUP_LAST_FILE_ID', copy.getId());
       props.setProperty('BACKUP_LAST_FILE_NAME', copy.getName());
@@ -117,8 +152,10 @@ function createRegistryBackup_(mode, actorEmail) {
       cleanupOldBackups_();
       appendAudit_(normalizeEmail_(actorEmail || 'scheduler'), '', 'SYSTEM_BACKUP_CREATE', 'BACKUP', copy.getId(), 'SUCCESS', copy.getName());
       if (typeof markBackupHealthy_ === 'function') markBackupHealthy_(String(mode || 'BACKUP'));
-      return {id: copy.getId(), name: copy.getName(), createdAt: now.toISOString(), mode: mode};
+      return {id: copy.getId(), name: copy.getName(), createdAt: now.toISOString(), mode: mode, skipped:false};
     } catch (error) {
+      props.setProperty(BACKUP_LAST_CHECK_AT_PROPERTY, now.toISOString());
+      props.setProperty(BACKUP_LAST_CHECK_RESULT_PROPERTY, 'FAILED');
       props.setProperty('BACKUP_LAST_ERROR_AT', now.toISOString());
       props.setProperty('BACKUP_LAST_ERROR', String(error && error.message || error));
       try {
@@ -132,6 +169,55 @@ function createRegistryBackup_(mode, actorEmail) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Fingerprint only meaningful registry state. AUDIT_LOG is intentionally excluded because
+// login/backup audit entries would otherwise make the workbook look changed every day.
+// USERS.last_login_at is also excluded because logins are operational activity, not registry data.
+function registryFingerprint_() {
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const snapshot = [];
+  spreadsheet.getSheets().forEach(function(sheet) {
+    const name = sheet.getName();
+    if (name === 'AUDIT_LOG') return;
+
+    const range = sheet.getDataRange();
+    const values = range.getValues();
+    if (!values.length) {
+      snapshot.push([name, []]);
+      return;
+    }
+
+    let columnIndexes = null;
+    if (name === 'USERS') {
+      const headers = values[0].map(function(value) { return String(value || '').trim(); });
+      columnIndexes = headers.map(function(header, index) {
+        return header === 'last_login_at' ? -1 : index;
+      }).filter(function(index) { return index >= 0; });
+    }
+
+    const normalizedRows = values.map(function(row) {
+      const sourceRow = columnIndexes ? columnIndexes.map(function(index) { return row[index]; }) : row;
+      return sourceRow.map(canonicalBackupValue_);
+    });
+    snapshot.push([name, normalizedRows]);
+  });
+
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    JSON.stringify(snapshot),
+    Utilities.Charset.UTF_8
+  );
+  return bytes.map(function(value) {
+    const byte = value < 0 ? value + 256 : value;
+    return ('0' + byte.toString(16)).slice(-2);
+  }).join('');
+}
+
+function canonicalBackupValue_(value) {
+  if (value instanceof Date) return value.toISOString();
+  if (value === null || value === undefined) return '';
+  return value;
 }
 
 function cleanupOldBackups_() {
