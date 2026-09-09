@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ขอสิทธิ์เข้าใช้งาน — Pollution Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#eef4f6;color:#173347;font-family:Sarabun,sans-serif}main{width:min(520px,100%);padding:30px;background:white;border-radius:16px;box-shadow:0 12px 35px #17334718}h1{font-size:24px;margin:0 0 12px}p{line-height:1.7;color:#627987}label{display:block;margin-top:16px;font-weight:600}input,select,button{font:inherit;width:100%;padding:11px;margin-top:6px;border:1px solid #afc1ca;border-radius:8px}button{background:#0e7c7b;color:white;border:0;cursor:pointer;font-weight:700}button:disabled{opacity:.55;cursor:not-allowed}.secondary{background:#edf4f5;color:#173347}.hidden{display:none!important}.error{color:#b42318}.ok{color:#08745e}#message{margin-top:14px;min-height:24px}#googleButton{margin-top:16px}
+</style>
+</head>
+<body><main>
+<h1>ขอสิทธิ์เข้าใช้งาน</h1>
+<p>ยืนยันตัวตนด้วยบัญชี Google แล้วส่งคำขอให้ผู้ดูแลหน่วยงานพิจารณา การส่งคำขอไม่ได้ทำให้ได้รับสิทธิ์ทันที</p>
+<div id="googleButton"></div>
+<section id="formPanel" class="hidden"><p id="accountText"></p><form id="requestForm"><label>ชื่อ-นามสกุล<input id="displayName" maxlength="160" required></label><label>หน่วยงาน<select id="agencyId" required><option value="">เลือกหน่วยงาน</option></select></label><button id="submitButton" type="submit">ส่งคำขอใช้งาน</button></form></section>
+<div id="message" role="status"></div><button id="backButton" class="secondary" type="button">กลับหน้าเข้าสู่ระบบ</button>
+</main>
+<script src="https://accounts.google.com/gsi/client?hl=th" async defer></script><script src="config.js"></script><script src="auth-client.js"></script>
+<script>
+const auth=window.PollutionMapAuth;
+const $=id=>document.getElementById(id);
+let verifiedCredential='';
+function show(text,error=false){$('message').textContent=text;$('message').className=error?'error':'ok';}
+async function api(action,payload={}){
+ const response=await fetch(window.POLLUTION_MAP_CONFIG.appsScriptWebAppUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,credential:verifiedCredential,...payload}),redirect:'follow'});
+ if(!response.ok)throw new Error('เซิร์ฟเวอร์ตอบกลับ '+response.status);
+ const result=await response.json();
+ if(!result.ok){const error=new Error(result.error||'ดำเนินการไม่สำเร็จ');error.code=result.code;throw error;}
+ return result.data;
+}
+function decodeCredential(token){const part=token.split('.')[1];const bytes=atob(part.replace(/-/g,'+').replace(/_/g,'/'));return JSON.parse(new TextDecoder().decode(Uint8Array.from(bytes,c=>c.charCodeAt(0))));}
+async function handleCredential(response){
+ verifiedCredential=response.credential;show('กำลังตรวจสอบข้อมูลบัญชี...');
+ try{
+  const claims=decodeCredential(verifiedCredential);
+  $('accountText').textContent='บัญชี Google: '+claims.email;
+  $('displayName').value=claims.name||'';
+  const agencies=await api('listRegistrationAgencies');
+  $('agencyId').replaceChildren(new Option('เลือกหน่วยงาน',''));
+  agencies.forEach(a=>$('agencyId').add(new Option(a.name,a.id)));
+  $('formPanel').classList.remove('hidden');show('ยืนยันบัญชีแล้ว กรุณากรอกข้อมูลและส่งคำขอ');
+ }catch(error){show(error.message||'โหลดข้อมูลไม่สำเร็จ',true);}
+}
+$('requestForm').addEventListener('submit',async event=>{
+ event.preventDefault();const button=$('submitButton');button.disabled=true;show('กำลังส่งคำขอ...');
+ try{
+  const result=await api('requestAccess',{displayName:$('displayName').value.trim(),agencyId:$('agencyId').value});
+  $('requestForm').classList.add('hidden');show('ส่งคำขอสำเร็จ สถานะ: รอผู้ดูแลอนุมัติ คุณสามารถกลับมาเข้าสู่ระบบได้หลังได้รับอนุมัติ');
+ }catch(error){show(error.message||'ส่งคำขอไม่สำเร็จ',true);}finally{button.disabled=false;}
+});
+$('backButton').onclick=()=>location.href='login.html';
+async function boot(){
+ if(!auth.configured()){show('ยังไม่ได้ตั้งค่า Google Login',true);return;}
+ const timer=setInterval(()=>{
+  if(!window.google?.accounts?.id)return;
+  clearInterval(timer);
+  google.accounts.id.initialize({client_id:window.POLLUTION_MAP_CONFIG.googleClientId,callback:handleCredential,auto_select:false});
+  google.accounts.id.renderButton($('googleButton'),{theme:'outline',size:'large',text:'signin_with',locale:'th',width:300});
+ },100);
+}
+boot();
+</script></body></html>
