@@ -26,6 +26,6 @@ jobs:
         run: git diff --check
       - name: Commit verified changes
         run: |
-          git add apps-script/Code.gs scripts/test-rbac.js
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Wire owner-only backup API'
+          git add apps-script/Code.gs scripts/test-rbac.js system-admin.html
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Add central backup API and owner UI'
           git push origin HEAD:refs/heads/feature/central-backup
