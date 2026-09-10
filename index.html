@@ -34,6 +34,7 @@
     .subtitle { margin-top: 2px; font-size: 11px; opacity: .78; }
     .header-spacer { flex: 1; }
     .agency-badge { max-width: 310px; padding: 5px 11px; border: 1px solid rgba(255,255,255,.28); border-radius: 16px; background: rgba(255,255,255,.12); font-size: 12px; line-height: 1.25; }
+    .donation-btn { color: #17324a; background: #ffd86b; border: 1px solid rgba(255,255,255,.45); }
     .cloud-section { margin-bottom: 12px; padding: 11px; border: 1px solid #a9ccc9; border-radius: 10px; background: #eef8f7; }
     .cloud-section h3 { margin: 0 0 7px; font-size: 14px; color: var(--navy); }
     .role-badge { display: inline-block; margin-top: 6px; padding: 3px 8px; border-radius: 12px; background: #d7edeb; font-size: 11px; font-weight: 700; }
@@ -173,6 +174,29 @@
       color: #fff; background: rgba(0,0,0,.55); text-align: center; white-space: pre-wrap;
       word-break: break-word; font-weight: 700; text-shadow: 0 0 4px #000; user-select: text;
     }
+    #donationModal[hidden] { display: none; }
+    #donationModal {
+      position: fixed; inset: 0; display: grid; place-items: center; padding: 18px;
+      background: rgba(8, 25, 43, .68); z-index: 40;
+    }
+    .donation-dialog {
+      position: relative; width: min(430px, 100%); max-height: calc(100vh - 36px);
+      overflow: auto; padding: 18px; border: 1px solid rgba(255,255,255,.75);
+      border-radius: 20px; background: #fff; box-shadow: 0 16px 44px rgba(0,0,0,.3);
+      text-align: center;
+    }
+    .donation-dialog h2 { margin: 0; color: var(--navy); font-size: 20px; }
+    .donation-dialog p { margin: 5px 0 13px; color: #5c7180; font-size: 13px; }
+    .donation-dialog img {
+      display: block; width: min(360px, 100%); height: auto; margin: 0 auto;
+      border-radius: 12px; box-shadow: 0 4px 18px rgba(22,50,74,.16);
+    }
+    .donation-close {
+      position: absolute; top: 10px; right: 10px; width: 34px; height: 34px;
+      padding: 0; border-radius: 50%; color: var(--navy); background: #edf4f7;
+      font-size: 20px; line-height: 1;
+    }
+    .donation-note { margin: 12px 0 0 !important; color: #657985 !important; font-size: 11px !important; }
     body.map-full #controls { display: none; }
     @media (max-width: 760px) {
       header { gap: 7px; }
@@ -197,6 +221,7 @@
     <div class="header-spacer"></div>
     <button id="loginBtn" type="button" onclick="location.href='login.html'">เข้าสู่ระบบหน่วยงาน</button>
     <button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
+    <button id="donationBtn" type="button" class="donation-btn" onclick="openDonationModal()">สนับสนุนระบบ</button>
     <button id="logoutBtn" type="button" class="secondary" hidden onclick="signOutSecure()">ออกจากระบบ</button>
     <button id="baseBtn" type="button" onclick="toggleBase()">🛰️ ดาวเทียม</button>
     <button id="toggleMapBtn" type="button" class="secondary" onclick="toggleMapView()">ขยายแผนที่</button>
@@ -361,6 +386,15 @@
     </section>
     <div id="hint">โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · กด “โหมดวางวงรัศมี” หากต้องการสร้างวงใหม่</div>
   </main>
+  <section id="donationModal" hidden role="dialog" aria-modal="true" aria-labelledby="donationTitle">
+    <div class="donation-dialog">
+      <button type="button" class="donation-close" aria-label="ปิดหน้าต่างสนับสนุนระบบ" onclick="closeDonationModal()">×</button>
+      <h2 id="donationTitle">สนับสนุนการพัฒนาระบบ</h2>
+      <p>ระบบนี้แจกให้ใช้งานฟรี หากเห็นว่ามีประโยชน์ สามารถร่วมสนับสนุนได้ตามสมัครใจ</p>
+      <img src="assets/promptpay-donation.jpg" alt="QR PromptPay สำหรับสนับสนุนผู้พัฒนาระบบ">
+      <p class="donation-note">สแกน QR ด้วยแอปธนาคารของท่านได้เลยครับ</p>
+    </div>
+  </section>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
@@ -892,6 +926,15 @@
       document.getElementById('toggleMapBtn').textContent = full ? 'แสดงเครื่องมือ' : 'ขยายแผนที่';
       setTimeout(() => map.resize(), 30);
     }
+    function openDonationModal() {
+      document.getElementById('donationModal').hidden = false;
+      document.body.style.overflow = 'hidden';
+      document.querySelector('.donation-close').focus();
+    }
+    function closeDonationModal() {
+      document.getElementById('donationModal').hidden = true;
+      document.body.style.overflow = '';
+    }
     function makeDraggable(element) {
       element.addEventListener('pointerdown', event => {
         if (event.button !== 0) return;
@@ -1237,7 +1280,13 @@
       document.getElementById('csvSearch').addEventListener('input', renderCsvRecords);
       refreshCsvHistory();
       document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && document.body.classList.contains('map-full')) toggleMapView();
+        if (event.key !== 'Escape') return;
+        const donationModal = document.getElementById('donationModal');
+        if (donationModal && !donationModal.hidden) {
+          closeDonationModal();
+          return;
+        }
+        if (document.body.classList.contains('map-full')) toggleMapView();
       });
     }
     function initMap() {
@@ -1284,3 +1333,4 @@
   </script>
 </body>
 </html>
+
