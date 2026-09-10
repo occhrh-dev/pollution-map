@@ -221,6 +221,7 @@
     <div class="header-spacer"></div>
     <button id="loginBtn" type="button" onclick="location.href='login.html'">เข้าสู่ระบบหน่วยงาน</button>
     <button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
+    <button id="exportImageBtn" type="button" onclick="exportMapImage()">บันทึกเป็นรูป PNG</button>
     <button id="donationBtn" type="button" class="donation-btn" onclick="openDonationModal()">สนับสนุนระบบ</button>
     <button id="logoutBtn" type="button" class="secondary" hidden onclick="signOutSecure()">ออกจากระบบ</button>
     <button id="baseBtn" type="button" onclick="toggleBase()">🛰️ ดาวเทียม</button>
@@ -401,6 +402,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://accounts.google.com/gsi/client?hl=th" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="map-image-export.js"></script>
   <script src="config.js"></script>
   <script src="auth-client.js"></script>
   <script>
