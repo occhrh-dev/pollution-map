@@ -330,12 +330,12 @@
       <details id="communitySettings" class="panel-section">
         <summary>ตั้งค่าผังชุมชนประจำหน่วยงาน</summary>
         <div class="section-body">
-        <p class="panel-note" id="communityConfigStatus">ผังเริ่มต้น: ชุมชนเขตรับผิดชอบเดิม</p>
+        <p class="panel-note" id="communityConfigStatus">ยังไม่มีผังชุมชน — กรุณานำเข้าผังของหน่วยงาน</p>
         <label class="panel-label" for="communityFile">เลือกผังใหม่ (GeoJSON / KML / KMZ)</label>
         <input id="communityFile" class="csv-file" type="file" accept=".geojson,.json,.kml,.kmz">
         <label class="panel-label" for="communityNameField">คอลัมน์ชื่อชุมชน</label>
         <select id="communityNameField" class="panel-select" disabled></select>
-        <div class="panel-actions"><button id="communityApply" type="button" disabled>บันทึกเฉพาะผังชุมชนนี้</button><button id="communityReset" class="outline" type="button">กลับไปใช้ผังเดิม</button></div>
+        <div class="panel-actions"><button id="communityApply" type="button" disabled>บันทึกเฉพาะผังชุมชนนี้</button><button id="communityReset" class="outline" type="button">ล้างผังชุมชน</button></div>
         <p class="panel-note">ส่วนนี้เปลี่ยนเฉพาะผังและรายชื่อชุมชนประจำหน่วยงาน ไม่ใช่การบันทึกโครงการ จุดหรือวงรัศมี</p>
         </div>
       </details>
@@ -441,7 +441,7 @@
   <script src="auth-client.js"></script>
   <script>
     const MAPTILER_KEY = 'XOw46Ht6gxyHhSCkLXPf';
-    const COMMUNITY_URL = 'ผังโครงร่างเขตควบคุมมลพิษ.json';
+    const emptyCommunityData = () => ({ type: 'FeatureCollection', features: [] });
     const STYLES = {
       streets: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
       satellite: `https://api.maptiler.com/maps/hybrid/style.json?key=${MAPTILER_KEY}`
@@ -799,9 +799,7 @@
     async function loadCommunities() {
       if (!secureMode) { try { communityConfig = JSON.parse(localStorage.getItem(COMMUNITY_CONFIG_KEY) || 'null'); } catch { communityConfig = null; } }
       if (communityConfig) { installCommunityData(communityConfig.data); updateCommunityConfigStatus(); return; }
-      const response = await fetch(COMMUNITY_URL);
-      if (!response.ok) throw new Error(`โหลดขอบเขตชุมชนไม่สำเร็จ: HTTP ${response.status}`);
-      installCommunityData(await response.json());
+      installCommunityData(emptyCommunityData());
       updateCommunityConfigStatus();
     }
     function installCommunityData(data) {
@@ -826,7 +824,7 @@
       updateCommunityVisibility();
     }
     function updateCommunityConfigStatus() {
-      document.getElementById('communityConfigStatus').textContent = `${communityConfig ? communityConfig.name : 'ผังเริ่มต้นของโรงพยาบาล'} · ${communityNames.length} ชุมชน`;
+      document.getElementById('communityConfigStatus').textContent = communityConfig ? `${communityConfig.name} · ${communityNames.length} ชุมชน` : 'ยังไม่มีผังชุมชน — กรุณานำเข้าผังของหน่วยงาน';
     }
     function openCommunitySettings() {
       document.getElementById('dataPanel').hidden = false;
@@ -871,8 +869,7 @@
     }
     async function resetCommunityFile() {
       try {
-        const response = await fetch(COMMUNITY_URL); if (!response.ok) throw new Error('โหลดผังเดิมไม่สำเร็จ');
-        const data = await response.json();
+        const data = emptyCommunityData();
         if (secureMode) await saveCommunityConfigCloud(null); else localStorage.removeItem(COMMUNITY_CONFIG_KEY);
         communityConfig = null;
         installCommunityData(data); updateCommunityConfigStatus();
