@@ -218,6 +218,24 @@
     #communityBlock { flex-basis: 620px; }
     #communityBlock .select2-container { min-width: min(220px, 100%); max-width: 100%; }
     #symbolControls { min-width: 0; max-width: 100%; }
+
+    /* Compact toolbar leaves more room for map work. */
+    header { min-height: 48px; padding: 6px 10px; gap: 7px; }
+    header button { font-size: 12px; padding: 6px 10px; white-space: nowrap; }
+    #controls { padding: 6px 8px; gap: 5px; max-height: 32vh; }
+    #controls .control-group { padding: 4px 6px; gap: 5px; min-height: 32px; }
+    #controls button { font-size: 12px; padding: 5px 9px; border-radius: 14px; }
+    #controls label { font-size: 12px; }
+    #controls input, #controls select { font-size: 12px; }
+    #controls input[type="number"] { width: 84px; padding: 4px 6px; }
+    #controls input[type="color"] { width: 28px; height: 24px; }
+    #interactionMode { min-width: 100px; }
+    #communityBlock { flex-basis: 530px; }
+    #communityBlock .select2-container { min-width: min(170px, 100%); flex-basis: 190px; font-size: 12px; }
+    #communityBlock .select2-selection--multiple { height: 30px; min-height: 30px; max-height: 30px; }
+    #communityBlock .select2-selection__rendered { height: 28px; }
+    #communityBlock .selection-count { font-size: 10px; padding: 3px 6px; }
+    @media (max-width: 760px) { #controls { max-height: 38vh; } #communityBlock { flex-basis: 100%; } }
   </style>
 </head>
 <body>
