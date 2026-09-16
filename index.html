@@ -209,6 +209,15 @@
       #hint { max-width: 190px; }
       #dataPanel { left: 8px; right: 8px; top: 8px; width: auto; max-height: 60%; }
     }
+
+    /* Keep toolbar groups and community actions inside the viewport. */
+    header { flex-shrink: 0; }
+    #controls { flex-shrink: 0; max-height: 42vh; overflow-y: auto; }
+    #controls .control-group { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+    #controls button { flex-shrink: 0; white-space: nowrap; }
+    #communityBlock { flex-basis: 620px; }
+    #communityBlock .select2-container { min-width: min(220px, 100%); max-width: 100%; }
+    #symbolControls { min-width: 0; max-width: 100%; }
   </style>
 </head>
 <body>
