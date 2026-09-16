@@ -261,9 +261,12 @@
     <div class="control-group">
       <button type="button" onclick="undoLast()">↶ Undo</button>
       <button type="button" class="danger" onclick="clearMap()">ล้างสิ่งที่วาด</button>
-      <button type="button" onclick="addArrow()">เพิ่มลูกศร ⟵</button>
-      <label for="arrowRotation">หมุน</label>
-      <input id="arrowRotation" type="range" min="0" max="360" value="0" oninput="rotateSelectedArrow(this.value)">
+      <span id="symbolControls" style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <select id="symbolKind" aria-label="ชนิดสัญลักษณ์"></select>
+      <button type="button" onclick="addArrow()">เพิ่มสัญลักษณ์</button>
+      <input id="symbolColor" type="color" value="#87cefa" aria-label="สีสัญลักษณ์">
+      <button id="symbolDelete" type="button" disabled>ลบสัญลักษณ์ที่เลือก</button>
+      </span>
       <button type="button" onclick="addTextBox()">เพิ่มข้อความ</button>
       <button type="button" class="outline" onclick="clearAllMapData()">ล้างทั้งหมด</button>
     </div>
@@ -404,6 +407,7 @@
   <script src="https://accounts.google.com/gsi/client?hl=th" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="map-image-export.js?v=layout-1"></script>
+  <script src="symbol-tools.js?v=1"></script>
   <script src="config.js"></script>
   <script src="auth-client.js"></script>
   <script>
@@ -958,18 +962,7 @@
         element.addEventListener('pointercancel', up);
       });
     }
-    function addArrow() {
-      const arrow = document.createElement('div');
-      arrow.className = 'draggable arrow-overlay'; arrow.textContent = '⟵';
-      arrow.style.left = '300px'; arrow.style.top = '160px';
-      arrow.style.transform = `rotate(${document.getElementById('arrowRotation').value}deg)`;
-      arrow.addEventListener('click', event => { event.stopPropagation(); selectedArrow = arrow; });
-      document.getElementById('mapwrap').appendChild(arrow);
-      makeDraggable(arrow); arrows.push(arrow); selectedArrow = arrow;
-    }
-    function rotateSelectedArrow(degrees) {
-      if (selectedArrow) selectedArrow.style.transform = `rotate(${degrees}deg)`;
-    }
+    function addArrow() { SymbolTools.add(); }
     function addTextBox() {
       const box = document.createElement('div');
       box.className = 'draggable text-overlay'; box.contentEditable = 'true'; box.textContent = 'ข้อความ';
@@ -1171,7 +1164,7 @@
         circles: circleFeatures.map(feature => feature.properties),
         radiusSet: readRadiusSet(),
         csv: { name: currentCsvName, headers: csvHeaders, records: csvRecords, latColumn: csvLatColumn, lngColumn: csvLngColumn },
-        arrows: arrows.map(element => ({ left: element.style.left, top: element.style.top, rotation: element.style.transform || 'rotate(0deg)' })),
+        arrows: arrows.map(element => SymbolTools.serialize(element)),
         textBoxes: textBoxes.map(element => ({ left: element.style.left, top: element.style.top, text: element.textContent }))
       };
     }
@@ -1205,12 +1198,7 @@
       } catch (error) { alert(error.message || 'ไฟล์แผนที่ไม่ถูกต้อง'); } };
       reader.readAsText(file); event.target.value = '';
     }
-    function restoreArrow(state) {
-      const arrow = document.createElement('div'); arrow.className = 'draggable arrow-overlay'; arrow.textContent = '⟵';
-      arrow.style.left = state.left || '300px'; arrow.style.top = state.top || '160px'; arrow.style.transform = state.rotation || 'rotate(0deg)';
-      arrow.addEventListener('click', event => { event.stopPropagation(); selectedArrow = arrow; });
-      document.getElementById('mapwrap').appendChild(arrow); makeDraggable(arrow); arrows.push(arrow); selectedArrow = arrow;
-    }
+    function restoreArrow(state) { SymbolTools.restore(state); }
     function restoreTextBox(state) {
       const box = document.createElement('div'); box.className = 'draggable text-overlay'; box.contentEditable = 'true'; box.textContent = state.text || 'ข้อความ';
       box.style.left = state.left || '150px'; box.style.top = state.top || '130px'; box.addEventListener('click', event => event.stopPropagation());
