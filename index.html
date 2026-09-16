@@ -245,6 +245,7 @@
       <label for="lngInput">ลองจิจูด</label>
       <input type="number" id="lngInput" step="0.000001" placeholder="101.185">
       <button type="button" onclick="addPointFromInput()">ลงจุด</button>
+      <button id="locationLinkBtn" type="button" onclick="openLocationLink()">วางลิงก์ตำแหน่ง</button>
     </div>
     <div class="control-group" id="communityBlock">
       <label for="communitySelect">ชุมชน</label>
@@ -408,6 +409,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="map-image-export.js?v=layout-1"></script>
   <script src="symbol-tools.js?v=1"></script>
+  <script src="location-link.js?v=1"></script>
   <script src="config.js"></script>
   <script src="auth-client.js"></script>
   <script>
