@@ -246,6 +246,7 @@
     </div>
     <div class="agency-badge" id="agencyBadge" hidden></div>
     <div class="header-spacer"></div>
+    <button type="button" onclick="location.href=secureMode?'field-notebook.html?org='+encodeURIComponent(secureOrganizationId):'login.html?next=field'">เก็บจุดลงพื้นที่</button>
     <button id="loginBtn" type="button" onclick="location.href='login.html'">เข้าสู่ระบบหน่วยงาน</button>
     <button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
     <button id="exportImageBtn" type="button" onclick="exportMapImage()">บันทึกเป็นรูป PNG</button>
@@ -1333,6 +1334,8 @@
           await refreshCloudProjects();
           document.getElementById('projectName').value = 'โครงการใหม่';
           document.getElementById('projectOwner').value = secureOrganization.name;
+          const requestedProject = new URLSearchParams(location.search).get('project');
+          if (requestedProject && cloudProjects.some(p => p.id === requestedProject)) { document.getElementById('cloudProjectSelect').value = requestedProject; await openCloudProject(); }
         } else if (demoAgency) {
           const raw = localStorage.getItem(MAP_STORAGE_KEY);
           if (raw) { try { applyMapState(JSON.parse(raw)); } catch (error) { alert('เปิดโครงการทดลองไม่สำเร็จ'); } }
@@ -1350,4 +1353,3 @@
   </script>
 </body>
 </html>
-
