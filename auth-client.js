@@ -19,7 +19,15 @@
 
   function credential() { return sessionStorage.getItem(CREDENTIAL_KEY) || ''; }
   function session() { return readJson(SESSION_KEY); }
+  const PROFILE_KEY = 'pollution-map-last-account-v1';
+  function remembered() { try { return JSON.parse(localStorage.getItem(PROFILE_KEY)||'null'); } catch (_) { return null; } }
+  function rememberWorkspace(id) { const profile=remembered(); if(profile) { try { localStorage.setItem(PROFILE_KEY,JSON.stringify({...profile,agencyId:id})); } catch (_) {} } }
+  function forgetAccount() { clearLogin(); try { localStorage.removeItem(PROFILE_KEY); } catch (_) {} }
   function setLogin(googleCredential, loginSession) {
+    const previous=session();
+    if(previous?.user?.email !== loginSession?.user?.email) sessionStorage.removeItem(DRIVE_TOKEN_KEY);
+    const old=remembered(),email=loginSession?.user?.email;
+    if(email) { try { localStorage.setItem(PROFILE_KEY,JSON.stringify({email,agencyId:old?.email===email?old.agencyId:''})); } catch (_) {} }
     sessionStorage.setItem(CREDENTIAL_KEY, googleCredential);
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(loginSession));
   }
@@ -73,6 +81,7 @@
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: config().googleClientId,
         scope: 'https://www.googleapis.com/auth/drive.file',
+        hint: session()?.user?.email || remembered()?.email || '',
         callback: response => {
           if (response.error || !response.access_token) { reject(new Error('ไม่ได้รับสิทธิ์ Google Drive')); return; }
           const token = { accessToken: response.access_token, expiresAt: Date.now() + Number(response.expires_in || 3600) * 1000 };
@@ -81,7 +90,7 @@
         },
         error_callback: () => reject(new Error('หน้าต่างขอสิทธิ์ Google Drive ถูกปิด'))
       });
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      tokenClient.requestAccessToken({ prompt: '' });
     });
   }
 
@@ -98,7 +107,7 @@
   }
 
   async function ensureAgencyFolder(agencyId, agencyName) {
-    const cacheKey = `pollution-map-drive-folder-${agencyId}`;
+    const cacheKey = `pollution-map-drive-folder-${session()?.user?.email || ''}-${agencyId}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) return cached;
     const safeId = String(agencyId).replace(/'/g, "\\'");
@@ -146,7 +155,7 @@
   }
 
   window.PollutionMapAuth = {
-    configured, credential, session, setLogin, clearLogin, api,
+    configured, credential, session, setLogin, clearLogin, api, remembered, rememberWorkspace, forgetAccount,
     requestDriveToken, saveJsonFile, loadJsonFile, trashDriveFile,
     hasDriveToken: () => !!savedDriveToken()
   };
