@@ -338,7 +338,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         <div id="secureAccountText" class="panel-note"></div>
         <div id="secureRoleText" class="role-badge"></div>
         <select id="cloudProjectSelect" hidden></select>
-        <div id="projectCards"></div><div class="panel-actions"><button id="projectPrev" onclick="changeProjectPage(-1)">ก่อนหน้า</button><span id="projectPage" aria-live="polite"></span><button id="projectNext" onclick="changeProjectPage(1)">ถัดไป</button></div>
+        <button type="button" onclick="refreshCloudProjects()">โหลดรายการใหม่</button><div id="projectCards"></div><div class="panel-actions"><button id="projectPrev" onclick="changeProjectPage(-1)">ก่อนหน้า</button><span id="projectPage" aria-live="polite"></span><button id="projectNext" onclick="changeProjectPage(1)">ถัดไป</button></div>
         <div id="cloudStatus" class="panel-note">กำลังเชื่อมต่อระบบกลาง...</div>
       </section>
       <details id="communitySettings" class="panel-section">
@@ -388,7 +388,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       <details id="csvSection" class="panel-section">
         <summary>จุดข้อมูลจาก CSV</summary>
         <div class="section-body">
-        <label class="panel-label" for="csvHistorySelect">ประวัติไฟล์ที่เคยนำเข้า</label>
+        <section class="project-card"><h3>ชุดสำรวจจากการลงพื้นที่</h3><p class="panel-note">เลือกข้อมูลที่กดส่งเข้าระบบหลักจากสมุดลงพื้นที่</p><select id="fieldSurveySelect" class="panel-select"><option value="">เลือกชุดสำรวจที่ส่งไว้</option></select><div class="panel-actions"><button onclick="refreshCloudProjects()" type="button">โหลดชุดสำรวจ</button><button id="fieldSurveyImport" onclick="importFieldSurvey()" type="button">นำเข้าชุดสำรวจ</button></div><p id="fieldSurveyStatus" class="panel-note" role="status"></p></section><label class="panel-label" for="csvHistorySelect">ประวัติไฟล์ที่เคยนำเข้า</label>
         <select class="panel-select" id="csvHistorySelect" disabled><option value="">ยังไม่มีประวัติ</option></select>
         <div class="panel-actions"><button type="button" class="outline" id="csvHistoryLoadBtn" disabled>เปิดจากประวัติ</button></div>
         <label class="panel-label" for="csvFile">หรือเลือกไฟล์ CSV ใหม่</label>
@@ -506,6 +506,8 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     let communitySettingsFileId = '';
     let cloudProjectId = '';
     let cloudProjects = [];
+    let projectListState="idle", projectListError="", projectListRequest=null;
+    const isFieldSurvey=p=>String(p.name||"").startsWith("[ภาคสนาม]");
 
     function updateActiveProjectTitle(){
       const title=document.getElementById('activeProjectTitle');
@@ -571,10 +573,12 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     function changeProjectPage(delta){projectPageIndex+=delta;renderProjectCards();}
     function renderProjectCards(){
       updateActiveProjectTitle();
-      const total=Math.max(1,Math.ceil(cloudProjects.length/3));projectPageIndex=Math.max(0,Math.min(projectPageIndex,total-1));
+      const mapProjects=cloudProjects.filter(p=>!isFieldSurvey(p));
+      const total=Math.max(1,Math.ceil(mapProjects.length/3));projectPageIndex=Math.max(0,Math.min(projectPageIndex,total-1));
       const list=document.getElementById('projectCards');list.replaceChildren();
-      if(!cloudProjects.length)list.textContent='ยังไม่มีโครงการที่บันทึกไว้';
-      cloudProjects.slice(projectPageIndex*3,projectPageIndex*3+3).forEach(project=>{
+      if(!mapProjects.length)list.textContent=projectListState==='error'?'ยังแสดงรายการไม่ได้ เพราะเชื่อมต่อระบบกลางไม่สำเร็จ':projectListState==='ready'?'ยังไม่มีโครงการที่บันทึกไว้':'กำลังโหลดรายการโครงการ…';
+      if(cloudProjectId){const active=document.createElement('p');active.className='panel-note';active.textContent='กำลังทำงาน: '+document.getElementById('projectName').value;list.append(active);}
+      mapProjects.slice(projectPageIndex*3,projectPageIndex*3+3).forEach(project=>{
         const card=document.createElement('article');card.className='project-card';
         const title=document.createElement('h3');title.textContent=project.name+(project.id===cloudProjectId?' · กำลังเปิด':'');
         const date=document.createElement('p');date.className='panel-note';date.textContent=project.updatedAt?'บันทึกล่าสุด '+new Date(project.updatedAt).toLocaleString('th-TH'):'';
@@ -612,14 +616,42 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     }
 
     async function refreshCloudProjects(selectId = cloudProjectId) {
-      if (!secureMode) return;
-      try {
-        cloudProjects = await PollutionMapAuth.api('listProjects', { agencyId: secureOrganizationId }) || [];
-        const select = document.getElementById('cloudProjectSelect');
-        select.innerHTML = '<option value="">— โครงการใหม่ —</option>' + cloudProjects.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
-        select.value = selectId || ''; renderProjectCards();
-        document.getElementById('cloudStatus').textContent = `พบ ${cloudProjects.length.toLocaleString('th-TH')} โครงการในหน่วยงานนี้`;
-      } catch (error) { document.getElementById('cloudStatus').textContent = `โหลดรายการโครงการไม่สำเร็จ: ${error.message}`; }
+      if(!secureMode)return;
+      if(projectListRequest)return projectListRequest;
+      projectListRequest=(async()=>{
+        projectListState='loading';renderProjectCards();renderFieldSurveys();
+        try{
+          cloudProjects=await PollutionMapAuth.api('listProjects',{agencyId:secureOrganizationId})||[];
+          projectListState='ready';projectListError='';
+          const select=document.getElementById('cloudProjectSelect');select.replaceChildren(new Option('— โครงการใหม่ —',''));
+          cloudProjects.forEach(p=>select.add(new Option(p.name,p.id)));select.value=selectId||'';
+          document.getElementById('cloudStatus').textContent='โหลดรายการแล้ว · '+cloudProjects.filter(p=>!isFieldSurvey(p)).length+' โครงการ';
+        }catch(error){projectListState='error';projectListError=error.message;document.getElementById('cloudStatus').textContent='โหลดรายการไม่สำเร็จ: '+error.message+' (ไม่ได้หมายความว่าโครงการหาย)';}
+        finally{renderProjectCards();renderFieldSurveys();}
+      })();
+      try{await projectListRequest;}finally{projectListRequest=null;}
+    }
+    function renderFieldSurveys(){
+      const select=document.getElementById('fieldSurveySelect');if(!select)return;
+      const selected=select.value;select.replaceChildren(new Option('เลือกชุดสำรวจที่ส่งไว้',''));
+      cloudProjects.filter(isFieldSurvey).forEach(p=>select.add(new Option(p.name,p.id)));select.value=selected;
+      document.getElementById('fieldSurveyStatus').textContent=!secureMode?'เข้าสู่ระบบเพื่อเลือกชุดสำรวจ':projectListState==='error'?'โหลดไม่สำเร็จ: '+projectListError:projectListState==='ready'?'พบ '+cloudProjects.filter(isFieldSurvey).length+' ชุดสำรวจในบัญชีและหน่วยงานนี้':'กำลังโหลดรายการ…';
+    }
+    async function importFieldSurvey(){
+      const button=document.getElementById('fieldSurveyImport'),status=document.getElementById('fieldSurveyStatus');
+      const item=cloudProjects.find(p=>p.id===document.getElementById('fieldSurveySelect').value&&isFieldSurvey(p));
+      if(!item){status.textContent='กรุณาเลือกชุดสำรวจ';return;}
+      if(csvRecords.length&&!confirm('แทนที่ชุดข้อมูล CSV ปัจจุบันด้วยชุดสำรวจนี้หรือไม่? ชื่อโครงการและชั้นข้อมูลอื่นจะคงเดิม'))return;
+      button.disabled=true;
+      try{
+        const state=await PollutionMapAuth.loadJsonFile(item.fileId);
+        if(!state.csv||!Array.isArray(state.csv.records))throw new Error('ชุดสำรวจไม่มีข้อมูลพิกัด');
+        clearCsvData();currentCsvName=item.name;csvHeaders=state.csv.headers||[];csvRecords=state.csv.records;
+        csvLatColumn=state.csv.latColumn||'latitude';csvLngColumn=state.csv.lngColumn||'longitude';setColumnOptions();
+        document.getElementById('csvLatColumn').value=csvLatColumn;document.getElementById('csvLngColumn').value=csvLngColumn;plotCsvRecords();
+        status.textContent='นำเข้า '+csvRecords.length+' จุดแล้ว กดบันทึกโครงการด้านบนเพื่อเก็บลงโครงการที่กำลังทำงาน';
+      }catch(error){status.textContent='นำเข้าไม่สำเร็จ: '+error.message;}
+      finally{button.disabled=false;}
     }
     function startNewCloudProject() {
       if (!canEditCloud()) return;
@@ -1347,6 +1379,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       closeToolDialogs();document.getElementById('dataPanel').hidden=true;document.getElementById('dataBtn').textContent='จัดการข้อมูล';
       const dialog=document.getElementById('tool-'+key);if(dialog)dialog.showModal();
       if(key==='points')updatePointList();
+      if(key==='csv'){renderFieldSurveys();if(secureMode&&!projectListRequest)refreshCloudProjects();}
     }
     function setupToolDialogs(){
       const panel=document.getElementById('dataPanel');
@@ -1448,6 +1481,8 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         catch (error) { console.error(error); alert('ไม่สามารถโหลดข้อมูลขอบเขตชุมชนได้'); }
         addAllSpatialLayers();
         if (secureMode) {
+          const requestedSurvey=new URLSearchParams(location.search).get('survey');
+          if(requestedSurvey){await refreshCloudProjects();openToolDialog('csv');document.getElementById('fieldSurveySelect').value=requestedSurvey;}
           // Restore local map only for a return from this account's field notebook.
           if(returningMap){applyMapState(returningMap.state);cloudProjectId=returningMap.projectId||'';renderProjectCards();sessionStorage.removeItem(mapReturnKey());returningMap=null;}
         } else if (demoAgency) {
