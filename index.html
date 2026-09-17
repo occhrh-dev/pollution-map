@@ -311,6 +311,7 @@
     </div>
   </section>
   <div id="activeProjectBar" role="status"><span>โครงการที่กำลังทำงาน</span><strong id="activeProjectTitle">ยังไม่ได้เลือกโครงการ</strong></div>
+  <div id="bootStatus" role="status" style="padding:12px;background:#fff3d9;color:#644a18">กำลังเปิดระบบ…</div>
   <main id="mapwrap">
     <div id="map" aria-label="แผนที่"></div>
     <section id="dataPanel" hidden aria-label="จัดการข้อมูลแผนที่">
@@ -449,7 +450,7 @@
   <script src="symbol-tools.js?v=1"></script>
   <script src="location-link.js?v=1"></script>
   <script src="config.js"></script>
-  <script src="auth-client.js"></script>
+  <script src="auth-client.js?v=timeout-1"></script>
   <script>
     const MAPTILER_KEY = 'XOw46Ht6gxyHhSCkLXPf';
     const emptyCommunityData = () => ({ type: 'FeatureCollection', features: [] });
@@ -523,14 +524,7 @@
         secureSession = { user: data.user };
         secureMembership = data.membership;
         secureOrganization = data.agency;
-        try {
-          const settings = await PollutionMapAuth.api('getSettings', { agencyId: secureOrganizationId });
-          if (settings && settings.fileId) {
-            communitySettingsFileId = settings.fileId;
-            const saved = await PollutionMapAuth.loadJsonFile(settings.fileId);
-            if (saved && saved.config) communityConfig = saved.config;
-          }
-        } catch (settingsError) { console.warn('โหลดผังชุมชนส่วนกลางไม่สำเร็จ', settingsError); }
+
       } catch (error) {
         if (error.code === 'AUTH_REQUIRED' || error.code === 'ACCESS_DENIED') {
           alert(error.message || 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงหน่วยงานดังกล่าว');
@@ -864,7 +858,19 @@
       }).on('change', () => { updateCommunityVisibility(); updateCommunitySelectionCount(); });
       updateCommunitySelectionCount();
     }
+    function boundedRead(promise,ms){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('โหลดผังใช้เวลานานเกินไป')),ms);promise.then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});});}
     async function loadCommunities() {
+      if(secureMode){
+        try{
+          const settings=await PollutionMapAuth.api('getSettings',{agencyId:secureOrganizationId});
+          if(settings?.fileId){
+            communitySettingsFileId=settings.fileId;
+            if(!PollutionMapAuth.hasDriveToken())throw new Error('กรุณาเชื่อมต่อ Drive อีกครั้งเพื่อโหลดผัง');
+            const saved=await boundedRead(PollutionMapAuth.loadJsonFile(settings.fileId),15000);
+            if(saved?.config)communityConfig=saved.config;
+          }
+        }catch(error){showSaveNotice('เปิดแผนที่ได้ แต่โหลดผังไม่สำเร็จ: '+error.message);}
+      }
       if (!secureMode) { try { communityConfig = JSON.parse(localStorage.getItem(COMMUNITY_CONFIG_KEY) || 'null'); } catch { communityConfig = null; } }
       if (communityConfig) { installCommunityData(communityConfig.data); updateCommunityConfigStatus(); return; }
       installCommunityData(emptyCommunityData());
@@ -1436,10 +1442,20 @@
       });
     }
     async function bootstrapApp() {
-      try { await bootstrapSecureSession(); }
-      catch (error) { console.error(error); return; }
-      initializeControls();
-      initMap();
+      const status=document.getElementById('bootStatus');
+      try {
+        status.textContent=secureMode?'กำลังตรวจสิทธิ์บัญชี… หากระบบกลางไม่ตอบกลับจะแจ้งภายใน 30 วินาที':'กำลังเปิดแผนที่…';
+        await bootstrapSecureSession();
+        initializeControls();
+        status.textContent='กำลังโหลดแผนที่…';
+        initMap();
+        const timer=setTimeout(()=>{if(!map.loaded()){status.hidden=false;status.textContent='แผนที่ยังโหลดไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า';}},20000);
+        map.once('load',()=>{clearTimeout(timer);status.hidden=true;});
+      } catch (error) {
+        console.error(error);status.hidden=false;status.textContent='เปิดระบบไม่สำเร็จ: '+error.message+' ';
+        const retry=document.createElement('button');retry.textContent='ลองใหม่';retry.onclick=()=>location.reload();status.append(retry);
+        const login=document.createElement('a');login.href='login.html';login.textContent=' เข้าสู่ระบบอีกครั้ง';status.append(login);
+      }
     }
     bootstrapApp();
   </script>
