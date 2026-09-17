@@ -240,6 +240,10 @@
 #quickSaveStatus{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:#173347;color:white;border-radius:10px;padding:12px 18px;max-width:min(600px,90vw);box-shadow:0 4px 20px #0003;font-size:14px;pointer-events:none}
 .tool-dialog{width:min(580px,94vw);max-height:88vh;overflow:auto;border:1px solid #d6e0e5;border-radius:16px;padding:20px;background:white;color:#173347}
 .tool-dialog::backdrop{background:#12334780}.tool-dialog h2{font-size:20px;margin:0}.tool-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:14px}.tool-dialog .panel-section>summary{display:none}.tool-dialog .panel-section{border:0}.tool-launch{display:block;width:100%;text-align:left;margin:8px 0;padding:12px}.tool-dialog button{cursor:pointer}.tool-dialog .panel-input,.tool-dialog .panel-select{width:100%}
+#activeProjectBar{display:flex;align-items:baseline;gap:10px;padding:7px 14px;background:#eef7f6;border-bottom:1px solid #cbdedc;color:#173347;flex-shrink:0;min-width:0}
+#activeProjectBar>span{font-size:11px;color:#54716f;flex-shrink:0}
+#activeProjectTitle{font-size:14px;overflow-wrap:anywhere;line-height:1.4}
+@media(max-width:600px){#activeProjectBar{gap:4px;flex-direction:column;padding:6px 10px}#activeProjectTitle{font-size:13px}}
 </style>
 </head>
 <body>
@@ -306,6 +310,7 @@
       <button type="button" class="outline" onclick="clearAllMapData()">ล้างทั้งหมด</button>
     </div>
   </section>
+  <div id="activeProjectBar" role="status"><span>โครงการที่กำลังทำงาน</span><strong id="activeProjectTitle">ยังไม่ได้เลือกโครงการ</strong></div>
   <main id="mapwrap">
     <div id="map" aria-label="แผนที่"></div>
     <section id="dataPanel" hidden aria-label="จัดการข้อมูลแผนที่">
@@ -499,6 +504,11 @@
     let cloudProjectId = '';
     let cloudProjects = [];
 
+    function updateActiveProjectTitle(){
+      const title=document.getElementById('activeProjectTitle');
+      const name=document.getElementById('projectName')?.value.trim();
+      title.textContent=name&&name!=='โครงการใหม่'?name:'ยังไม่ได้เลือกโครงการ — ตั้งชื่อได้ตอนบันทึก';
+    }
     function roleName(role) { return ({ ADMIN: 'ผู้ดูแลหน่วยงาน', EDITOR: 'ผู้แก้ไข', VIEWER: 'ผู้ดูข้อมูล', admin: 'ผู้ดูแลหน่วยงาน', editor: 'ผู้แก้ไข', viewer: 'ผู้ดูข้อมูล' })[role] || role || '-'; }
     function canEditCloud() { return secureMembership && ['ADMIN', 'EDITOR'].includes(String(secureMembership.role).toUpperCase()); }
     function secureConfigReady() {
@@ -549,6 +559,7 @@
     let projectPageIndex=0, pendingCreatedProject=null;
     function changeProjectPage(delta){projectPageIndex+=delta;renderProjectCards();}
     function renderProjectCards(){
+      updateActiveProjectTitle();
       const total=Math.max(1,Math.ceil(cloudProjects.length/3));projectPageIndex=Math.max(0,Math.min(projectPageIndex,total-1));
       const list=document.getElementById('projectCards');list.replaceChildren();
       if(!cloudProjects.length)list.textContent='ยังไม่มีโครงการที่บันทึกไว้';
@@ -624,7 +635,7 @@
     }
     async function saveCloudProject() {
       if (!canEditCloud() || document.getElementById('quickSaveBtn').disabled) return;
-      let name = document.getElementById('projectName').value.trim(); if (!cloudProjectId || !name) { const entered = prompt('ตั้งชื่อโครงการใหม่ที่จะบันทึก (ยกเลิกเพื่อกลับไปทำงาน)', name === 'โครงการใหม่' ? '' : name); if (!entered || !entered.trim()) return; name = entered.trim(); document.getElementById('projectName').value = name; }
+      let name = document.getElementById('projectName').value.trim(); if (!cloudProjectId || !name) { const entered = prompt('ตั้งชื่อโครงการใหม่ที่จะบันทึก (ยกเลิกเพื่อกลับไปทำงาน)', name === 'โครงการใหม่' ? '' : name); if (!entered || !entered.trim()) return; name = entered.trim(); document.getElementById('projectName').value = name; updateActiveProjectTitle(); }
       const button = document.getElementById('quickSaveBtn'); button.disabled = true; const quickButton = document.getElementById('quickSaveBtn'); quickButton.disabled = true; quickButton.textContent = 'กำลังบันทึก…'; showSaveNotice('กำลังบันทึกโครงการลง Google Drive…'); document.getElementById('cloudStatus').textContent = 'กำลังบันทึก...';
       try {
         const current = cloudProjects.find(item => item.id === cloudProjectId);
@@ -1289,7 +1300,7 @@
       clearCsvData();
       closeCsvEditor(); closeCsvRadiusCreator();
       if (state.view && Array.isArray(state.view.center) && state.view.center.length === 2 && state.view.center.every(Number.isFinite) && Number.isFinite(state.view.zoom)) map.jumpTo(state.view);
-      document.getElementById('projectName').value = state.project.name || '';
+      document.getElementById('projectName').value = state.project.name || ''; updateActiveProjectTitle();
       document.getElementById('projectStatus').value = state.project.status || 'กำลังจัดทำ';
       document.getElementById('projectOwner').value = state.project.owner || '';
       clearSpatialLayers(false);
@@ -1412,7 +1423,7 @@
         addAllSpatialLayers();
         if (secureMode) {
           await refreshCloudProjects();
-          document.getElementById('projectName').value = 'โครงการใหม่';
+          document.getElementById('projectName').value = 'โครงการใหม่'; updateActiveProjectTitle();
           document.getElementById('projectOwner').value = secureOrganization.name;
           const requestedProject = new URLSearchParams(location.search).get('project');
           if (requestedProject && cloudProjects.some(p => p.id === requestedProject)) { document.getElementById('cloudProjectSelect').value = requestedProject; await openCloudProject(); }
@@ -1420,7 +1431,7 @@
         } else if (demoAgency) {
           const raw = localStorage.getItem(MAP_STORAGE_KEY);
           if (raw) { try { applyMapState(JSON.parse(raw)); } catch (error) { alert('เปิดโครงการทดลองไม่สำเร็จ'); } }
-          else { document.getElementById('projectName').value = `แผนที่ ${activeAgencyName}`; document.getElementById('projectOwner').value = activeAgencyName; }
+          else { document.getElementById('projectName').value = `แผนที่ ${activeAgencyName}`; document.getElementById('projectOwner').value = activeAgencyName; updateActiveProjectTitle(); }
         }
       });
     }
