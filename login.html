@@ -44,7 +44,7 @@ async function handleCredential(response){
 }
 async function openWorkspace(id){
  setMessage('กำลังขอสิทธิ์ Google Drive...');
- try{await auth.requestDriveToken();location.href='index.html?secure=1&org='+encodeURIComponent(id);}
+ try{await auth.requestDriveToken();location.href=(new URLSearchParams(location.search).get('next')==='field'?'field-notebook.html?org=':'index.html?secure=1&org=')+encodeURIComponent(id);}
  catch(error){setMessage(error.message||'ไม่ได้รับสิทธิ์ Google Drive',true);}
 }
 async function boot(){
