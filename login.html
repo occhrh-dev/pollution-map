@@ -10,13 +10,18 @@
 </head>
 <body><main class="shell"><section class="brand"><h1>🗺️ แผนที่ควบคุมมลพิษ</h1><p>ระบบบริหารข้อมูลแผนที่แยกตามหน่วยงาน เข้าสู่ระบบด้วยบัญชี Google และตรวจสิทธิ์จากทะเบียนกลาง</p></section><section class="panel">
 <div id="setup" class="setup hidden">ระบบ Google Login ยังไม่ถูกเชื่อมต่อ กรุณาตรวจสอบ config.js</div>
-<section id="loginPanel"><h2>เข้าสู่ระบบ</h2><div id="googleButton"></div><p class="privacy">ระบบไม่เก็บรหัสผ่าน การเปิดพื้นที่ทำงานจะขอสิทธิ์ Google Drive เฉพาะไฟล์ที่ระบบสร้าง</p><p class="privacy">ยังไม่มีสิทธิ์ใช้งาน? <a href="registration.html">ขอสิทธิ์เข้าใช้งาน</a></p></section>
+<section id="loginPanel"><h2>เข้าสู่ระบบ</h2><div id="rememberedPanel" class="hidden"><p id="rememberedEmail"></p><button class="button" id="continueButton" type="button">เข้าสู่ระบบ</button><button class="button secondary" id="switchAccount" type="button">ใช้บัญชีอื่น</button></div><div id="googleButton"></div><p class="privacy">ระบบไม่เก็บรหัสผ่าน การเปิดพื้นที่ทำงานจะขอสิทธิ์ Google Drive เฉพาะไฟล์ที่ระบบสร้าง</p><p class="privacy">ยังไม่มีสิทธิ์ใช้งาน? <a href="registration.html">ขอสิทธิ์เข้าใช้งาน</a></p></section>
 <section id="workspacePanel" class="hidden"><h2>เลือกพื้นที่ทำงาน</h2><div id="accountText"></div><div class="orgs" id="organizations"></div><section id="systemPanel" class="system-card hidden"><strong>⚙️ การบริหารระบบส่วนกลาง</strong><p>จัดการคำขอสร้างหน่วยงานใหม่และทะเบียนหน่วยงานทั้งหมด</p><button class="button admin" id="systemButton" type="button">ศูนย์ผู้ดูแลระบบ</button></section><button class="button secondary" id="logoutButton" type="button">ออกจากระบบ</button></section>
 <div class="message" id="message" role="status"></div></section></main>
-<script src="https://accounts.google.com/gsi/client?hl=th" async defer></script><script src="config.js"></script><script src="auth-client.js"></script>
+<script src="https://accounts.google.com/gsi/client?hl=th" async defer></script><script src="config.js"></script><script src="auth-client.js?v=remember-account-1"></script>
 <script>
 const auth=window.PollutionMapAuth;
 const $=id=>document.getElementById(id);
+let currentLogin=null;
+function destination(id){return(new URLSearchParams(location.search).get('next')==='field'?'field-notebook.html?org=':'index.html?secure=1&org=')+encodeURIComponent(id);}
+function preferred(data){const saved=auth.remembered();return (data.agencies||[]).find(a=>a.id===saved?.agencyId)||(data.agencies?.length===1?data.agencies[0]:null);}
+function afterLogin(data){currentLogin=data;showOrganizations(data);const agency=preferred(data);if(agency&&auth.hasDriveToken()){auth.rememberWorkspace(agency.id);location.replace(destination(agency.id));}else if(agency){$('rememberedPanel').classList.remove('hidden');$('loginPanel').classList.remove('hidden');$('googleButton').classList.add('hidden');$('rememberedEmail').textContent=data.user.email+' · '+agency.name;$('continueButton').textContent='เข้าสู่ระบบ';setMessage('กดเข้าสู่ระบบเพื่อเปิดพื้นที่ทำงานเดิม');}}
+
 function setMessage(text,error=false){$('message').textContent=text;$('message').className='message '+(error?'error':'ok');}
 function roleName(role){return({ADMIN:'ผู้ดูแลหน่วยงาน',EDITOR:'ผู้แก้ไข',VIEWER:'ผู้ดูข้อมูล'})[String(role).toUpperCase()]||role;}
 function showOrganizations(data){
@@ -28,7 +33,7 @@ function showOrganizations(data){
   const title=document.createElement('strong');title.textContent=item.name;
   const role=document.createElement('small');role.textContent='สิทธิ์: '+roleName(item.role);
   const actions=document.createElement('div');actions.className='org-actions';
-  const open=document.createElement('button');open.className='button secondary';open.textContent='อนุญาต Drive และเปิดพื้นที่ทำงาน';open.onclick=()=>openWorkspace(item.id);actions.append(open);
+  const open=document.createElement('button');open.className='button secondary';open.textContent='เข้าสู่ระบบ';open.onclick=()=>openWorkspace(item.id);actions.append(open);
   if(String(item.role).toUpperCase()==='ADMIN'){
    const manage=document.createElement('button');manage.className='button admin';manage.textContent='👥 จัดการหน่วยงาน';manage.onclick=()=>location.href='admin.html?org='+encodeURIComponent(item.id);actions.append(manage);
   }
@@ -39,22 +44,25 @@ function showOrganizations(data){
 }
 async function handleCredential(response){
  setMessage('กำลังตรวจสอบบัญชี...');
- try{const data=await auth.api('login',{credential:response.credential});auth.setLogin(response.credential,data);showOrganizations(data);setMessage('เข้าสู่ระบบสำเร็จ');}
+ try{const data=await auth.api('login',{credential:response.credential});auth.setLogin(response.credential,data);setMessage('เข้าสู่ระบบสำเร็จ');afterLogin(data);}
  catch(error){auth.clearLogin();setMessage(error.message||'เข้าสู่ระบบไม่สำเร็จ',true);}
 }
 async function openWorkspace(id){
- setMessage('กำลังขอสิทธิ์ Google Drive...');
- try{await auth.requestDriveToken();location.href=(new URLSearchParams(location.search).get('next')==='field'?'field-notebook.html?org=':'index.html?secure=1&org=')+encodeURIComponent(id);}
+ setMessage('กำลังเปิดพื้นที่ทำงาน...');
+ try{await auth.requestDriveToken();auth.rememberWorkspace(id);location.href=destination(id);}
  catch(error){setMessage(error.message||'ไม่ได้รับสิทธิ์ Google Drive',true);}
 }
 async function boot(){
  if(!auth.configured()){$('setup').classList.remove('hidden');return;}
  if(auth.session()&&auth.credential()){
-  try{const data=await auth.api('login');auth.setLogin(auth.credential(),data);showOrganizations(data);return;}catch(_){auth.clearLogin();}
+  try{const data=await auth.api('login');auth.setLogin(auth.credential(),data);afterLogin(data);return;}catch(_){auth.clearLogin();}
  }
- const timer=setInterval(()=>{if(!window.google?.accounts?.id)return;clearInterval(timer);google.accounts.id.initialize({client_id:window.POLLUTION_MAP_CONFIG.googleClientId,callback:handleCredential,auto_select:false,cancel_on_tap_outside:true});google.accounts.id.renderButton($('googleButton'),{theme:'outline',size:'large',text:'signin_with',locale:'th',width:300});},100);
+ const timer=setInterval(()=>{if(!window.google?.accounts?.id)return;clearInterval(timer);google.accounts.id.initialize({client_id:window.POLLUTION_MAP_CONFIG.googleClientId,callback:handleCredential,auto_select:!!auth.remembered(),login_hint:auth.remembered()?.email,cancel_on_tap_outside:true});google.accounts.id.renderButton($('googleButton'),{theme:'outline',size:'large',text:'signin_with',locale:'th',width:300});if(auth.remembered()){google.accounts.id.prompt();}},100);
+ const saved=auth.remembered();if(saved){$('rememberedPanel').classList.remove('hidden');$('rememberedEmail').textContent=saved.email;}
 }
+$('continueButton').onclick=()=>{const agency=currentLogin&&preferred(currentLogin);if(agency){openWorkspace(agency.id);return;}if(window.google?.accounts?.id){google.accounts.id.prompt();setMessage('ยืนยันบัญชีเดิมกับ Google หากไม่มีหน้าต่างขึ้น ให้กดปุ่ม Google ด้านล่าง');}else setMessage('กำลังโหลด Google กรุณารอสักครู่');};
+$('switchAccount').onclick=()=>{auth.forgetAccount();if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();location.reload();};
 $('systemButton').onclick=()=>location.href='system-admin.html';
-$('logoutButton').onclick=()=>{auth.clearLogin();if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();location.reload();};
+$('logoutButton').onclick=()=>{auth.forgetAccount();if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();location.reload();};
 boot().catch(error=>setMessage(error.message||'เปิดระบบเข้าสู่ระบบไม่สำเร็จ',true));
 </script></body></html>
