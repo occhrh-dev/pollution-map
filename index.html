@@ -256,7 +256,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     </div>
     <div class="agency-badge" id="agencyBadge" hidden></div>
     <div class="header-spacer"></div>
-    <button type="button" onclick="location.href=secureMode?'field-notebook.html?org='+encodeURIComponent(secureOrganizationId):'login.html?next=field'">เก็บจุดลงพื้นที่</button>
+    <button type="button" onclick="openFieldNotebook()">เก็บจุดลงพื้นที่</button>
     <button id="loginBtn" type="button" onclick="location.href='login.html'">เข้าสู่ระบบหน่วยงาน</button>
     <button id="quickSaveBtn" type="button" hidden onclick="saveCloudProject()" title="บันทึกจุด ชั้นข้อมูล และงานแผนที่ทั้งโครงการลง Google Drive">💾 บันทึกโครงการ</button>
     <button type="button" onclick="openToolDialog('project')">โครงการ</button><button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
@@ -452,7 +452,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
   <script src="symbol-tools.js?v=1"></script>
   <script src="location-link.js?v=1"></script>
   <script src="config.js"></script>
-  <script src="auth-client.js?v=timeout-1"></script>
+  <script src="auth-client.js?v=save-recovery-2"></script>
   <script>
     const MAPTILER_KEY = 'XOw46Ht6gxyHhSCkLXPf';
     const emptyCommunityData = () => ({ type: 'FeatureCollection', features: [] });
@@ -552,6 +552,21 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       if (!editable) document.getElementById('cloudStatus').textContent = 'สิทธิ์ผู้ดูข้อมูล: เปิดดูและส่งออกได้ แต่ไม่สามารถบันทึกหรือแก้ไขข้อมูลส่วนกลาง';
     }
 
+
+    function mapReturnKey(){return 'pollution-map-return:'+secureOrganizationId+':'+secureSession.user.email;}
+    function openFieldNotebook(){
+      if(!secureMode){location.href='login.html?next=field';return;}
+      try{sessionStorage.setItem(mapReturnKey(),JSON.stringify({state:getMapState(),projectId:cloudProjectId}));}
+      catch(error){alert('เก็บงานเพื่อกลับมาเปิดต่อไม่ได้ กรุณาบันทึกโครงการก่อน');return;}
+      location.href='field-notebook.html?org='+encodeURIComponent(secureOrganizationId)+'&from=map';
+    }
+    let returningMap=null;
+    function pendingProjectKey(){return 'pollution-project-pending:'+secureOrganizationId+':'+secureSession.user.email;}
+    function rememberPendingProject(){
+      if(pendingCreatedProject)sessionStorage.setItem(pendingProjectKey(),JSON.stringify(pendingCreatedProject));
+      else sessionStorage.removeItem(pendingProjectKey());
+    }
+
     let projectPageIndex=0, pendingCreatedProject=null;
     function changeProjectPage(delta){projectPageIndex+=delta;renderProjectCards();}
     function renderProjectCards(){
@@ -583,14 +598,16 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         if(!pendingCreatedProject){
           const state={version:2,project:{name,status:document.getElementById('newProjectStatus').value,owner:document.getElementById('newProjectOwner').value.trim()},organization:{id:secureOrganizationId,name:secureOrganization.name},communities:[],spatialLayers:[],circles:[],arrows:[],textBoxes:[],csv:{headers:[],records:[]}};
           const file=await PollutionMapAuth.saveJsonFile({fileName:'project-'+crypto.randomUUID()+'.json',data:state,agencyId:secureOrganizationId,agencyName:secureOrganization.name});
-          pendingCreatedProject={name,fileId:file.id,fileName:file.name};
+          pendingCreatedProject={name,fileId:file.id,fileName:file.name,attempted:false}; rememberPendingProject();
         }
-        const existing=(await PollutionMapAuth.api('listProjects',{agencyId:secureOrganizationId})||[]).find(p=>p.fileId===pendingCreatedProject.fileId);
+        status.textContent='ไฟล์ถูกเก็บบน Drive แล้ว กำลังเพิ่มเข้ารายการโครงการ…';
+        const existing=pendingCreatedProject.attempted?(await PollutionMapAuth.api('listProjects',{agencyId:secureOrganizationId})||[]).find(p=>p.fileId===pendingCreatedProject.fileId):null;
+        pendingCreatedProject.attempted=true;rememberPendingProject();
         if(!existing)await PollutionMapAuth.api('saveProject',{agencyId:secureOrganizationId,project:{id:'',...pendingCreatedProject}});
-        pendingCreatedProject=null;projectPageIndex=0;await refreshCloudProjects();
+        pendingCreatedProject=null;rememberPendingProject();projectPageIndex=0;refreshCloudProjects();
         document.getElementById('newProjectName').value='';document.getElementById('newProjectStatus').value='กำลังจัดทำ';document.getElementById('newProjectOwner').value='';
         status.textContent='สร้างโครงการแล้ว กดเปิดใช้งานจากรายการด้านล่าง หรือกรอกเพื่อสร้างรายการถัดไป';
-      }catch(error){status.textContent='บันทึกไม่สำเร็จ: '+error.message+' — กดบันทึกอีกครั้งเพื่อลองต่อ';}
+      }catch(error){status.textContent='บันทึกไม่สำเร็จ: '+error.message+' — ข้อมูลที่ส่งค้างถูกเก็บไว้ กดบันทึกเพื่อลองต่อโดยใช้ไฟล์เดิม';}
       finally{button.disabled=!canEditCloud();['newProjectName','newProjectStatus','newProjectOwner'].forEach(id=>document.getElementById(id).disabled=!!pendingCreatedProject);}
     }
 
@@ -1431,7 +1448,8 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         catch (error) { console.error(error); alert('ไม่สามารถโหลดข้อมูลขอบเขตชุมชนได้'); }
         addAllSpatialLayers();
         if (secureMode) {
-          // Project chooser is displayed before waiting for map resources.
+          // Restore local map only for a return from this account's field notebook.
+          if(returningMap){applyMapState(returningMap.state);cloudProjectId=returningMap.projectId||'';renderProjectCards();sessionStorage.removeItem(mapReturnKey());returningMap=null;}
         } else if (demoAgency) {
           const raw = localStorage.getItem(MAP_STORAGE_KEY);
           if (raw) { try { applyMapState(JSON.parse(raw)); } catch (error) { alert('เปิดโครงการทดลองไม่สำเร็จ'); } }
@@ -1445,7 +1463,8 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         status.textContent=secureMode?'กำลังตรวจสิทธิ์บัญชี… หากระบบกลางไม่ตอบกลับจะแจ้งภายใน 30 วินาที':'กำลังเปิดแผนที่…';
         await bootstrapSecureSession();
         initializeControls();
-        if(secureMode){document.body.classList.add('choosing-project');document.getElementById('projectName').value='';document.getElementById('projectOwner').value=secureOrganization.name;updateActiveProjectTitle();openToolDialog('project');refreshCloudProjects();}
+        if(secureMode){try{pendingCreatedProject=JSON.parse(sessionStorage.getItem(pendingProjectKey())||'null');if(pendingCreatedProject){document.getElementById('newProjectName').value=pendingCreatedProject.name;document.getElementById('createProjectStatus').textContent='มีรายการส่งค้าง กดบันทึกเพื่อลองต่อ';}if(new URLSearchParams(location.search).get('return')==='field')returningMap=JSON.parse(sessionStorage.getItem(mapReturnKey())||'null');}catch(error){console.warn(error);}}
+        if(secureMode){document.body.classList.add('choosing-project');document.getElementById('projectName').value='';document.getElementById('projectOwner').value=secureOrganization.name;updateActiveProjectTitle();if(!returningMap)openToolDialog('project');else document.body.classList.remove('choosing-project');refreshCloudProjects();}
         status.textContent='กำลังโหลดแผนที่…';
         initMap();
         const timer=setTimeout(()=>{if(!map.loaded()){status.hidden=false;status.textContent='แผนที่ยังโหลดไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า';}},20000);
