@@ -238,6 +238,8 @@
     @media (max-width: 760px) { #controls { max-height: 38vh; } #communityBlock { flex-basis: 100%; } }
   #quickSaveBtn[hidden],#quickSaveStatus[hidden]{display:none}
 #quickSaveStatus{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:#173347;color:white;border-radius:10px;padding:12px 18px;max-width:min(600px,90vw);box-shadow:0 4px 20px #0003;font-size:14px;pointer-events:none}
+.tool-dialog{width:min(580px,94vw);max-height:88vh;overflow:auto;border:1px solid #d6e0e5;border-radius:16px;padding:20px;background:white;color:#173347}
+.tool-dialog::backdrop{background:#12334780}.tool-dialog h2{font-size:20px;margin:0}.tool-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:14px}.tool-dialog .panel-section>summary{display:none}.tool-dialog .panel-section{border:0}.tool-launch{display:block;width:100%;text-align:left;margin:8px 0;padding:12px}.tool-dialog button{cursor:pointer}.tool-dialog .panel-input,.tool-dialog .panel-select{width:100%}
 </style>
 </head>
 <body>
@@ -251,7 +253,7 @@
     <button type="button" onclick="location.href=secureMode?'field-notebook.html?org='+encodeURIComponent(secureOrganizationId):'login.html?next=field'">เก็บจุดลงพื้นที่</button>
     <button id="loginBtn" type="button" onclick="location.href='login.html'">เข้าสู่ระบบหน่วยงาน</button>
     <button id="quickSaveBtn" type="button" hidden onclick="saveCloudProject()" title="บันทึกจุด ชั้นข้อมูล และงานแผนที่ทั้งโครงการลง Google Drive">💾 บันทึกโครงการ</button>
-    <button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
+    <button type="button" onclick="openToolDialog('project')">โครงการ</button><button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
     <button id="exportImageBtn" type="button" onclick="exportMapImage()">บันทึกเป็นรูป PNG</button>
     <button id="donationBtn" type="button" class="donation-btn" onclick="openDonationModal()">สนับสนุนระบบ</button>
     <button id="logoutBtn" type="button" class="secondary" hidden onclick="signOutSecure()">ออกจากระบบ</button>
@@ -556,9 +558,11 @@
     }
     function startNewCloudProject() {
       if (!canEditCloud()) return;
+      const newName = prompt('ตั้งชื่อโครงการใหม่'); if (!newName || !newName.trim()) return;
+      if ((circleFeatures.length || csvRecords.length || spatialLayers.length || arrows.length || textBoxes.length) && !confirm('เริ่มโครงการใหม่จะล้างงานที่แสดงอยู่ โปรดบันทึกงานก่อน ต้องการเริ่มใหม่หรือไม่?')) return;
       cloudProjectId = ''; document.getElementById('cloudProjectSelect').value = '';
-      applyMapState({ version: 2, project: { name: 'โครงการใหม่', status: 'กำลังจัดทำ', owner: secureOrganization.name }, communities: [], spatialLayers: [], circles: [], csv: { headers: [], records: [] }, arrows: [], textBoxes: [] });
-      document.getElementById('cloudStatus').textContent = 'เริ่มโครงการใหม่แล้ว กรอกข้อมูลและกด “บันทึกทั้งโครงการ”';
+      applyMapState({ version: 2, project: { name: newName.trim(), status: 'กำลังจัดทำ', owner: secureOrganization.name }, communities: [], spatialLayers: [], circles: [], csv: { headers: [], records: [] }, arrows: [], textBoxes: [] });
+      document.getElementById('cloudStatus').textContent = 'เริ่มโครงการใหม่แล้ว'; closeToolDialogs();
     }
     async function openCloudProject() {
       const id = document.getElementById('cloudProjectSelect').value;
@@ -567,7 +571,7 @@
       document.getElementById('cloudStatus').textContent = 'กำลังเปิดโครงการ...';
       try {
         const state = await PollutionMapAuth.loadJsonFile(summary.fileId);
-        applyMapState(state); cloudProjectId = summary.id;
+        applyMapState(state); cloudProjectId = summary.id; closeToolDialogs();
         document.getElementById('cloudStatus').textContent = `เปิด ${summary.name} แล้ว`;
       } catch (error) { document.getElementById('cloudStatus').textContent = `เปิดโครงการไม่สำเร็จ: ${error.message}`; }
     }
@@ -579,7 +583,7 @@
     }
     async function saveCloudProject() {
       if (!canEditCloud() || document.getElementById('quickSaveBtn').disabled) return;
-      let name = document.getElementById('projectName').value.trim(); if (!name) { const entered = prompt('ตั้งชื่อโครงการที่ต้องการบันทึก'); if (!entered || !entered.trim()) return; name = entered.trim(); document.getElementById('projectName').value = name; }
+      let name = document.getElementById('projectName').value.trim(); if (!cloudProjectId || !name) { const entered = prompt('ตั้งชื่อโครงการใหม่ที่จะบันทึก (ยกเลิกเพื่อกลับไปทำงาน)', name === 'โครงการใหม่' ? '' : name); if (!entered || !entered.trim()) return; name = entered.trim(); document.getElementById('projectName').value = name; }
       const button = document.getElementById('quickSaveBtn'); button.disabled = true; const quickButton = document.getElementById('quickSaveBtn'); quickButton.disabled = true; quickButton.textContent = 'กำลังบันทึก…'; showSaveNotice('กำลังบันทึกโครงการลง Google Drive…'); document.getElementById('cloudStatus').textContent = 'กำลังบันทึก...';
       try {
         const current = cloudProjects.find(item => item.id === cloudProjectId);
@@ -599,7 +603,7 @@
       try {
         await PollutionMapAuth.api('archiveProject', { agencyId: secureOrganizationId, projectId: cloudProjectId });
         if (project && project.fileId) await PollutionMapAuth.trashDriveFile(project.fileId);
-        cloudProjectId = ''; startNewCloudProject(); await refreshCloudProjects();
+        cloudProjectId = ''; document.getElementById('projectName').value = ''; await refreshCloudProjects();
       } catch (error) { document.getElementById('cloudStatus').textContent = `ลบไม่สำเร็จ: ${error.message}`; }
     }
     async function signOutSecure() { PollutionMapAuth.clearLogin(); if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect(); location.replace('login.html'); }
@@ -838,11 +842,7 @@
     function updateCommunityConfigStatus() {
       document.getElementById('communityConfigStatus').textContent = communityConfig ? `${communityConfig.name} · ${communityNames.length} ชุมชน` : 'ยังไม่มีผังชุมชน — กรุณานำเข้าผังของหน่วยงาน';
     }
-    function openCommunitySettings() {
-      document.getElementById('dataPanel').hidden = false;
-      document.getElementById('dataBtn').textContent = 'ซ่อนจัดการข้อมูล';
-      const panel = document.getElementById('communitySettings'); panel.open = true; panel.scrollIntoView({ block: 'nearest' });
-    }
+    function openCommunitySettings() { openToolDialog('community'); }
     async function readCommunityFile(event) {
       const file = event.target.files[0]; if (!file) return;
       pendingCommunity = null; document.getElementById('communityApply').disabled = true;
@@ -1095,7 +1095,7 @@
     }
     function updateCsvListToggle() { const area = document.getElementById('csvListArea'); const button = document.getElementById('csvListToggleBtn'); if (!area || !button) return; area.hidden = !csvListExpanded; button.textContent = csvListExpanded ? 'ซ่อนรายการข้อมูล' : `แสดงรายการข้อมูล (${csvRecords.length})`; }
     function toggleCsvList() { csvListExpanded = !csvListExpanded; updateCsvListToggle(); if (csvListExpanded) renderCsvRecords(); }
-    function focusCsvRecord(index) { const coordinates = getCsvCoordinates(csvRecords[index]); if (!coordinates) { alert('รายการนี้ไม่มีพิกัดที่ถูกต้อง'); return; } map.easeTo({ center: coordinates, zoom: Math.max(map.getZoom(), 14), duration: 500 }); const marker = csvMarkers.find(item => { const position = item.getLngLat(); return Math.abs(position.lng - coordinates[0]) < 0.000001 && Math.abs(position.lat - coordinates[1]) < 0.000001; }); if (marker) marker.togglePopup(); }
+    function focusCsvRecord(index) { closeToolDialogs(); const coordinates = getCsvCoordinates(csvRecords[index]); if (!coordinates) { alert('รายการนี้ไม่มีพิกัดที่ถูกต้อง'); return; } map.easeTo({ center: coordinates, zoom: Math.max(map.getZoom(), 14), duration: 500 }); const marker = csvMarkers.find(item => { const position = item.getLngLat(); return Math.abs(position.lng - coordinates[0]) < 0.000001 && Math.abs(position.lat - coordinates[1]) < 0.000001; }); if (marker) marker.togglePopup(); }
     function defaultRadiusSet() { return [{ km: 1, color: '#e53935' }, { km: 3, color: '#fb8c00' }, { km: 5, color: '#43a047' }]; }
     function readRadiusSet() {
       try {
@@ -1119,7 +1119,7 @@
       document.getElementById('csvRadiusPointName').textContent = `${title} · ${coordinates[1]}, ${coordinates[0]}`;
       renderRadiusSetRows(readRadiusSet());
       document.getElementById('csvRadiusFill').checked = document.getElementById('fillToggle').checked;
-      const panel = document.getElementById('dataPanel'); panel.hidden = false; document.getElementById('dataBtn').textContent = 'ซ่อนจัดการข้อมูล';
+      openToolDialog('csv');
       document.getElementById('csvRadiusPanel').hidden = false; document.getElementById('csvRadiusPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     function closeCsvRadiusCreator() { radiusCsvIndex = -1; document.getElementById('csvRadiusPanel').hidden = true; }
@@ -1133,7 +1133,7 @@
       closeCsvRadiusCreator(); document.getElementById('csvStatus').textContent = `สร้างชุดวงรัศมี ${radiusSet.length} วงจากจุด CSV แล้ว`;
     }
     function openCsvEditor(index) {
-      const record = csvRecords[index]; if (!record) return; editingCsvIndex = index;
+      const record = csvRecords[index]; if (!record) return; openToolDialog('csv'); editingCsvIndex = index;
       closeCsvRadiusCreator();
       csvListExpanded = false; updateCsvListToggle();
       document.getElementById('csvMarkerShape').value = record.__markerShape || 'pin';
@@ -1182,7 +1182,7 @@
         return `<div class="point-item"><strong>จุดที่ ${index + 1} · รัศมี ${radius}</strong>พิกัด ${Number(p.lat).toFixed(6)}, ${Number(p.lng).toFixed(6)}<br><button type="button" onclick="focusPoint(${index})">ไปยังจุดนี้</button></div>`;
       }).join('');
     }
-    function focusPoint(index) {
+    function focusPoint(index) { closeToolDialogs();
       const p = circleFeatures[index] && circleFeatures[index].properties;
       if (p) map.easeTo({ center: [Number(p.lng), Number(p.lat)], zoom: Math.max(map.getZoom(), 13), duration: 500 });
     }
@@ -1264,7 +1264,38 @@
       (state.arrows || []).forEach(restoreArrow); (state.textBoxes || []).forEach(restoreTextBox);
       updatePointList();
     }
+
+    function closeToolDialogs(){document.querySelectorAll('.tool-dialog[open]').forEach(dialog=>dialog.close());}
+    function openToolDialog(key){
+      closeToolDialogs();document.getElementById('dataPanel').hidden=true;document.getElementById('dataBtn').textContent='จัดการข้อมูล';
+      const dialog=document.getElementById('tool-'+key);if(dialog)dialog.showModal();
+      if(key==='points')updatePointList();
+    }
+    function setupToolDialogs(){
+      const panel=document.getElementById('dataPanel');
+      const groups=[
+        ['project','โครงการ',['.project-card','#cloudSection','#cloudSaveGuide','#agencyIsolationNote']],
+        ['community','เปลี่ยนผังชุมชน',['#communitySettings']],
+        ['csv','จุดข้อมูล CSV',['#csvSection']],
+        ['spatial','ชั้นข้อมูลพื้นที่',['#spatialSection']],
+        ['points','วงรัศมีและจุดที่วางเอง',['#pointList']],
+        ['backup','สำรองและย้ายข้อมูล',['#localBackupSection']]
+      ];
+      groups.forEach(([key,title,selectors])=>{
+        const dialog=document.createElement('dialog');dialog.id='tool-'+key;dialog.className='tool-dialog';dialog.setAttribute('aria-label',title);
+        const head=document.createElement('div');head.className='tool-dialog-head';
+        const heading=document.createElement('h2');heading.textContent=title;
+        const close=document.createElement('button');close.type='button';close.textContent=key==='project'?'ข้าม / ปิด':'ปิด';close.onclick=()=>dialog.close();head.append(heading,close);dialog.append(head);
+        if(key==='project'){const note=document.createElement('p');note.className='panel-note';note.textContent='สร้างโครงการใหม่ หรือเลือกงานเดิมแล้วกดเปิดโครงการ • ข้ามได้ และตั้งชื่อตอนบันทึกภายหลัง';dialog.append(note);}
+        selectors.forEach(selector=>{const node=panel.querySelector(selector);if(node){if(node.tagName==='DETAILS')node.open=true;dialog.append(node);}});
+        document.body.append(dialog);
+      });
+      panel.replaceChildren();const title=document.createElement('h2');title.textContent='เลือกข้อมูลที่ต้องการจัดการ';panel.append(title);
+      groups.filter(([key])=>!['project','community'].includes(key)).forEach(([key,title])=>{const button=document.createElement('button');button.type='button';button.className='tool-launch';button.textContent=title;button.onclick=()=>openToolDialog(key);panel.append(button);});
+    }
+
     function initializeControls() {
+      setupToolDialogs();
       if (demoAgency) {
         const badge = document.getElementById('agencyBadge'); badge.hidden = false; badge.textContent = `พื้นที่ทำงาน: ${activeAgencyName}`;
         const note = document.getElementById('agencyIsolationNote'); note.hidden = false; note.textContent = `ข้อมูลในหน้านี้แยกไว้สำหรับ ${activeAgencyName} รวมทั้งโครงการ ประวัติ CSV ชุดรัศมี ชั้นข้อมูล และผังชุมชน`;
@@ -1276,7 +1307,7 @@
         document.getElementById('cloudOpenBtn').addEventListener('click', openCloudProject);
 
         document.getElementById('cloudDeleteBtn').addEventListener('click', deleteCloudProject);
-        document.getElementById('cloudProjectSelect').addEventListener('change', event => { cloudProjectId = event.target.value; });
+        // Selecting a project does not change the currently loaded project.
       }
       document.getElementById('communityFile').addEventListener('change', readCommunityFile);
       document.getElementById('communityApply').addEventListener('click', applyCommunityFile);
@@ -1346,6 +1377,7 @@
           document.getElementById('projectOwner').value = secureOrganization.name;
           const requestedProject = new URLSearchParams(location.search).get('project');
           if (requestedProject && cloudProjects.some(p => p.id === requestedProject)) { document.getElementById('cloudProjectSelect').value = requestedProject; await openCloudProject(); }
+          else { openToolDialog('project'); }
         } else if (demoAgency) {
           const raw = localStorage.getItem(MAP_STORAGE_KEY);
           if (raw) { try { applyMapState(JSON.parse(raw)); } catch (error) { alert('เปิดโครงการทดลองไม่สำเร็จ'); } }
