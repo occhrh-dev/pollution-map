@@ -323,7 +323,7 @@
         <label class="panel-label" for="newProjectOwner">ผู้รับผิดชอบ</label>
         <input class="panel-input" id="newProjectOwner" placeholder="ชื่อหน่วยงานหรือผู้รับผิดชอบ">
       <button id="createProjectBtn" type="button" onclick="createProjectFromForm()">บันทึกโครงการ</button><p id="createProjectStatus" class="panel-note" role="status"></p></section>
-      <div hidden><input id="projectName"><select id="projectStatus"><option>กำลังจัดทำ</option><option>รอตรวจสอบ</option><option>ดำเนินการแล้ว</option><option>ปิดงาน</option></select><input id="projectOwner"></div>
+      <div id="activeProjectFields" hidden><input id="projectName"><select id="projectStatus"><option>กำลังจัดทำ</option><option>รอตรวจสอบ</option><option>ดำเนินการแล้ว</option><option>ปิดงาน</option></select><input id="projectOwner"></div>
 
       <section id="cloudSection" class="cloud-section" hidden>
         <h3>บันทึกและเปิดโครงการจาก Google Drive</h3>
@@ -1315,7 +1315,7 @@
     function setupToolDialogs(){
       const panel=document.getElementById('dataPanel');
       const groups=[
-        ['project','โครงการ',['.project-card','#cloudSection','#cloudSaveGuide','#agencyIsolationNote']],
+        ['project','โครงการ',['.project-card','#activeProjectFields','#cloudSection','#cloudSaveGuide','#agencyIsolationNote']],
         ['community','เปลี่ยนผังชุมชน',['#communitySettings']],
         ['csv','จุดข้อมูล CSV',['#csvSection']],
         ['spatial','ชั้นข้อมูลพื้นที่',['#spatialSection']],
