@@ -39,7 +39,11 @@
 
   async function api(action, payload = {}) {
     if (!configured()) throw new Error('ยังไม่ได้ตั้งค่า Google Login');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
     const response = await fetch(config().appsScriptWebAppUrl, {
+      signal: controller.signal,
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action, credential: credential(), ...payload }),
@@ -54,6 +58,7 @@
       throw error;
     }
     return result.data;
+    } catch(error) { if(error.name==='AbortError') { const timeout=new Error('ระบบกลางไม่ตอบกลับภายใน 30 วินาที กรุณาลองใหม่'); timeout.code='TIMEOUT'; throw timeout; } throw error; } finally { clearTimeout(timer); }
   }
 
   function savedDriveToken() {
