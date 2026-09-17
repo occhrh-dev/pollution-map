@@ -14,14 +14,14 @@
 <section id="loginPanel"><h2>เข้าสู่ระบบ</h2><div id="rememberedPanel" class="hidden"><p id="rememberedEmail"></p><button class="button hidden" id="continueButton" type="button">เข้าสู่ระบบ</button><button class="button secondary" id="switchAccount" type="button">ใช้บัญชีอื่น</button></div><div id="googleButton"></div><p class="privacy">ระบบไม่เก็บรหัสผ่าน การเปิดพื้นที่ทำงานจะขอสิทธิ์ Google Drive เฉพาะไฟล์ที่ระบบสร้าง</p><p class="privacy">ยังไม่เคยลงทะเบียน? <a href="registration.html">ลงทะเบียนเข้าใช้ระบบ</a></p></section>
 <section id="workspacePanel" class="hidden"><h2>เลือกพื้นที่ทำงาน</h2><div id="accountText"></div><div class="orgs" id="organizations"></div><section id="systemPanel" class="system-card hidden"><strong>⚙️ การบริหารระบบส่วนกลาง</strong><p>จัดการคำขอสร้างหน่วยงานใหม่และทะเบียนหน่วยงานทั้งหมด</p><button class="button admin" id="systemButton" type="button">ศูนย์ผู้ดูแลระบบ</button></section><button class="button secondary" id="logoutButton" type="button">ออกจากระบบ</button></section>
 <div class="message" id="message" role="status"></div></section></main>
-<script src="https://accounts.google.com/gsi/client?hl=th" async defer></script><script src="config.js"></script><script src="auth-client.js?v=remember-account-1"></script>
+<script src="https://accounts.google.com/gsi/client?hl=th" async defer></script><script src="config.js"></script><script src="auth-client.js?v=timeout-1"></script>
 <script>
 const auth=window.PollutionMapAuth;
 const $=id=>document.getElementById(id);
 let currentLogin=null;
 function destination(id){return(new URLSearchParams(location.search).get('next')==='field'?'field-notebook.html?org=':'index.html?secure=1&org=')+encodeURIComponent(id);}
 function preferred(data){const saved=auth.remembered();return (data.agencies||[]).find(a=>a.id===saved?.agencyId)||(data.agencies?.length===1?data.agencies[0]:null);}
-function afterLogin(data){currentLogin=data;showOrganizations(data);const agency=preferred(data);if(agency&&auth.hasDriveToken()){auth.rememberWorkspace(agency.id);location.replace(destination(agency.id));}else{setMessage('เลือกหน่วยงาน แล้วกดเข้าสู่ระบบ');}}
+function afterLogin(data){currentLogin=data;showOrganizations(data);setMessage('เลือกหน่วยงาน แล้วกดเข้าสู่ระบบ');}
 
 function setMessage(text,error=false){$('message').textContent=text;$('message').className='message '+(error?'error':'ok');}
 function roleName(role){return({ADMIN:'ผู้ดูแลหน่วยงาน',EDITOR:'ผู้แก้ไข',VIEWER:'ผู้ดูข้อมูล'})[String(role).toUpperCase()]||role;}
