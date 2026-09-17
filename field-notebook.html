@@ -17,9 +17,12 @@
 function timeout(promise,ms){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('รอการตอบกลับนานเกินไป กรุณาลองใหม่')),ms);promise.then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});});}
 const auth=window.PollutionMapAuth,org=new URLSearchParams(location.search).get("org");
 if(!org||!auth||!auth.credential()){location.replace("login.html?next=field");return;}
-let verified;try{verified=await timeout(auth.api("session",{agencyId:org}),25000);}catch(e){document.getElementById("account").textContent="ตรวจสอบบัญชีไม่สำเร็จ: "+e.message;document.getElementById("destination").textContent="ยังไม่มีข้อมูลถูกส่ง กรุณาเข้าสู่ระบบอีกครั้ง";document.querySelectorAll("button,input").forEach(e=>e.disabled=true);const a=document.createElement("a");a.href="login.html?next=field";a.textContent=" เข้าสู่ระบบอีกครั้ง";document.getElementById("account").append(a);return;}
-const editable=["ADMIN","EDITOR"].includes(String(verified.membership.role).toUpperCase());
-document.getElementById("account").textContent=verified.agency.name+" · "+verified.user.email;
+const previousLogin=auth.session();
+const previousAgency=(previousLogin?.agencies||[]).find(item=>String(item.id)===String(org));
+let usingPreviousLogin=!!(previousLogin?.user?.email&&previousAgency);
+let verified;try{verified=usingPreviousLogin?{user:previousLogin.user,agency:previousAgency,membership:{role:previousAgency.role}}:await timeout(auth.api("session",{agencyId:org}),60000);}catch(e){document.getElementById("account").textContent="ตรวจสอบบัญชีไม่สำเร็จ: "+e.message;document.getElementById("destination").textContent="ยังไม่มีข้อมูลถูกส่ง กรุณาเข้าสู่ระบบอีกครั้ง";document.querySelectorAll("button,input").forEach(e=>e.disabled=true);const a=document.createElement("a");a.href="login.html?next=field";a.textContent=" เข้าสู่ระบบอีกครั้ง";document.getElementById("account").append(a);const retry=document.createElement("button");retry.type="button";retry.textContent="ลองเชื่อมต่ออีกครั้ง";retry.onclick=()=>location.reload();document.getElementById("account").append(retry);return;}
+let editable=["ADMIN","EDITOR"].includes(String(verified.membership.role).toUpperCase());
+document.getElementById("account").textContent=verified.agency.name+" · "+verified.user.email+(usingPreviousLogin?" · พร้อมเก็บจุดในเครื่อง — ตรวจสิทธิ์ล่าสุดอีกครั้งตอนส่ง":"");
 document.getElementById("mainLink").href="index.html?secure=1&org="+encodeURIComponent(org);
 const $=id=>document.getElementById(id),KEY='pollution-field-notebook-v1:'+org+':'+verified.user.email;let data={survey:'',points:[]},editing=null,accuracy=null,gpsVersion=0;
 try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&Array.isArray(saved.points))data=saved;}catch{$('status').textContent='อ่านข้อมูลในเครื่องไม่ได้ กรุณาสำรอง CSV หลังบันทึก';}
@@ -64,6 +67,12 @@ $('send').onclick=async()=>{
  if(!data.pending&&data.sent?.fingerprint===fingerprint()){$('status').textContent='ข้อมูลชุดนี้ส่งแล้ว กดเปิดโครงการที่ส่งแล้วได้เลย';return;}
  busy=true;updateCloudUI();$('status').textContent='กำลังบันทึกชุดสำรวจ…';
  try{
+  $('status').textContent='กำลังตรวจสิทธิ์ล่าสุดก่อนส่ง ข้อมูลในเครื่องบันทึกไว้แล้ว…';
+  const fresh=await timeout(auth.api('session',{agencyId:org}),60000);
+  if(fresh.user.email!==verified.user.email||String(fresh.agency.id)!==String(org))throw new Error('บัญชีหรือหน่วยงานเปลี่ยน กรุณาเข้าสู่ระบบอีกครั้ง');
+  verified=fresh;editable=['ADMIN','EDITOR'].includes(String(fresh.membership.role).toUpperCase());
+  if(!editable)throw new Error('บัญชีนี้ไม่มีสิทธิ์ส่งข้อมูลในหน่วยงานนี้');
+  $('status').textContent='กำลังบันทึกชุดสำรวจลง Google Drive…';
   await auth.requestDriveToken();
   if(!data.pending){
    const name='[ภาคสนาม] '+data.survey+' · '+new Date().toLocaleString('th-TH');
