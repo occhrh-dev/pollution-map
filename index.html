@@ -325,7 +325,7 @@
         <select class="panel-select" id="cloudProjectSelect"><option value="">— โครงการใหม่ —</option></select>
         <div class="panel-actions"><button id="cloudNewBtn" type="button">+ สร้างโครงการใหม่</button><button id="cloudOpenBtn" type="button" class="outline">เปิดโครงการที่เลือก</button></div>
         <div class="panel-actions"><button id="cloudSaveBtn" type="button" class="primary-save">💾 บันทึกทั้งโครงการลง Google Drive</button></div>
-        <div class="panel-actions"><button id="cloudDeleteBtn" type="button" class="danger">ลบโครงการที่เลือก</button><button id="cloudMembersBtn" type="button" class="outline" hidden>จัดการสมาชิก</button></div>
+        <div class="panel-actions"><button id="cloudDeleteBtn" type="button" class="danger">ลบโครงการที่เลือก</button></div>
         <div id="cloudStatus" class="panel-note">กำลังเชื่อมต่อระบบกลาง...</div>
       </section>
       <details id="communitySettings" class="panel-section">
@@ -537,7 +537,6 @@
       const editable = canEditCloud();
       ['cloudNewBtn','cloudSaveBtn','communityFile','communityApply','communityReset','spatialImportBtn','spatialExampleBtn','csvFile','csvPlotBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !editable; });
       document.getElementById('cloudDeleteBtn').disabled = String(secureMembership.role).toUpperCase() !== 'ADMIN';
-      const membersButton = document.getElementById('cloudMembersBtn'); membersButton.hidden = String(secureMembership.role).toUpperCase() !== 'ADMIN';
       if (!editable) document.getElementById('cloudStatus').textContent = 'สิทธิ์ผู้ดูข้อมูล: เปิดดูและส่งออกได้ แต่ไม่สามารถบันทึกหรือแก้ไขข้อมูลส่วนกลาง';
     }
     async function refreshCloudProjects(selectId = cloudProjectId) {
@@ -1265,7 +1264,6 @@
         document.getElementById('cloudOpenBtn').addEventListener('click', openCloudProject);
         document.getElementById('cloudSaveBtn').addEventListener('click', saveCloudProject);
         document.getElementById('cloudDeleteBtn').addEventListener('click', deleteCloudProject);
-        document.getElementById('cloudMembersBtn').addEventListener('click', () => { location.href = `admin.html?org=${encodeURIComponent(secureOrganizationId)}`; });
         document.getElementById('cloudProjectSelect').addEventListener('change', event => { cloudProjectId = event.target.value; });
       }
       document.getElementById('communityFile').addEventListener('change', readCommunityFile);
