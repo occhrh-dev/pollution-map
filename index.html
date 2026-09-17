@@ -236,7 +236,9 @@
     #communityBlock .select2-selection__rendered { height: 28px; }
     #communityBlock .selection-count { font-size: 10px; padding: 3px 6px; }
     @media (max-width: 760px) { #controls { max-height: 38vh; } #communityBlock { flex-basis: 100%; } }
-  </style>
+  #quickSaveBtn[hidden],#quickSaveStatus[hidden]{display:none}
+#quickSaveStatus{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:#173347;color:white;border-radius:10px;padding:12px 18px;max-width:min(600px,90vw);box-shadow:0 4px 20px #0003;font-size:14px;pointer-events:none}
+</style>
 </head>
 <body>
   <header>
@@ -248,6 +250,7 @@
     <div class="header-spacer"></div>
     <button type="button" onclick="location.href=secureMode?'field-notebook.html?org='+encodeURIComponent(secureOrganizationId):'login.html?next=field'">เก็บจุดลงพื้นที่</button>
     <button id="loginBtn" type="button" onclick="location.href='login.html'">เข้าสู่ระบบหน่วยงาน</button>
+    <button id="quickSaveBtn" type="button" hidden onclick="saveCloudProject()" title="บันทึกจุด ชั้นข้อมูล และงานแผนที่ทั้งโครงการลง Google Drive">💾 บันทึกโครงการ</button>
     <button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
     <button id="exportImageBtn" type="button" onclick="exportMapImage()">บันทึกเป็นรูป PNG</button>
     <button id="donationBtn" type="button" class="donation-btn" onclick="openDonationModal()">สนับสนุนระบบ</button>
@@ -255,6 +258,7 @@
     <button id="baseBtn" type="button" onclick="toggleBase()">🛰️ ดาวเทียม</button>
     <button id="toggleMapBtn" type="button" class="secondary" onclick="toggleMapView()">ขยายแผนที่</button>
   </header>
+  <div id="quickSaveStatus" role="status" hidden></div>
   <section id="controls" aria-label="เครื่องมือแผนที่">
     <div class="control-group">
       <label for="interactionMode">โหมดแผนที่</label>
@@ -535,6 +539,7 @@
       const note = document.getElementById('agencyIsolationNote'); note.hidden = false; note.textContent = `ข้อมูลถูกแยกสำหรับ ${secureOrganization.name} ตรวจสิทธิ์จากทะเบียนกลาง และเก็บไฟล์ใน Google Drive ของบัญชีที่เข้าสู่ระบบ`;
       document.querySelector('[onclick="saveMapToBrowser()"]').textContent = 'สำรองในเครื่องนี้';
       const editable = canEditCloud();
+      document.getElementById('quickSaveBtn').hidden = !editable;
       ['cloudNewBtn','cloudSaveBtn','communityFile','communityApply','communityReset','spatialImportBtn','spatialExampleBtn','csvFile','csvPlotBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !editable; });
       document.getElementById('cloudDeleteBtn').disabled = String(secureMembership.role).toUpperCase() !== 'ADMIN';
       if (!editable) document.getElementById('cloudStatus').textContent = 'สิทธิ์ผู้ดูข้อมูล: เปิดดูและส่งออกได้ แต่ไม่สามารถบันทึกหรือแก้ไขข้อมูลส่วนกลาง';
@@ -566,10 +571,16 @@
         document.getElementById('cloudStatus').textContent = `เปิด ${summary.name} แล้ว`;
       } catch (error) { document.getElementById('cloudStatus').textContent = `เปิดโครงการไม่สำเร็จ: ${error.message}`; }
     }
+    let quickSaveNoticeTimer;
+    function showSaveNotice(text) {
+      const notice = document.getElementById('quickSaveStatus');
+      clearTimeout(quickSaveNoticeTimer); notice.textContent = text; notice.hidden = false;
+      quickSaveNoticeTimer = setTimeout(() => { notice.hidden = true; }, 10000);
+    }
     async function saveCloudProject() {
-      if (!canEditCloud()) return;
-      const name = document.getElementById('projectName').value.trim(); if (!name) { alert('กรุณาระบุชื่อโครงการ'); return; }
-      const button = document.getElementById('cloudSaveBtn'); button.disabled = true; document.getElementById('cloudStatus').textContent = 'กำลังบันทึก...';
+      if (!canEditCloud() || document.getElementById('cloudSaveBtn').disabled) return;
+      let name = document.getElementById('projectName').value.trim(); if (!name) { const entered = prompt('ตั้งชื่อโครงการที่ต้องการบันทึก'); if (!entered || !entered.trim()) return; name = entered.trim(); document.getElementById('projectName').value = name; }
+      const button = document.getElementById('cloudSaveBtn'); button.disabled = true; const quickButton = document.getElementById('quickSaveBtn'); quickButton.disabled = true; quickButton.textContent = 'กำลังบันทึก…'; showSaveNotice('กำลังบันทึกโครงการลง Google Drive…'); document.getElementById('cloudStatus').textContent = 'กำลังบันทึก...';
       try {
         const current = cloudProjects.find(item => item.id === cloudProjectId);
         const fileName = `${name.replace(/[^ก-๙a-zA-Z0-9_-]+/g, '-').slice(0, 120) || 'project'}.json`;
@@ -577,8 +588,9 @@
         const result = await PollutionMapAuth.api('saveProject', { agencyId: secureOrganizationId, project: { id: cloudProjectId, name, fileId: file.id, fileName: file.name || fileName } });
         cloudProjectId = result.id; await refreshCloudProjects(cloudProjectId);
         document.getElementById('cloudStatus').textContent = `บันทึกทั้งโครงการ “${name}” ใน Google Drive แล้ว · ${new Date().toLocaleString('th-TH')}`;
-      } catch (error) { document.getElementById('cloudStatus').textContent = `บันทึกไม่สำเร็จ: ${error.message}`; }
-      finally { button.disabled = !canEditCloud(); }
+        showSaveNotice(`บันทึกโครงการ “${name}” ลง Drive แล้ว`);
+      } catch (error) { document.getElementById('cloudStatus').textContent = `บันทึกไม่สำเร็จ: ${error.message}`; showSaveNotice(`บันทึกไม่สำเร็จ: ${error.message}`); }
+      finally { button.disabled = !canEditCloud(); quickButton.disabled = !canEditCloud(); quickButton.textContent = '💾 บันทึกโครงการ'; }
     }
     async function deleteCloudProject() {
       if (String(secureMembership.role).toUpperCase() !== 'ADMIN' || !cloudProjectId) { document.getElementById('cloudStatus').textContent = 'เลือกโครงการก่อนลบ'; return; }
