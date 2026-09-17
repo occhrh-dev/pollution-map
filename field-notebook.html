@@ -7,16 +7,17 @@
 <header><div><small>FIELD NOTEBOOK</small><h1>สมุดบันทึกจุดลงพื้นที่</h1><span style="font-size:13px;color:#b9d7ce">เก็บจุดให้ครบ จบเป็นตารางเดียว</span></div><a id="mainLink" href="./index.html">เปิดระบบแผนที่ ↗</a></header>
 <main><div class="notice"><span id="account">กำลังตรวจสอบบัญชี…</span><br>จุดจะเก็บในเบราว์เซอร์นี้ก่อน กดส่งเข้าระบบหลักเมื่อต้องการบันทึกบน Drive • ต้องมีอินเทอร์เน็ตเพื่อเปิดหน้าและส่งข้อมูล</div>
 <div class="top"><div><h2>ชุดสำรวจของฉัน</h2><div class="muted">ตั้งชื่อชุดงาน แล้วบันทึกจุดระหว่างลงพื้นที่</div></div><span class="pill">บันทึกในเครื่อง</span></div>
-<div class="layout"><section class="card"><label for="survey" style="margin-top:0">ชื่อชุดสำรวจ</label><input id="survey" maxlength="100" placeholder="เช่น สำรวจกลิ่นรบกวน — กันยายน 2569"><div class="stats" style="margin-top:20px"><div><strong id="count">0</strong><span class="muted">จุดที่บันทึก</span></div><div><strong id="types">0</strong><span class="muted">ประเภทจุด</span></div></div>
-<div class="actions"><button class="primary" id="add">＋ บันทึกจุดใหม่</button><button id="csv">↓ ส่งออก CSV</button><button id="send" class="primary">ส่งเข้าระบบหลัก</button><button id="open" hidden>เปิดโครงการที่ส่งแล้ว</button><button id="newSurvey">เริ่มชุดสำรวจใหม่</button></div><div id="status" role="status"></div><div id="list"></div></section>
+<div class="layout"><section class="card"><label for="survey" style="margin-top:0">ชื่อชุดสำรวจ</label><input id="survey" disabled maxlength="100" placeholder="เช่น สำรวจกลิ่นรบกวน — กันยายน 2569"><div class="stats" style="margin-top:20px"><div><strong id="count">0</strong><span class="muted">จุดที่บันทึก</span></div><div><strong id="types">0</strong><span class="muted">ประเภทจุด</span></div></div>
+<div class="actions"><button disabled class="primary" id="add">＋ บันทึกจุดใหม่</button><button disabled id="csv">↓ ส่งออก CSV</button><button disabled id="send" class="primary">ส่งเข้าระบบหลัก</button><button id="open" hidden>เปิดโครงการที่ส่งแล้ว</button><button disabled id="newSurvey">เริ่มชุดสำรวจใหม่</button></div><div id="destination" class="notice" style="margin-top:16px" role="status">ยังไม่ส่งข้อมูล · กำลังตรวจสอบบัญชีและหน่วยงานปลายทาง</div><div id="status" role="status"></div><div id="list"></div></section>
 <aside class="card"><h3>จากหน้างาน สู่แผนที่</h3><div class="step"><b>1</b><p><strong>เก็บจุดด้วยมือถือ</strong><br>รับตำแหน่ง ใส่ชื่อ และจดสิ่งที่พบ</p></div><div class="step"><b>2</b><p><strong>ตรวจรายการ</strong><br>แก้ชื่อ ประเภท และรายละเอียดได้</p></div><div class="step"><b>3</b><p><strong>ส่งเข้าระบบหลัก</strong><br>เปิดเป็นโครงการบนแผนที่ หรือนำออก CSV ได้เหมือนเดิม</p></div><p class="footnote">บนคอมพิวเตอร์: เข้าบัญชีและหน่วยงานเดียวกัน แล้วเปิดชุดสำรวจจากรายการโครงการ</p><div class="notice">ส่งแต่ละครั้งเป็นโครงการใหม่ งานแผนที่ที่เคยตกแต่งไว้จึงยังอยู่ครบ</div></aside></div></main>
-<div class="mobile-add"><button class="primary wide" id="addMobile">＋ บันทึกจุดใหม่</button></div>
+<div class="mobile-add"><button disabled class="primary wide" id="addMobile">＋ บันทึกจุดใหม่</button></div>
 <dialog id="editor"><form id="form"><div class="dialog-top"><h2 id="formTitle">บันทึกจุดใหม่</h2><button type="button" id="close" aria-label="ปิด">✕</button></div><p class="muted">ให้เบราว์เซอร์รับตำแหน่ง หรือกรอกพิกัดจากหมุดที่เก็บไว้</p><button type="button" class="wide" id="gps">◎ ใช้ตำแหน่งปัจจุบัน</button><p id="gpsStatus" role="status" class="muted"></p><div class="row"><div><label for="lat">ละติจูด</label><input id="lat" type="number" step="any" min="-90" max="90" required placeholder="12.738"></div><div><label for="lng">ลองจิจูด</label><input id="lng" type="number" step="any" min="-180" max="180" required placeholder="101.185"></div></div><label for="name">ชื่อจุด *</label><input id="name" required maxlength="140" placeholder="เช่น บ้านผู้ร้องเรียน จุดที่ 1"><label for="type">ประเภท</label><select id="type"><option>จุดร้องเรียน</option><option>จุดตรวจวัด</option><option>จุดเก็บตัวอย่าง</option><option>สถานประกอบการ</option><option>อื่น ๆ</option></select><label for="notes">รายละเอียดที่พบ</label><textarea id="notes" rows="3" maxlength="2000" placeholder="เช่น มีกลิ่นช่วงเช้า อยู่ริมคลอง"></textarea><p id="formError" role="alert"></p><button class="primary wide" type="submit">บันทึกจุดนี้</button><p class="muted">วันเวลาบันทึกให้อัตโนมัติ • เก็บเฉพาะเบราว์เซอร์นี้</p></form></dialog>
 <script src="config.js"></script><script src="auth-client.js"></script><script src="https://accounts.google.com/gsi/client" async defer></script><script>
 (async()=>{
+function timeout(promise,ms){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('รอการตอบกลับนานเกินไป กรุณาลองใหม่')),ms);promise.then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});});}
 const auth=window.PollutionMapAuth,org=new URLSearchParams(location.search).get("org");
-if(!org||!auth.credential()){location.replace("login.html?next=field");return;}
-let verified;try{verified=await auth.api("session",{agencyId:org});}catch(e){document.getElementById("account").textContent="ตรวจสอบบัญชีไม่สำเร็จ: "+e.message;document.querySelectorAll("button,input").forEach(e=>e.disabled=true);const a=document.createElement("a");a.href="login.html?next=field";a.textContent=" เข้าสู่ระบบอีกครั้ง";document.getElementById("account").append(a);return;}
+if(!org||!auth||!auth.credential()){location.replace("login.html?next=field");return;}
+let verified;try{verified=await timeout(auth.api("session",{agencyId:org}),25000);}catch(e){document.getElementById("account").textContent="ตรวจสอบบัญชีไม่สำเร็จ: "+e.message;document.getElementById("destination").textContent="ยังไม่มีข้อมูลถูกส่ง กรุณาเข้าสู่ระบบอีกครั้ง";document.querySelectorAll("button,input").forEach(e=>e.disabled=true);const a=document.createElement("a");a.href="login.html?next=field";a.textContent=" เข้าสู่ระบบอีกครั้ง";document.getElementById("account").append(a);return;}
 const editable=["ADMIN","EDITOR"].includes(String(verified.membership.role).toUpperCase());
 document.getElementById("account").textContent=verified.agency.name+" · "+verified.user.email;
 document.getElementById("mainLink").href="index.html?secure=1&org="+encodeURIComponent(org);
@@ -39,8 +40,10 @@ $('csv').onclick=()=>{const rows=[['survey','name','type','latitude','longitude'
 function fingerprint(){return JSON.stringify({survey:data.survey,points:data.points});}
 function updateCloudUI(){
  $('send').disabled=busy||!editable||!data.points.length;
- $('send').textContent=data.pending?'ส่งต่อรายการที่ค้าง':'ส่งเข้าระบบหลัก';
+ $('send').textContent=busy?'กำลังส่ง…':data.pending?'ส่งต่อรายการที่ค้าง':'ส่งเข้าระบบหลัก';
  $('open').hidden=!data.sent;
+ $('destination').textContent='ปลายทาง: โครงการของบัญชี '+verified.user.email+' ในหน่วยงาน '+verified.agency.name+' · บันทึกบน Google Drive'+(data.sent?'\nส่งล่าสุด: '+(data.sent.name||'ชุดสำรวจ')+' — กด “เปิดโครงการที่ส่งแล้ว” ด้านบน':'\nยังไม่ได้ส่งชุดนี้: ตั้งชื่อและบันทึกอย่างน้อย 1 จุด แล้วกดส่งเข้าระบบหลัก');
+ $('destination').style.whiteSpace='pre-line';
  ['add','addMobile','newSurvey','survey'].forEach(id=>$(id).disabled=busy||!editable||!!data.pending);
  if(!editable)$('status').textContent='บัญชีนี้มีสิทธิ์ดูข้อมูล กรุณาใช้บัญชีที่มีสิทธิ์แก้ไขเพื่อส่งชุดสำรวจ';
 }
@@ -72,8 +75,8 @@ $('send').onclick=async()=>{
   const projects=await auth.api('listProjects',{agencyId:org})||[];
   const existing=projects.find(p=>p.fileId===pending.fileId);
   const result=existing||await auth.api('saveProject',{agencyId:org,project:{id:'',name:pending.name,fileId:pending.fileId,fileName:pending.fileName}});
-  if(!persist({...data,pending:null,sent:{id:result.id,fingerprint:pending.fingerprint}}))throw new Error('ส่งแล้ว แต่เก็บสถานะในเครื่องไม่ได้ เปิดโครงการได้จากระบบหลัก');
-  $('status').textContent='ส่งสำเร็จแล้ว เปิดเป็นโครงการในระบบหลักได้ทันที';
+  if(!persist({...data,pending:null,sent:{id:result.id,name:pending.name,fingerprint:pending.fingerprint}}))throw new Error('ส่งแล้ว แต่เก็บสถานะในเครื่องไม่ได้ เปิดโครงการได้จากระบบหลัก');
+  $('status').textContent='ส่งสำเร็จ: '+pending.name+' · กด “เปิดโครงการที่ส่งแล้ว” เพื่อดูจุดบนแผนที่';$('open').hidden=false;$('open').focus();
  }catch(e){$('status').textContent='ส่งยังไม่สำเร็จ: '+e.message+' · ข้อมูลในเครื่องยังอยู่ กดส่งอีกครั้งเมื่อพร้อม';}
  finally{busy=false;updateCloudUI();}
 };
