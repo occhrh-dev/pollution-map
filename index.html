@@ -328,7 +328,7 @@
         <label class="panel-label" for="cloudProjectSelect">เลือกโครงการ</label>
         <select class="panel-select" id="cloudProjectSelect"><option value="">— โครงการใหม่ —</option></select>
         <div class="panel-actions"><button id="cloudNewBtn" type="button">+ สร้างโครงการใหม่</button><button id="cloudOpenBtn" type="button" class="outline">เปิดโครงการที่เลือก</button></div>
-        <div class="panel-actions"><button id="cloudSaveBtn" type="button" class="primary-save">💾 บันทึกทั้งโครงการลง Google Drive</button></div>
+
         <div class="panel-actions"><button id="cloudDeleteBtn" type="button" class="danger">ลบโครงการที่เลือก</button></div>
         <div id="cloudStatus" class="panel-note">กำลังเชื่อมต่อระบบกลาง...</div>
       </section>
@@ -540,7 +540,7 @@
       document.querySelector('[onclick="saveMapToBrowser()"]').textContent = 'สำรองในเครื่องนี้';
       const editable = canEditCloud();
       document.getElementById('quickSaveBtn').hidden = !editable;
-      ['cloudNewBtn','cloudSaveBtn','communityFile','communityApply','communityReset','spatialImportBtn','spatialExampleBtn','csvFile','csvPlotBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !editable; });
+      ['cloudNewBtn','quickSaveBtn','communityFile','communityApply','communityReset','spatialImportBtn','spatialExampleBtn','csvFile','csvPlotBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !editable; });
       document.getElementById('cloudDeleteBtn').disabled = String(secureMembership.role).toUpperCase() !== 'ADMIN';
       if (!editable) document.getElementById('cloudStatus').textContent = 'สิทธิ์ผู้ดูข้อมูล: เปิดดูและส่งออกได้ แต่ไม่สามารถบันทึกหรือแก้ไขข้อมูลส่วนกลาง';
     }
@@ -578,9 +578,9 @@
       quickSaveNoticeTimer = setTimeout(() => { notice.hidden = true; }, 10000);
     }
     async function saveCloudProject() {
-      if (!canEditCloud() || document.getElementById('cloudSaveBtn').disabled) return;
+      if (!canEditCloud() || document.getElementById('quickSaveBtn').disabled) return;
       let name = document.getElementById('projectName').value.trim(); if (!name) { const entered = prompt('ตั้งชื่อโครงการที่ต้องการบันทึก'); if (!entered || !entered.trim()) return; name = entered.trim(); document.getElementById('projectName').value = name; }
-      const button = document.getElementById('cloudSaveBtn'); button.disabled = true; const quickButton = document.getElementById('quickSaveBtn'); quickButton.disabled = true; quickButton.textContent = 'กำลังบันทึก…'; showSaveNotice('กำลังบันทึกโครงการลง Google Drive…'); document.getElementById('cloudStatus').textContent = 'กำลังบันทึก...';
+      const button = document.getElementById('quickSaveBtn'); button.disabled = true; const quickButton = document.getElementById('quickSaveBtn'); quickButton.disabled = true; quickButton.textContent = 'กำลังบันทึก…'; showSaveNotice('กำลังบันทึกโครงการลง Google Drive…'); document.getElementById('cloudStatus').textContent = 'กำลังบันทึก...';
       try {
         const current = cloudProjects.find(item => item.id === cloudProjectId);
         const fileName = `${name.replace(/[^ก-๙a-zA-Z0-9_-]+/g, '-').slice(0, 120) || 'project'}.json`;
@@ -1274,7 +1274,7 @@
         setupSecureUI();
         document.getElementById('cloudNewBtn').addEventListener('click', startNewCloudProject);
         document.getElementById('cloudOpenBtn').addEventListener('click', openCloudProject);
-        document.getElementById('cloudSaveBtn').addEventListener('click', saveCloudProject);
+
         document.getElementById('cloudDeleteBtn').addEventListener('click', deleteCloudProject);
         document.getElementById('cloudProjectSelect').addEventListener('change', event => { cloudProjectId = event.target.value; });
       }
