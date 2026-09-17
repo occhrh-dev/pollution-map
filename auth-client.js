@@ -40,7 +40,8 @@
   async function api(action, payload = {}) {
     if (!configured()) throw new Error('ยังไม่ได้ตั้งค่า Google Login');
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timeoutMs = action === 'saveProject' ? 60000 : 30000;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
     const response = await fetch(config().appsScriptWebAppUrl, {
       signal: controller.signal,
@@ -58,7 +59,7 @@
       throw error;
     }
     return result.data;
-    } catch(error) { if(error.name==='AbortError') { const timeout=new Error('ระบบกลางไม่ตอบกลับภายใน 30 วินาที กรุณาลองใหม่'); timeout.code='TIMEOUT'; throw timeout; } throw error; } finally { clearTimeout(timer); }
+    } catch(error) { if(error.name==='AbortError') { const timeout=new Error('ระบบกลางไม่ตอบกลับภายใน '+(timeoutMs/1000)+' วินาที กรุณาลองใหม่'); timeout.code='TIMEOUT'; throw timeout; } throw error; } finally { clearTimeout(timer); }
   }
 
   function savedDriveToken() {
