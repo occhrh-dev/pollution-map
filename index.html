@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<script>if(new URLSearchParams(location.search).get("secure")!=="1"){location.replace("login.html");}</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ระบบจัดการแผนทีอย่างง่าย</title>
@@ -244,6 +245,7 @@
 #activeProjectBar>span{font-size:11px;color:#54716f;flex-shrink:0}
 #activeProjectTitle{font-size:14px;overflow-wrap:anywhere;line-height:1.4}
 @media(max-width:600px){#activeProjectBar{gap:4px;flex-direction:column;padding:6px 10px}#activeProjectTitle{font-size:13px}}
+body.choosing-project>header,body.choosing-project>#controls,body.choosing-project>#activeProjectBar,body.choosing-project>#mapwrap{visibility:hidden}
 </style>
 </head>
 <body>
@@ -1343,7 +1345,8 @@
         const dialog=document.createElement('dialog');dialog.id='tool-'+key;dialog.className='tool-dialog';dialog.setAttribute('aria-label',title);
         const head=document.createElement('div');head.className='tool-dialog-head';
         const heading=document.createElement('h2');heading.textContent=title;
-        const close=document.createElement('button');close.type='button';close.textContent=key==='project'?'ข้าม / ปิด':'ปิด';close.onclick=()=>dialog.close();head.append(heading,close);dialog.append(head);
+        const close=document.createElement('button');close.type='button';close.textContent=key==='project'?'ข้าม / ปิด':'ปิด';close.onclick=()=>dialog.close();
+        if(key==='project')dialog.addEventListener('close',()=>{document.body.classList.remove('choosing-project');if(map)map.resize();});head.append(heading,close);dialog.append(head);
         if(key==='project'){const note=document.createElement('p');note.className='panel-note';note.textContent='กรอกข้อมูลแล้วบันทึกเพื่อสร้างโครงการ หรือเปิดโครงการจากรายการด้านล่าง • ข้ามได้';dialog.append(note);}
         selectors.forEach(selector=>{const node=panel.querySelector(selector);if(node){if(node.tagName==='DETAILS')node.open=true;dialog.append(node);}});
         document.body.append(dialog);
@@ -1428,12 +1431,7 @@
         catch (error) { console.error(error); alert('ไม่สามารถโหลดข้อมูลขอบเขตชุมชนได้'); }
         addAllSpatialLayers();
         if (secureMode) {
-          await refreshCloudProjects();
-          document.getElementById('projectName').value = 'โครงการใหม่'; updateActiveProjectTitle();
-          document.getElementById('projectOwner').value = secureOrganization.name;
-          const requestedProject = new URLSearchParams(location.search).get('project');
-          if (requestedProject && cloudProjects.some(p => p.id === requestedProject)) { document.getElementById('cloudProjectSelect').value = requestedProject; await openCloudProject(); }
-          else { openToolDialog('project'); }
+          // Project chooser is displayed before waiting for map resources.
         } else if (demoAgency) {
           const raw = localStorage.getItem(MAP_STORAGE_KEY);
           if (raw) { try { applyMapState(JSON.parse(raw)); } catch (error) { alert('เปิดโครงการทดลองไม่สำเร็จ'); } }
@@ -1447,6 +1445,7 @@
         status.textContent=secureMode?'กำลังตรวจสิทธิ์บัญชี… หากระบบกลางไม่ตอบกลับจะแจ้งภายใน 30 วินาที':'กำลังเปิดแผนที่…';
         await bootstrapSecureSession();
         initializeControls();
+        if(secureMode){document.body.classList.add('choosing-project');document.getElementById('projectName').value='';document.getElementById('projectOwner').value=secureOrganization.name;updateActiveProjectTitle();openToolDialog('project');refreshCloudProjects();}
         status.textContent='กำลังโหลดแผนที่…';
         initMap();
         const timer=setTimeout(()=>{if(!map.loaded()){status.hidden=false;status.textContent='แผนที่ยังโหลดไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า';}},20000);
