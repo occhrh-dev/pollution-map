@@ -316,22 +316,21 @@
       </div>
       <section class="project-card">
         <h3>รายละเอียดโครงการ</h3>
-        <label class="panel-label" for="projectName">ชื่อเหตุการณ์/โครงการ</label>
-        <input class="panel-input" id="projectName" value="ชื่อแผนที่" placeholder="เช่น จุดร้องเรียนกลิ่นรบกวน">
-        <label class="panel-label" for="projectStatus">สถานะ</label>
-        <select class="panel-select" id="projectStatus"><option>กำลังจัดทำ</option><option>รอตรวจสอบ</option><option>ดำเนินการแล้ว</option><option>ปิดงาน</option></select>
-        <label class="panel-label" for="projectOwner">ผู้รับผิดชอบ</label>
-        <input class="panel-input" id="projectOwner" placeholder="ชื่อหน่วยงานหรือผู้รับผิดชอบ">
-      </section>
+        <label class="panel-label" for="newProjectName">ชื่อเหตุการณ์/โครงการ</label>
+        <input class="panel-input" id="newProjectName" value="" placeholder="เช่น จุดร้องเรียนกลิ่นรบกวน">
+        <label class="panel-label" for="newProjectStatus">สถานะ</label>
+        <select class="panel-select" id="newProjectStatus"><option>กำลังจัดทำ</option><option>รอตรวจสอบ</option><option>ดำเนินการแล้ว</option><option>ปิดงาน</option></select>
+        <label class="panel-label" for="newProjectOwner">ผู้รับผิดชอบ</label>
+        <input class="panel-input" id="newProjectOwner" placeholder="ชื่อหน่วยงานหรือผู้รับผิดชอบ">
+      <button id="createProjectBtn" type="button" onclick="createProjectFromForm()">บันทึกโครงการ</button><p id="createProjectStatus" class="panel-note" role="status"></p></section>
+      <div hidden><input id="projectName"><select id="projectStatus"><option>กำลังจัดทำ</option><option>รอตรวจสอบ</option><option>ดำเนินการแล้ว</option><option>ปิดงาน</option></select><input id="projectOwner"></div>
+
       <section id="cloudSection" class="cloud-section" hidden>
         <h3>บันทึกและเปิดโครงการจาก Google Drive</h3>
         <div id="secureAccountText" class="panel-note"></div>
         <div id="secureRoleText" class="role-badge"></div>
-        <label class="panel-label" for="cloudProjectSelect">เลือกโครงการ</label>
-        <select class="panel-select" id="cloudProjectSelect"><option value="">— โครงการใหม่ —</option></select>
-        <div class="panel-actions"><button id="cloudNewBtn" type="button">+ สร้างโครงการใหม่</button><button id="cloudOpenBtn" type="button" class="outline">เปิดโครงการที่เลือก</button></div>
-
-        <div class="panel-actions"><button id="cloudDeleteBtn" type="button" class="danger">ลบโครงการที่เลือก</button></div>
+        <select id="cloudProjectSelect" hidden></select>
+        <div id="projectCards"></div><div class="panel-actions"><button id="projectPrev" onclick="changeProjectPage(-1)">ก่อนหน้า</button><span id="projectPage" aria-live="polite"></span><button id="projectNext" onclick="changeProjectPage(1)">ถัดไป</button></div>
         <div id="cloudStatus" class="panel-note">กำลังเชื่อมต่อระบบกลาง...</div>
       </section>
       <details id="communitySettings" class="panel-section">
@@ -542,17 +541,59 @@
       document.querySelector('[onclick="saveMapToBrowser()"]').textContent = 'สำรองในเครื่องนี้';
       const editable = canEditCloud();
       document.getElementById('quickSaveBtn').hidden = !editable;
-      ['cloudNewBtn','quickSaveBtn','communityFile','communityApply','communityReset','spatialImportBtn','spatialExampleBtn','csvFile','csvPlotBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !editable; });
-      document.getElementById('cloudDeleteBtn').disabled = String(secureMembership.role).toUpperCase() !== 'ADMIN';
+      document.getElementById('newProjectOwner').value = secureOrganization.name;
+      ['createProjectBtn','quickSaveBtn','communityFile','communityApply','communityReset','spatialImportBtn','spatialExampleBtn','csvFile','csvPlotBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = !editable; });
       if (!editable) document.getElementById('cloudStatus').textContent = 'สิทธิ์ผู้ดูข้อมูล: เปิดดูและส่งออกได้ แต่ไม่สามารถบันทึกหรือแก้ไขข้อมูลส่วนกลาง';
     }
+
+    let projectPageIndex=0, pendingCreatedProject=null;
+    function changeProjectPage(delta){projectPageIndex+=delta;renderProjectCards();}
+    function renderProjectCards(){
+      const total=Math.max(1,Math.ceil(cloudProjects.length/3));projectPageIndex=Math.max(0,Math.min(projectPageIndex,total-1));
+      const list=document.getElementById('projectCards');list.replaceChildren();
+      if(!cloudProjects.length)list.textContent='ยังไม่มีโครงการที่บันทึกไว้';
+      cloudProjects.slice(projectPageIndex*3,projectPageIndex*3+3).forEach(project=>{
+        const card=document.createElement('article');card.className='project-card';
+        const title=document.createElement('h3');title.textContent=project.name+(project.id===cloudProjectId?' · กำลังเปิด':'');
+        const date=document.createElement('p');date.className='panel-note';date.textContent=project.updatedAt?'บันทึกล่าสุด '+new Date(project.updatedAt).toLocaleString('th-TH'):'';
+        const open=document.createElement('button');open.textContent='เปิดใช้งาน';open.onclick=async()=>{if((csvRecords.length||circleFeatures.length||spatialLayers.length||arrows.length||textBoxes.length)&&!confirm('เปิดโครงการนี้แทนงานบนแผนที่? โปรดบันทึกงานปัจจุบันก่อน'))return;document.getElementById('cloudProjectSelect').value=project.id;await openCloudProject();renderProjectCards();};
+        card.append(title,date,open);
+        if(String(secureMembership?.role).toUpperCase()==='ADMIN'){const remove=document.createElement('button');remove.textContent='ลบ';remove.className='danger';remove.onclick=()=>deleteCloudProject(project.id);card.append(remove);}
+        list.append(card);
+      });
+      document.getElementById('projectPage').textContent='หน้า '+(projectPageIndex+1)+' / '+total;
+      document.getElementById('projectPrev').disabled=projectPageIndex===0;document.getElementById('projectNext').disabled=projectPageIndex>=total-1;
+    }
+    async function createProjectFromForm(){
+      const button=document.getElementById('createProjectBtn'),status=document.getElementById('createProjectStatus');
+      if(!canEditCloud()||button.disabled)return;
+      const name=document.getElementById('newProjectName').value.trim();
+      if(!name){status.textContent='กรุณากรอกชื่อโครงการ';return;}
+      button.disabled=true;
+      ['newProjectName','newProjectStatus','newProjectOwner'].forEach(id=>document.getElementById(id).disabled=true);
+      status.textContent='กำลังบันทึกโครงการใหม่…';
+      try{
+        if(!pendingCreatedProject){
+          const state={version:2,project:{name,status:document.getElementById('newProjectStatus').value,owner:document.getElementById('newProjectOwner').value.trim()},organization:{id:secureOrganizationId,name:secureOrganization.name},communities:[],spatialLayers:[],circles:[],arrows:[],textBoxes:[],csv:{headers:[],records:[]}};
+          const file=await PollutionMapAuth.saveJsonFile({fileName:'project-'+crypto.randomUUID()+'.json',data:state,agencyId:secureOrganizationId,agencyName:secureOrganization.name});
+          pendingCreatedProject={name,fileId:file.id,fileName:file.name};
+        }
+        const existing=(await PollutionMapAuth.api('listProjects',{agencyId:secureOrganizationId})||[]).find(p=>p.fileId===pendingCreatedProject.fileId);
+        if(!existing)await PollutionMapAuth.api('saveProject',{agencyId:secureOrganizationId,project:{id:'',...pendingCreatedProject}});
+        pendingCreatedProject=null;projectPageIndex=0;await refreshCloudProjects();
+        document.getElementById('newProjectName').value='';document.getElementById('newProjectStatus').value='กำลังจัดทำ';document.getElementById('newProjectOwner').value='';
+        status.textContent='สร้างโครงการแล้ว กดเปิดใช้งานจากรายการด้านล่าง หรือกรอกเพื่อสร้างรายการถัดไป';
+      }catch(error){status.textContent='บันทึกไม่สำเร็จ: '+error.message+' — กดบันทึกอีกครั้งเพื่อลองต่อ';}
+      finally{button.disabled=!canEditCloud();['newProjectName','newProjectStatus','newProjectOwner'].forEach(id=>document.getElementById(id).disabled=!!pendingCreatedProject);}
+    }
+
     async function refreshCloudProjects(selectId = cloudProjectId) {
       if (!secureMode) return;
       try {
         cloudProjects = await PollutionMapAuth.api('listProjects', { agencyId: secureOrganizationId }) || [];
         const select = document.getElementById('cloudProjectSelect');
         select.innerHTML = '<option value="">— โครงการใหม่ —</option>' + cloudProjects.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
-        select.value = selectId || '';
+        select.value = selectId || ''; renderProjectCards();
         document.getElementById('cloudStatus').textContent = `พบ ${cloudProjects.length.toLocaleString('th-TH')} โครงการในหน่วยงานนี้`;
       } catch (error) { document.getElementById('cloudStatus').textContent = `โหลดรายการโครงการไม่สำเร็จ: ${error.message}`; }
     }
@@ -596,14 +637,14 @@
       } catch (error) { document.getElementById('cloudStatus').textContent = `บันทึกไม่สำเร็จ: ${error.message}`; showSaveNotice(`บันทึกไม่สำเร็จ: ${error.message}`); }
       finally { button.disabled = !canEditCloud(); quickButton.disabled = !canEditCloud(); quickButton.textContent = '💾 บันทึกโครงการ'; }
     }
-    async function deleteCloudProject() {
-      if (String(secureMembership.role).toUpperCase() !== 'ADMIN' || !cloudProjectId) { document.getElementById('cloudStatus').textContent = 'เลือกโครงการก่อนลบ'; return; }
-      const project = cloudProjects.find(item => item.id === cloudProjectId);
+    async function deleteCloudProject(targetId = cloudProjectId) {
+      if (String(secureMembership.role).toUpperCase() !== 'ADMIN' || !targetId) { document.getElementById('cloudStatus').textContent = 'เลือกโครงการก่อนลบ'; return; }
+      const project = cloudProjects.find(item => item.id === targetId);
       if (!confirm(`ลบโครงการ “${project ? project.name : ''}” ออกจากระบบหรือไม่?`)) return;
       try {
-        await PollutionMapAuth.api('archiveProject', { agencyId: secureOrganizationId, projectId: cloudProjectId });
+        await PollutionMapAuth.api('archiveProject', { agencyId: secureOrganizationId, projectId: targetId });
         if (project && project.fileId) await PollutionMapAuth.trashDriveFile(project.fileId);
-        cloudProjectId = ''; document.getElementById('projectName').value = ''; await refreshCloudProjects();
+        if (cloudProjectId === targetId) { cloudProjectId = ''; document.getElementById('projectName').value = ''; } await refreshCloudProjects();
       } catch (error) { document.getElementById('cloudStatus').textContent = `ลบไม่สำเร็จ: ${error.message}`; }
     }
     async function signOutSecure() { PollutionMapAuth.clearLogin(); if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect(); location.replace('login.html'); }
@@ -1286,10 +1327,11 @@
         const head=document.createElement('div');head.className='tool-dialog-head';
         const heading=document.createElement('h2');heading.textContent=title;
         const close=document.createElement('button');close.type='button';close.textContent=key==='project'?'ข้าม / ปิด':'ปิด';close.onclick=()=>dialog.close();head.append(heading,close);dialog.append(head);
-        if(key==='project'){const note=document.createElement('p');note.className='panel-note';note.textContent='สร้างโครงการใหม่ หรือเลือกงานเดิมแล้วกดเปิดโครงการ • ข้ามได้ และตั้งชื่อตอนบันทึกภายหลัง';dialog.append(note);}
+        if(key==='project'){const note=document.createElement('p');note.className='panel-note';note.textContent='กรอกข้อมูลแล้วบันทึกเพื่อสร้างโครงการ หรือเปิดโครงการจากรายการด้านล่าง • ข้ามได้';dialog.append(note);}
         selectors.forEach(selector=>{const node=panel.querySelector(selector);if(node){if(node.tagName==='DETAILS')node.open=true;dialog.append(node);}});
         document.body.append(dialog);
       });
+      document.getElementById('createProjectBtn').disabled = !secureMode;
       panel.replaceChildren();const title=document.createElement('h2');title.textContent='เลือกข้อมูลที่ต้องการจัดการ';panel.append(title);
       groups.filter(([key])=>!['project','community'].includes(key)).forEach(([key,title])=>{const button=document.createElement('button');button.type='button';button.className='tool-launch';button.textContent=title;button.onclick=()=>openToolDialog(key);panel.append(button);});
     }
@@ -1303,10 +1345,7 @@
       document.getElementById('loginBtn').hidden = !!demoAgency || secureMode;
       if (secureMode) {
         setupSecureUI();
-        document.getElementById('cloudNewBtn').addEventListener('click', startNewCloudProject);
-        document.getElementById('cloudOpenBtn').addEventListener('click', openCloudProject);
 
-        document.getElementById('cloudDeleteBtn').addEventListener('click', deleteCloudProject);
         // Selecting a project does not change the currently loaded project.
       }
       document.getElementById('communityFile').addEventListener('change', readCommunityFile);
