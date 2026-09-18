@@ -11,7 +11,7 @@
 </head>
 <body><main class="shell"><section class="brand"><h1>🗺️ แผนที่ควบคุมมลพิษ</h1><p>ระบบบริหารข้อมูลแผนที่แยกตามหน่วยงาน เข้าสู่ระบบด้วยบัญชี Google และตรวจสิทธิ์จากทะเบียนกลาง</p><section class="support" aria-label="สนับสนุนการพัฒนาระบบ"><h2>ร่วมสนับสนุนการพัฒนาระบบ</h2><p>ระบบนี้เปิดให้ใช้งานฟรี<br>หากเป็นประโยชน์ สามารถสนับสนุนได้ตามความสมัครใจ</p><a href="assets/promptpay-donation.jpg" target="_blank" rel="noopener"><img src="assets/promptpay-donation.jpg" alt="QR พร้อมเพย์สนับสนุนผู้พัฒนา โชคสยาม แกล้วเกษตรกรณ์"><span>เปิดภาพ QR ขนาดเต็ม</span></a><small>ขอบคุณทุกการสนับสนุนครับ</small></section></section><section class="panel">
 <div id="setup" class="setup hidden">ระบบ Google Login ยังไม่ถูกเชื่อมต่อ กรุณาตรวจสอบ config.js</div>
-<section id="loginPanel"><h2>เข้าสู่ระบบ</h2><div id="rememberedPanel" class="hidden"><p id="rememberedEmail"></p><button class="button hidden" id="continueButton" type="button">เข้าสู่ระบบ</button><button class="button secondary" id="switchAccount" type="button">ใช้บัญชีอื่น</button></div><div id="googleButton"></div><p class="privacy">ระบบไม่เก็บรหัสผ่าน การเปิดพื้นที่ทำงานจะขอสิทธิ์ Google Drive เฉพาะไฟล์ที่ระบบสร้าง</p><p class="privacy">ยังไม่เคยลงทะเบียน? <a href="registration.html">ลงทะเบียนเข้าใช้ระบบ</a></p></section>
+<section id="loginPanel"><h2>เข้าสู่ระบบ</h2><div id="rememberedPanel" class="hidden"><button class="button secondary" id="switchAccount" type="button">ใช้บัญชีอื่น</button></div><div id="googleButton"></div><button class="button hidden" id="retrySession" type="button">ลองเชื่อมต่ออีกครั้ง</button><p class="privacy">ระบบไม่เก็บรหัสผ่าน การเปิดพื้นที่ทำงานจะขอสิทธิ์ Google Drive เฉพาะไฟล์ที่ระบบสร้าง</p><p class="privacy">ยังไม่เคยลงทะเบียน? <a href="registration.html">ลงทะเบียนเข้าใช้ระบบ</a></p></section>
 <section id="workspacePanel" class="hidden"><h2>เลือกพื้นที่ทำงาน</h2><div id="accountText"></div><div class="orgs" id="organizations"></div><section id="systemPanel" class="system-card hidden"><strong>⚙️ การบริหารระบบส่วนกลาง</strong><p>จัดการคำขอสร้างหน่วยงานใหม่และทะเบียนหน่วยงานทั้งหมด</p><button class="button admin" id="systemButton" type="button">ศูนย์ผู้ดูแลระบบ</button></section><button class="button secondary" id="logoutButton" type="button">ออกจากระบบ</button></section>
 <div class="message" id="message" role="status"></div></section></main>
 <script src="https://accounts.google.com/gsi/client?hl=th" async defer></script><script src="config.js"></script><script src="auth-client.js?v=timeout-1"></script>
@@ -53,15 +53,51 @@ async function openWorkspace(id){
  try{await auth.requestDriveToken();auth.rememberWorkspace(id);location.href=destination(id);}
  catch(error){setMessage(error.message||'ไม่ได้รับสิทธิ์ Google Drive',true);}
 }
+let googleStarted=false;
+function showGoogleLogin(){
+ $('retrySession').classList.add('hidden');
+ $('googleButton').classList.remove('hidden');
+ $('rememberedPanel').classList.toggle('hidden',!auth.remembered());
+ if(googleStarted)return;
+ googleStarted=true;
+ const started=Date.now();
+ const timer=setInterval(()=>{
+  if(!window.google?.accounts?.id){
+   if(Date.now()-started>10000){clearInterval(timer);googleStarted=false;setMessage('โหลด Google ไม่สำเร็จ กรุณาลองอีกครั้ง',true);$('retrySession').classList.remove('hidden');}
+   return;
+  }
+  clearInterval(timer);
+  google.accounts.id.initialize({client_id:window.POLLUTION_MAP_CONFIG.googleClientId,callback:handleCredential,auto_select:!!auth.remembered(),login_hint:auth.remembered()?.email,cancel_on_tap_outside:true});
+  google.accounts.id.renderButton($('googleButton'),{theme:'outline',size:'large',text:'signin_with',locale:'th',width:300});
+  if(auth.remembered())google.accounts.id.prompt();
+ },100);
+}
 async function boot(){
  if(!auth.configured()){$('setup').classList.remove('hidden');return;}
+ $('retrySession').classList.add('hidden');
  if(auth.session()&&auth.credential()){
-  try{const data=await auth.api('login');auth.setLogin(auth.credential(),data);afterLogin(data);return;}catch(_){auth.clearLogin();}
+  $('googleButton').classList.add('hidden');
+  setMessage('กำลังตรวจสอบบัญชีเดิม...');
+  try{
+   const data=await auth.api('login');
+   auth.setLogin(auth.credential(),data);
+   afterLogin(data);
+   return;
+  }catch(error){
+   // A network failure is not evidence that the user's authentication expired.
+   if(error.code!=='AUTH_REQUIRED'){
+    setMessage('ตรวจสอบบัญชีเดิมไม่ได้: '+(error.message||'เชื่อมต่อไม่สำเร็จ')+' — กดลองเชื่อมต่ออีกครั้ง',true);
+    $('retrySession').classList.remove('hidden');
+    $('rememberedPanel').classList.remove('hidden');
+    return;
+   }
+   auth.clearLogin();
+   setMessage('กรุณายืนยันบัญชีกับ Google อีกครั้ง');
+  }
  }
- const timer=setInterval(()=>{if(!window.google?.accounts?.id)return;clearInterval(timer);google.accounts.id.initialize({client_id:window.POLLUTION_MAP_CONFIG.googleClientId,callback:handleCredential,auto_select:!!auth.remembered(),login_hint:auth.remembered()?.email,cancel_on_tap_outside:true});google.accounts.id.renderButton($('googleButton'),{theme:'outline',size:'large',text:'signin_with',locale:'th',width:300});if(auth.remembered()){google.accounts.id.prompt();}},100);
- const saved=auth.remembered();if(saved){$('rememberedPanel').classList.remove('hidden');$('rememberedEmail').textContent=saved.email;}
+ showGoogleLogin();
 }
-$('continueButton').onclick=()=>{const agency=currentLogin&&preferred(currentLogin);if(agency){openWorkspace(agency.id);return;}if(window.google?.accounts?.id){google.accounts.id.prompt();setMessage('ยืนยันบัญชีเดิมกับ Google หากไม่มีหน้าต่างขึ้น ให้กดปุ่ม Google ด้านล่าง');}else setMessage('กำลังโหลด Google กรุณารอสักครู่');};
+$('retrySession').onclick=()=>boot().catch(error=>setMessage(error.message,true));
 $('switchAccount').onclick=()=>{auth.forgetAccount();if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();location.reload();};
 $('systemButton').onclick=()=>location.href='system-admin.html';
 $('logoutButton').onclick=()=>{auth.forgetAccount();if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();location.reload();};
