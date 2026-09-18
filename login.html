@@ -11,7 +11,7 @@
 </head>
 <body><main class="shell"><section class="brand"><h1>🗺️ แผนที่ควบคุมมลพิษ</h1><p>ระบบบริหารข้อมูลแผนที่แยกตามหน่วยงาน เข้าสู่ระบบด้วยบัญชี Google และตรวจสิทธิ์จากทะเบียนกลาง</p><section class="support" aria-label="สนับสนุนการพัฒนาระบบ"><h2>ร่วมสนับสนุนการพัฒนาระบบ</h2><p>ระบบนี้เปิดให้ใช้งานฟรี<br>หากเป็นประโยชน์ สามารถสนับสนุนได้ตามความสมัครใจ</p><a href="assets/promptpay-donation.jpg" target="_blank" rel="noopener"><img src="assets/promptpay-donation.jpg" alt="QR พร้อมเพย์สนับสนุนผู้พัฒนา โชคสยาม แกล้วเกษตรกรณ์"><span>เปิดภาพ QR ขนาดเต็ม</span></a><small>ขอบคุณทุกการสนับสนุนครับ</small></section></section><section class="panel">
 <div id="setup" class="setup hidden">ระบบ Google Login ยังไม่ถูกเชื่อมต่อ กรุณาตรวจสอบ config.js</div>
-<section id="loginPanel"><h2>เข้าสู่ระบบ</h2><div id="rememberedPanel" class="hidden"><button class="button secondary" id="switchAccount" type="button">ใช้บัญชีอื่น</button></div><div id="googleButton"></div><button class="button hidden" id="retrySession" type="button">ลองเชื่อมต่ออีกครั้ง</button><p class="privacy">ระบบไม่เก็บรหัสผ่าน การเปิดพื้นที่ทำงานจะขอสิทธิ์ Google Drive เฉพาะไฟล์ที่ระบบสร้าง</p><p class="privacy">ยังไม่เคยลงทะเบียน? <a href="registration.html">ลงทะเบียนเข้าใช้ระบบ</a></p></section>
+<section id="loginPanel"><h2>เข้าสู่ระบบ</h2><div id="rememberedPanel" class="hidden"><p id="rememberedEmail"></p><button class="button" id="continueButton" type="button">เข้าสู่ระบบ</button><button class="button secondary" id="switchAccount" type="button">ใช้บัญชีอื่น</button></div><div id="googleButton"></div><button class="button hidden" id="retrySession" type="button">ลองเชื่อมต่ออีกครั้ง</button><p class="privacy">ระบบไม่เก็บรหัสผ่าน การเปิดพื้นที่ทำงานจะขอสิทธิ์ Google Drive เฉพาะไฟล์ที่ระบบสร้าง</p><p class="privacy">ยังไม่เคยลงทะเบียน? <a href="registration.html">ลงทะเบียนเข้าใช้ระบบ</a></p></section>
 <section id="workspacePanel" class="hidden"><h2>เลือกพื้นที่ทำงาน</h2><div id="accountText"></div><div class="orgs" id="organizations"></div><section id="systemPanel" class="system-card hidden"><strong>⚙️ การบริหารระบบส่วนกลาง</strong><p>จัดการคำขอสร้างหน่วยงานใหม่และทะเบียนหน่วยงานทั้งหมด</p><button class="button admin" id="systemButton" type="button">ศูนย์ผู้ดูแลระบบ</button></section><button class="button secondary" id="logoutButton" type="button">ออกจากระบบ</button></section>
 <div class="message" id="message" role="status"></div></section></main>
 <script src="https://accounts.google.com/gsi/client?hl=th" async defer></script><script src="config.js"></script><script src="auth-client.js?v=timeout-1"></script>
@@ -19,9 +19,10 @@
 const auth=window.PollutionMapAuth;
 const $=id=>document.getElementById(id);
 let currentLogin=null;
+let entryRequested=false;
 function destination(id){return(new URLSearchParams(location.search).get('next')==='field'?'field-notebook.html?org=':'index.html?secure=1&org=')+encodeURIComponent(id);}
 function preferred(data){const saved=auth.remembered();return (data.agencies||[]).find(a=>a.id===saved?.agencyId)||(data.agencies?.length===1?data.agencies[0]:null);}
-function afterLogin(data){currentLogin=data;showOrganizations(data);setMessage('เลือกหน่วยงาน แล้วกดเข้าสู่ระบบ');}
+function afterLogin(data){currentLogin=data;showOrganizations(data);const agency=preferred(data);if(entryRequested&&agency&&auth.hasDriveToken()){openWorkspace(agency.id);return;}setMessage('เลือกหน่วยงาน แล้วกดเข้าสู่ระบบ');}
 
 function setMessage(text,error=false){$('message').textContent=text;$('message').className='message '+(error?'error':'ok');}
 function roleName(role){return({ADMIN:'ผู้ดูแลหน่วยงาน',EDITOR:'ผู้แก้ไข',VIEWER:'ผู้ดูข้อมูล'})[String(role).toUpperCase()]||role;}
@@ -57,6 +58,8 @@ let googleStarted=false;
 function showGoogleLogin(){
  $('retrySession').classList.add('hidden');
  $('googleButton').classList.remove('hidden');
+ $('continueButton').classList.add('hidden');
+ $('rememberedEmail').classList.add('hidden');
  $('rememberedPanel').classList.toggle('hidden',!auth.remembered());
  if(googleStarted)return;
  googleStarted=true;
@@ -72,16 +75,25 @@ function showGoogleLogin(){
   if(auth.remembered())google.accounts.id.prompt();
  },100);
 }
-async function boot(){
+async function boot(enter=false){
  if(!auth.configured()){$('setup').classList.remove('hidden');return;}
  $('retrySession').classList.add('hidden');
+ const saved=auth.remembered();
+ if(saved&&!enter){
+  $('rememberedEmail').textContent=saved.email;
+  $('rememberedPanel').classList.remove('hidden');
+  $('googleButton').classList.add('hidden');
+  return;
+ }
  if(auth.session()&&auth.credential()){
   $('googleButton').classList.add('hidden');
   setMessage('กำลังตรวจสอบบัญชีเดิม...');
   try{
    const data=await auth.api('login');
    auth.setLogin(auth.credential(),data);
-   afterLogin(data);
+   currentLogin=data;
+   const agency=preferred(data);
+   if(agency){await openWorkspace(agency.id);}else{afterLogin(data);}
    return;
   }catch(error){
    // A network failure is not evidence that the user's authentication expired.
@@ -95,9 +107,11 @@ async function boot(){
    setMessage('กรุณายืนยันบัญชีกับ Google อีกครั้ง');
   }
  }
+ if(enter)setMessage('กำลังขอให้ Google ยืนยันบัญชีล่าสุด หากมีหน้าต่างเลือกบัญชี ให้เลือกบัญชีเดิม');
  showGoogleLogin();
 }
-$('retrySession').onclick=()=>boot().catch(error=>setMessage(error.message,true));
+$('continueButton').onclick=()=>{entryRequested=true;boot(true).catch(error=>setMessage(error.message,true));};
+$('retrySession').onclick=()=>boot(true).catch(error=>setMessage(error.message,true));
 $('switchAccount').onclick=()=>{auth.forgetAccount();if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();location.reload();};
 $('systemButton').onclick=()=>location.href='system-admin.html';
 $('logoutButton').onclick=()=>{auth.forgetAccount();if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();location.reload();};
