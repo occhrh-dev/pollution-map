@@ -102,7 +102,6 @@ const SymbolTools = (() => {
     picker.innerHTML='<p class="symbol-picker-title">เลือกรูปสัญลักษณ์ที่จะวางบนแผนที่</p><div class="symbol-choice-grid">'+Object.entries(shapes).map(([id,item])=>`<button type="button" class="symbol-choice" data-kind="${id}"><span class="symbol-choice-icon"></span><span>${item[0]}</span></button>`).join('')+'</div>';
     const pickerButton=document.getElementById('symbolPickerBtn');
     pickerButton.addEventListener('click',()=>{
-      if(window.jQuery && jQuery('#communitySelect').data('select2'))jQuery('#communitySelect').select2('close');
       if(picker.matches(':popover-open')){picker.hidePopover();return;}
       const rect=pickerButton.getBoundingClientRect();
       picker.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-335-8))+'px';
