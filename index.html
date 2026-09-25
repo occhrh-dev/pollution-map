@@ -36,6 +36,7 @@
     .header-spacer { flex: 1; }
     .agency-badge { max-width: 310px; padding: 5px 11px; border: 1px solid rgba(255,255,255,.28); border-radius: 16px; background: rgba(255,255,255,.12); font-size: 12px; line-height: 1.25; }
     .donation-btn { color: #17324a; background: #ffd86b; border: 1px solid rgba(255,255,255,.45); }
+    .radius-shortcut { background: #18a09b; border: 1px solid rgba(255,255,255,.65); box-shadow: 0 0 0 2px rgba(255,255,255,.12); font-weight: 700; }
     .cloud-section { margin-bottom: 12px; padding: 11px; border: 1px solid #a9ccc9; border-radius: 10px; background: #eef8f7; }
     .cloud-section h3 { margin: 0 0 7px; font-size: 14px; color: var(--navy); }
     .role-badge { display: inline-block; margin-top: 6px; padding: 3px 8px; border-radius: 12px; background: #d7edeb; font-size: 11px; font-weight: 700; }
@@ -242,7 +243,7 @@
 .tool-dialog{width:min(580px,94vw);max-height:88vh;overflow:auto;border:1px solid #d6e0e5;border-radius:16px;padding:20px;background:white;color:#173347}
 .tool-dialog::backdrop{background:#12334780}.tool-dialog h2{font-size:20px;margin:0}.tool-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:14px}.tool-dialog .panel-section>summary{display:none}.tool-dialog .panel-section{border:0}.tool-launch{display:block;width:100%;text-align:left;margin:8px 0;padding:12px}.tool-dialog button{cursor:pointer}.tool-dialog .panel-input,.tool-dialog .panel-select{width:100%}
 .tool-launch strong,.tool-launch small{display:block}.tool-launch strong{font-size:14px}.tool-launch small{margin-top:4px;font-size:12px;line-height:1.45;font-weight:400;opacity:.9}
-#tool-data .panel-section{border:1px solid var(--line)}#tool-data .panel-section>summary{display:list-item;font-size:14px}#tool-data .panel-section>.section-body{padding-top:2px}
+#tool-radius #pointList{border:1px solid var(--line)}#tool-radius #pointList>summary{display:list-item;font-size:14px}
 .radius-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.radius-fields .panel-label{margin-top:4px}.radius-fields input{box-sizing:border-box;width:100%}.radius-fields input[type=color]{height:38px}
 #drawingBanner{position:absolute;top:12px;left:12px;z-index:11;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:calc(100% - 24px);padding:8px 10px;border-radius:10px;background:#173347;color:white;box-shadow:0 3px 12px #0004;font-size:12px}#drawingBanner[hidden]{display:none}#drawingBanner button{padding:6px 9px;font-size:12px}
 #activeProjectBar{display:flex;align-items:baseline;gap:10px;padding:7px 14px;background:#eef7f6;border-bottom:1px solid #cbdedc;color:#173347;flex-shrink:0;min-width:0}
@@ -261,6 +262,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     <div class="agency-badge" id="agencyBadge" hidden></div>
     <div class="header-spacer"></div>
     <button type="button" onclick="openFieldNotebook()">เก็บจุดลงพื้นที่</button>
+    <button id="radiusShortcut" type="button" class="radius-shortcut" onclick="openToolDialog('radius')" title="กำหนดขนาดและสี แล้ววางวงรัศมีบนแผนที่หรือจากพิกัด">◎ สร้างวงรัศมี</button>
     <button id="loginBtn" type="button" onclick="location.href='login.html'">เข้าสู่ระบบหน่วยงาน</button>
     <button id="quickSaveBtn" type="button" hidden onclick="saveCloudProject()" title="บันทึกจุด ชั้นข้อมูล และงานแผนที่ทั้งโครงการลง Google Drive">💾 บันทึกโครงการ</button>
     <button type="button" onclick="openToolDialog('project')">โครงการ</button><button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
@@ -301,7 +303,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
   <div id="bootStatus" role="status" style="padding:12px;background:#fff3d9;color:#644a18">กำลังเปิดระบบ…</div>
   <main id="mapwrap">
     <div id="map" aria-label="แผนที่"></div>
-    <div id="drawingBanner" hidden role="status">กำลังวางวงรัศมี: คลิกบนแผนที่เพื่อเพิ่มวง <button type="button" onclick="openToolDialog('data');document.getElementById('radiusSection').open=true">ตั้งค่าวง</button><button type="button" class="secondary" onclick="toggleInteractionMode()">เสร็จสิ้น</button></div>
+    <div id="drawingBanner" hidden role="status">กำลังวางวงรัศมี: คลิกบนแผนที่เพื่อเพิ่มวง <button type="button" onclick="openToolDialog('radius')">ตั้งค่าวง</button><button type="button" class="secondary" onclick="toggleInteractionMode()">เสร็จสิ้น</button></div>
     <section id="dataPanel" hidden aria-label="จัดการข้อมูลแผนที่">
       <h2>จัดการข้อมูลแผนที่</h2>
       <div class="save-guide" id="cloudSaveGuide" hidden>
@@ -433,7 +435,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         <div class="section-body"><div id="pointListItems">ยังไม่มีจุด</div></div>
       </details>
     </section>
-    <div id="hint">โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · สร้างวงรัศมีได้ที่ “จัดการข้อมูล”</div>
+    <div id="hint">โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · สร้างวงรัศมีได้จากปุ่มด้านบน</div>
   </main>
   <section id="donationModal" hidden role="dialog" aria-modal="true" aria-labelledby="donationTitle">
     <div class="donation-dialog">
@@ -1283,7 +1285,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       button.textContent = drawing ? 'หยุดวางวงรัศมี' : 'คลิกแผนที่เพื่อวางวงรัศมี';
       button.classList.toggle('danger', drawing);
       document.getElementById('drawingBanner').hidden = !drawing;
-      hint.textContent = drawing ? 'คลิกบนแผนที่เพื่อวางวงรัศมี · กด “เสร็จสิ้น” เมื่อวางครบ' : 'โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · สร้างวงรัศมีได้ที่ “จัดการข้อมูล”';
+      hint.textContent = drawing ? 'คลิกบนแผนที่เพื่อวางวงรัศมี · กด “เสร็จสิ้น” เมื่อวางครบ' : 'โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · สร้างวงรัศมีได้จากปุ่มด้านบน';
     }
     function startRadiusDrawing() {
       toggleInteractionMode();
@@ -1388,14 +1390,16 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     function openToolDialog(key){
       closeToolDialogs();document.getElementById('dataPanel').hidden=true;document.getElementById('dataBtn').textContent='จัดการข้อมูล';
       const dialog=document.getElementById('tool-'+key);if(dialog)dialog.showModal();
-      if(key==='data'){updatePointList();renderFieldSurveys();if(secureMode&&!projectListRequest)refreshCloudProjects();}
+      if(key==='radius')updatePointList();
+      if(key==='data'){renderFieldSurveys();if(secureMode&&!projectListRequest)refreshCloudProjects();}
     }
     function setupToolDialogs(){
       const panel=document.getElementById('dataPanel');
       const groups=[
         ['project','โครงการ',['.project-card','#activeProjectFields','#cloudSection','#cloudSaveGuide','#agencyIsolationNote']],
         ['community','เปลี่ยนผังชุมชน',['#communitySettings']],
-        ['data','นำเข้าและจัดการจุดข้อมูล',['#csvSection','#radiusSection','#pointList'],'นำเข้าจุดจาก CSV หรือสมุดลงพื้นที่ สร้างวงรัศมี และดูรายการจุดที่วางเอง'],
+        ['data','นำเข้าและจัดการจุดข้อมูล',['#csvSection'],'นำเข้าจุดจาก CSV หรือสมุดลงพื้นที่ แล้วดูหรือแก้ไขข้อมูลหมุด'],
+        ['radius','สร้างวงรัศมี',['#radiusSection','#pointList']],
         ['spatial','ขอบเขตและชั้นข้อมูลแผนที่',['#spatialSection'],'นำไฟล์ GeoJSON, KML หรือ KMZ มาแสดงเป็นขอบเขต เส้น หรือจุดบนแผนที่'],
         ['backup','สำรองและย้ายข้อมูล',['#localBackupSection'],'เก็บงานในเบราว์เซอร์หรือไฟล์ JSON เพื่อสำรองและย้ายเครื่อง']
       ];
@@ -1405,13 +1409,13 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         const heading=document.createElement('h2');heading.textContent=title;
         const close=document.createElement('button');close.type='button';close.textContent=key==='project'?'ข้าม / ปิด':'ปิด';close.onclick=()=>dialog.close();
         if(key==='project')dialog.addEventListener('close',()=>{document.body.classList.remove('choosing-project');if(map)map.resize();});head.append(heading,close);dialog.append(head);
-        if(key==='project'||key==='data'){const note=document.createElement('p');note.className='panel-note';note.textContent=key==='project'?'กรอกข้อมูลแล้วบันทึกเพื่อสร้างโครงการ หรือเปิดโครงการจากรายการด้านล่าง • ข้ามได้':'เลือกนำเข้าจุด สร้างวงรัศมี หรือดูรายการวงที่วางไว้จากหัวข้อด้านล่าง';dialog.append(note);}
-        selectors.forEach(selector=>{const node=panel.querySelector(selector);if(node){if(node.tagName==='DETAILS')node.open=key!=='data';dialog.append(node);}});
+        if(key==='project'){const note=document.createElement('p');note.className='panel-note';note.textContent='กรอกข้อมูลแล้วบันทึกเพื่อสร้างโครงการ หรือเปิดโครงการจากรายการด้านล่าง • ข้ามได้';dialog.append(note);}
+        selectors.forEach(selector=>{const node=panel.querySelector(selector);if(node){if(node.tagName==='DETAILS')node.open=key!=='radius'||selector==='#radiusSection';dialog.append(node);}});
         document.body.append(dialog);
       });
       document.getElementById('createProjectBtn').disabled = !secureMode;
       panel.replaceChildren();const title=document.createElement('h2');title.textContent='เลือกข้อมูลที่ต้องการจัดการ';panel.append(title);
-      groups.filter(([key])=>!['project','community'].includes(key)).forEach(([key,title,,description])=>{const button=document.createElement('button');button.type='button';button.className='tool-launch';const name=document.createElement('strong');name.textContent=title;const detail=document.createElement('small');detail.textContent=description;button.append(name,detail);button.onclick=()=>openToolDialog(key);panel.append(button);});
+      groups.filter(([key])=>!['project','community','radius'].includes(key)).forEach(([key,title,,description])=>{const button=document.createElement('button');button.type='button';button.className='tool-launch';const name=document.createElement('strong');name.textContent=title;const detail=document.createElement('small');detail.textContent=description;button.append(name,detail);button.onclick=()=>openToolDialog(key);panel.append(button);});
     }
 
     function initializeControls() {
@@ -1476,7 +1480,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
           usingFallback = true;
           currentBase = 'streets';
           document.getElementById('baseBtn').textContent = '🛰️ ดาวเทียม';
-          document.getElementById('hint').textContent = 'ใช้แผนที่ถนนสำรอง OpenStreetMap · คลิกหมุดเพื่อดูข้อมูล หรือสร้างวงรัศมีที่ “จัดการข้อมูล”';
+          document.getElementById('hint').textContent = 'ใช้แผนที่ถนนสำรอง OpenStreetMap · คลิกหมุดเพื่อดูข้อมูล หรือสร้างวงรัศมีจากปุ่มด้านบน';
           map.setStyle(fallbackStreetStyle());
         }
       });
