@@ -150,6 +150,21 @@
     .spatial-style-grid .panel-label { margin: 0; }
     .spatial-style-grid input[type="color"] { display: block; width: 100%; height: 31px; padding: 2px; border: 1px solid #bac8d2; border-radius: 6px; background: #fff; }
     .spatial-opacity { width: 100%; }
+    .spatial-pending { margin-top: 11px; padding: 12px; border: 1px solid #8bbcb8; border-radius: 10px; background: #eef8f6; }
+    .spatial-pending strong { display: block; color: var(--navy); font-size: 13px; overflow-wrap: anywhere; }
+    .spatial-pending p { margin: 5px 0; font-size: 12px; line-height: 1.4; }
+    .spatial-pending .panel-label { margin-top: 7px; }
+    .spatial-pending[hidden], #spatialMapLegend[hidden] { display: none; }
+    #spatialMapLegend { position: absolute; top: 12px; right: 12px; z-index: 10; width: min(240px, calc(100% - 24px)); border: 1px solid #b6cbd2; border-radius: 10px; color: var(--navy); background: rgba(255,255,255,.96); box-shadow: 0 2px 10px #0002; font-size: 11px; }
+    #spatialMapLegend summary { padding: 8px 10px; cursor: pointer; font-weight: 700; }
+    #spatialLegendItems { max-height: 190px; overflow: auto; padding: 0 10px 8px; border-top: 1px solid #e0e8eb; }
+    .spatial-legend-row { display: flex; align-items: center; gap: 7px; margin-top: 7px; }
+    .spatial-legend-row input { margin: 0; }
+    .spatial-legend-swatch, .spatial-hit-swatch { display: inline-block; width: 13px; height: 13px; flex: 0 0 13px; border: 1px solid #536a76; border-radius: 3px; }
+    .spatial-legend-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .spatial-hit { padding: 7px 0; border-top: 1px solid #e1e8eb; }
+    .spatial-hit summary { display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700; }
+    .spatial-hit .csv-popup-row { margin-left: 19px; }
     #hint {
       position: absolute; left: 12px; bottom: 26px; max-width: 250px; padding: 7px 10px;
       border-radius: 8px; color: #425766; background: rgba(255,255,255,.92);
@@ -262,6 +277,11 @@
 #quickSaveStatus{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:#173347;color:white;border-radius:10px;padding:12px 18px;max-width:min(600px,90vw);box-shadow:0 4px 20px #0003;font-size:14px;pointer-events:none}
 .tool-dialog{width:min(580px,94vw);max-height:88vh;overflow:auto;border:1px solid #d6e0e5;border-radius:16px;padding:20px;background:white;color:#173347}
 .tool-dialog::backdrop{background:#12334780}.tool-dialog h2{font-size:20px;margin:0}.tool-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:14px}.tool-dialog .panel-section>summary{display:none}.tool-dialog .panel-section{border:0}.tool-launch{display:block;width:100%;text-align:left;margin:8px 0;padding:12px}.tool-dialog button{cursor:pointer}.tool-dialog .panel-input,.tool-dialog .panel-select{width:100%}
+#tool-spatial[open]{position:fixed;inset:auto;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;z-index:30;max-height:75vh;box-shadow:0 12px 35px #0004}
+#tool-spatial .tool-dialog-head{position:sticky;top:0;z-index:2;padding:5px 0;background:#fff;cursor:move;touch-action:none;user-select:none}
+#tool-spatial .tool-dialog-head h2{min-width:0;font-size:18px;line-height:1.25}
+#tool-spatial .tool-dialog-head button{flex:0 0 auto;cursor:pointer}
+#tool-spatial .drag-hint{display:block;color:#6b7f89;font-size:10px;font-weight:500}
 .tool-launch strong,.tool-launch small{display:block}.tool-launch strong{font-size:14px}.tool-launch small{margin-top:4px;font-size:12px;line-height:1.45;font-weight:400;opacity:.9}
 #tool-radius #pointList{border:1px solid var(--line)}#tool-radius #pointList>summary{display:list-item;font-size:14px}
 .radius-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.radius-fields .panel-label{margin-top:4px}.radius-fields input{box-sizing:border-box;width:100%}.radius-fields input[type=color]{height:38px}
@@ -340,6 +360,10 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
   <div id="bootStatus" role="status" style="padding:12px;background:#fff3d9;color:#644a18">กำลังเปิดระบบ…</div>
   <main id="mapwrap">
     <div id="map" aria-label="แผนที่"></div>
+    <details id="spatialMapLegend" hidden aria-label="ชั้นข้อมูลที่แสดงบนแผนที่">
+      <summary id="spatialLegendSummary">ชั้นข้อมูลบนแผนที่ (0)</summary>
+      <div id="spatialLegendItems"></div>
+    </details>
     <div id="drawingBanner" hidden role="status">กำลังวางวงรัศมี: คลิกบนแผนที่เพื่อเพิ่มวง <button type="button" onclick="openToolDialog('radius')">ตั้งค่าวง</button><button type="button" class="secondary" onclick="toggleInteractionMode()">เสร็จสิ้น</button></div>
     <section id="dataPanel" hidden aria-label="จัดการข้อมูลแผนที่">
       <h2>จัดการข้อมูลแผนที่</h2>
@@ -398,12 +422,23 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         <div class="section-body">
         <div class="panel-note">นำไฟล์ขอบเขต เส้นทาง หรือจุดมาแสดงซ้อนบนแผนที่ และปรับสีหรือซ่อนแต่ละชั้นได้ · รองรับ GeoJSON, JSON, KML และ KMZ · ไม่ลบผังชุมชนเดิม</div>
         <div class="panel-actions">
-          <button type="button" id="spatialImportBtn">นำเข้าชั้นข้อมูล</button>
+          <button type="button" id="spatialImportBtn">เลือกไฟล์ชั้นข้อมูล</button>
           <button type="button" class="outline" id="spatialExampleBtn">ลองข้อมูลตัวอย่าง</button>
           <button type="button" class="outline" id="spatialClearBtn" disabled>ล้างชั้นข้อมูล</button>
           <input id="spatialFile" type="file" accept=".geojson,.json,.kml,.kmz,application/geo+json,application/json,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz" hidden>
         </div>
-        <div id="spatialStatus">ยังไม่มีชั้นข้อมูลที่นำเข้า</div>
+        <div id="spatialStatus" role="status">ยังไม่มีชั้นข้อมูลที่นำเข้า</div>
+        <section id="spatialPending" class="spatial-pending" hidden aria-label="ตรวจไฟล์ก่อนใช้บนแผนที่">
+          <strong id="spatialPendingFile"></strong>
+          <p id="spatialPendingSummary"></p>
+          <label class="panel-label" for="spatialPendingName">ชื่อชั้นข้อมูลที่จะเพิ่ม</label>
+          <input id="spatialPendingName" class="panel-input" maxlength="120">
+          <p>ไฟล์นี้ยังไม่ถูกเพิ่มลงแผนที่ ตรวจให้ถูกก่อนกดยืนยัน</p>
+          <div class="panel-actions">
+            <button type="button" id="spatialConfirmBtn">ยืนยันใช้ไฟล์นี้บนแผนที่</button>
+            <button type="button" class="outline" id="spatialCancelPendingBtn">ยกเลิกไฟล์นี้</button>
+          </div>
+        </section>
         <details id="spatialLayerDetails">
           <summary id="spatialLayerSummary">ชั้นข้อมูลที่นำเข้า (0)</summary>
           <div id="spatialLayerList"><div class="panel-note">ยังไม่มีข้อมูล</div></div>
@@ -525,6 +560,8 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     let interactionMode = 'view';
     let spatialLayers = [];
     let spatialLayerCounter = 0;
+    let pendingSpatialImport = null;
+    let spatialImportRequest = 0;
     const AGENCY_DIRECTORY = {
       'agency-a': 'หน่วยงาน A — สาธารณสุขจังหวัด',
       'agency-b': 'หน่วยงาน B — เทศบาล',
@@ -873,34 +910,113 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       const layer = { id: settings.id || `layer-${Date.now()}-${spatialLayerCounter++}`, name: name || `ชั้นข้อมูล ${spatialLayers.length + 1}`, data: normalizeGeoJson(data), fillColor: settings.fillColor || '#2e86de', lineColor: settings.lineColor || '#16324a', fillOpacity: Number.isFinite(Number(settings.fillOpacity)) ? Number(settings.fillOpacity) : 0.28, visible: settings.visible !== false };
       spatialLayers.push(layer); addSpatialLayerToMap(layer); renderSpatialLayers(); return layer;
     }
+    function renderSpatialMapLegend() {
+      const legend = document.getElementById('spatialMapLegend');
+      const wasHidden = legend.hidden;
+      legend.hidden = !spatialLayers.length;
+      if (!spatialLayers.length) return;
+      if (wasHidden) legend.open = true;
+      const visibleCount = spatialLayers.filter(layer => layer.visible).length;
+      document.getElementById('spatialLegendSummary').textContent = `ชั้นข้อมูลบนแผนที่ (${visibleCount}/${spatialLayers.length} แสดง)`;
+      const items = document.getElementById('spatialLegendItems');
+      items.replaceChildren();
+      let markedTop = false;
+      spatialLayers.map((layer, index) => ({ layer, index })).reverse().forEach(({ layer, index }) => {
+        const row = document.createElement('label'); row.className = 'spatial-legend-row';
+        const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = layer.visible;
+        checkbox.setAttribute('aria-label', `แสดง ${layer.name}`);
+        checkbox.onchange = () => toggleSpatialLayer(index, checkbox.checked);
+        const swatch = document.createElement('span'); swatch.className = 'spatial-legend-swatch'; swatch.style.backgroundColor = layer.fillColor;
+        const name = document.createElement('span'); name.className = 'spatial-legend-name';
+        const isTop = layer.visible && !markedTop; if (isTop) markedTop = true;
+        name.textContent = isTop && visibleCount > 1 ? `${layer.name} · บนสุด` : layer.name; name.title = name.textContent;
+        row.append(checkbox, swatch, name); items.append(row);
+      });
+      if (visibleCount > 1) {
+        const note = document.createElement('p'); note.className = 'panel-note'; note.textContent = 'เรียงจากชั้นบนลงล่าง · คลิกพื้นที่เพื่อดูชั้นที่ซ้อนกัน'; items.append(note);
+      }
+    }
     function renderSpatialLayers() {
       document.getElementById('spatialLayerSummary').textContent = `ชั้นข้อมูลที่นำเข้า (${spatialLayers.length})`;
       document.getElementById('spatialClearBtn').disabled = !spatialLayers.length;
       document.getElementById('spatialLayerList').innerHTML = spatialLayers.map((layer, index) => `<div class="spatial-layer-item"><div class="spatial-layer-head"><input type="checkbox" ${layer.visible ? 'checked' : ''} onchange="toggleSpatialLayer(${index}, this.checked)" aria-label="แสดง ${escapeHtml(layer.name)}"><strong>${escapeHtml(layer.name)}</strong></div><label class="panel-label">ชื่อชั้นข้อมูล<input class="panel-input" value="${escapeHtml(layer.name)}" onchange="renameSpatialLayer(${index}, this.value)"></label><div class="panel-note">${layer.data.features.length.toLocaleString('th-TH')} รายการ</div><div class="spatial-style-grid"><label class="panel-label">สีพื้นที่/จุด<input type="color" value="${layer.fillColor}" oninput="updateSpatialLayerStyle(${index}, 'fillColor', this.value)"></label><label class="panel-label">สีเส้น<input type="color" value="${layer.lineColor}" oninput="updateSpatialLayerStyle(${index}, 'lineColor', this.value)"></label></div><label class="panel-label">ความโปร่งใส<input class="spatial-opacity" type="range" min="0" max="0.8" step="0.05" value="${layer.fillOpacity}" oninput="updateSpatialLayerStyle(${index}, 'fillOpacity', this.value)"></label><div class="panel-actions"><button type="button" onclick="fitSpatialLayer(${index})">ดูบนแผนที่</button><button type="button" class="outline" onclick="removeSpatialLayer(${index})">ลบชั้นนี้</button></div></div>`).join('') || '<div class="panel-note">ยังไม่มีข้อมูล</div>';
+      renderSpatialMapLegend();
     }
     function renameSpatialLayer(index, value) { const layer = spatialLayers[index]; if (!layer) return; layer.name = value.trim() || `ชั้นข้อมูล ${index + 1}`; renderSpatialLayers(); }
-    function toggleSpatialLayer(index, visible) { const layer = spatialLayers[index]; if (!layer) return; layer.visible = visible; spatialMapLayerIds(layer).forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none'); }); }
-    function updateSpatialLayerStyle(index, field, value) { const layer = spatialLayers[index]; if (!layer) return; layer[field] = field === 'fillOpacity' ? Number(value) : value; const ids = spatialMapLayerIds(layer); if (map.getLayer(ids[0])) { map.setPaintProperty(ids[0], 'fill-color', layer.fillColor); map.setPaintProperty(ids[0], 'fill-opacity', layer.fillOpacity); } if (map.getLayer(ids[1])) map.setPaintProperty(ids[1], 'line-color', layer.lineColor); if (map.getLayer(ids[2])) { map.setPaintProperty(ids[2], 'circle-color', layer.fillColor); map.setPaintProperty(ids[2], 'circle-stroke-color', layer.lineColor); } }
+    function toggleSpatialLayer(index, visible) { const layer = spatialLayers[index]; if (!layer) return; layer.visible = visible; spatialMapLayerIds(layer).forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none'); }); renderSpatialMapLegend(); }
+    function updateSpatialLayerStyle(index, field, value) { const layer = spatialLayers[index]; if (!layer) return; layer[field] = field === 'fillOpacity' ? Number(value) : value; const ids = spatialMapLayerIds(layer); if (map.getLayer(ids[0])) { map.setPaintProperty(ids[0], 'fill-color', layer.fillColor); map.setPaintProperty(ids[0], 'fill-opacity', layer.fillOpacity); } if (map.getLayer(ids[1])) map.setPaintProperty(ids[1], 'line-color', layer.lineColor); if (map.getLayer(ids[2])) { map.setPaintProperty(ids[2], 'circle-color', layer.fillColor); map.setPaintProperty(ids[2], 'circle-stroke-color', layer.lineColor); } renderSpatialMapLegend(); }
     function fitSpatialLayer(index) { const layer = spatialLayers[index]; if (!layer) return; const bounds = turf.bbox(layer.data); if (bounds.every(Number.isFinite)) map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], { padding: 60, maxZoom: 15, duration: 650 }); }
     function removeSpatialLayer(index) { const layer = spatialLayers[index]; if (!layer) return; removeSpatialLayerFromMap(layer); spatialLayers.splice(index, 1); renderSpatialLayers(); document.getElementById('spatialStatus').textContent = `ลบชั้นข้อมูล ${layer.name} แล้ว`; }
     function clearSpatialLayers(ask = true) { if (!spatialLayers.length) return; if (ask && !confirm('ล้างชั้นข้อมูลที่นำเข้าทั้งหมดหรือไม่? ขอบเขตชุมชนและข้อมูล CSV จะไม่ถูกลบ')) return; spatialLayers.forEach(removeSpatialLayerFromMap); spatialLayers = []; renderSpatialLayers(); document.getElementById('spatialStatus').textContent = 'ล้างชั้นข้อมูลที่นำเข้าแล้ว'; }
+    function clearPendingSpatialImport() {
+      spatialImportRequest++;
+      pendingSpatialImport = null;
+      document.getElementById('spatialPending').hidden = true;
+      document.getElementById('spatialPendingName').value = '';
+    }
+    function stageSpatialImport(fileName, data, settings = {}) {
+      const name = fileName.replace(/\.(geojson|json|kml|kmz)$/i, '');
+      pendingSpatialImport = { fileName, name, data: normalizeGeoJson(data), settings };
+      const counts = { areas: 0, lines: 0, points: 0 };
+      pendingSpatialImport.data.features.forEach(feature => {
+        const type = feature.geometry.type;
+        if (/Polygon/.test(type)) counts.areas++;
+        else if (/LineString/.test(type)) counts.lines++;
+        else if (/Point/.test(type)) counts.points++;
+      });
+      document.getElementById('spatialPendingFile').textContent = `ไฟล์ที่เลือก: ${fileName}`;
+      const duplicate = spatialLayers.some(layer => layer.name === name);
+      document.getElementById('spatialPendingSummary').textContent = `${pendingSpatialImport.data.features.length.toLocaleString('th-TH')} รายการ · พื้นที่ ${counts.areas} · เส้น ${counts.lines} · จุด ${counts.points}${duplicate ? ' · มีชั้นข้อมูลชื่อนี้อยู่แล้ว' : ''}`;
+      document.getElementById('spatialPendingName').value = name;
+      document.getElementById('spatialPending').hidden = false;
+      document.getElementById('spatialStatus').textContent = `อ่าน ${fileName} แล้ว · ยังไม่เพิ่มลงแผนที่ กรุณาตรวจและกดยืนยัน`;
+    }
+    function confirmSpatialImport() {
+      if (!pendingSpatialImport || (secureMode && !canEditCloud())) return;
+      const pending = pendingSpatialImport;
+      const chosenName = document.getElementById('spatialPendingName').value.trim() || pending.name;
+      const layer = addSpatialLayer(chosenName, pending.data, pending.settings);
+      clearPendingSpatialImport();
+      document.getElementById('spatialLayerDetails').open = true;
+      document.getElementById('spatialStatus').textContent = `ใช้ ${pending.fileName} บนแผนที่แล้ว · ${layer.data.features.length.toLocaleString('th-TH')} รายการ${secureMode ? ' · กด “บันทึกโครงการลง Drive” เพื่อเก็บถาวร' : ''}`;
+      fitSpatialLayer(spatialLayers.indexOf(layer));
+    }
     async function importSpatialFile(event) {
       const file = event.target.files[0]; if (!file) return;
+      clearPendingSpatialImport();
+      const requestId = spatialImportRequest;
       document.getElementById('spatialStatus').textContent = `กำลังอ่าน ${file.name}...`;
-      try { const data = await readSpatialFile(file); const layer = addSpatialLayer(file.name.replace(/\.(geojson|json|kml|kmz)$/i, ''), data); document.getElementById('spatialLayerDetails').open = true; document.getElementById('spatialStatus').textContent = `นำเข้า ${file.name} สำเร็จ · ${data.features.length.toLocaleString('th-TH')} รายการ`; fitSpatialLayer(spatialLayers.indexOf(layer)); }
-      catch (error) { console.error(error); alert(error.message || 'ไม่สามารถอ่านไฟล์ชั้นข้อมูลได้'); document.getElementById('spatialStatus').textContent = 'นำเข้าไฟล์ไม่สำเร็จ'; }
-      event.target.value = '';
+      try { const data = await readSpatialFile(file); if (requestId === spatialImportRequest && document.getElementById('tool-spatial').open) stageSpatialImport(file.name, data); }
+      catch (error) { if (requestId === spatialImportRequest) { console.error(error); alert(error.message || 'ไม่สามารถอ่านไฟล์ชั้นข้อมูลได้'); document.getElementById('spatialStatus').textContent = 'นำเข้าไฟล์ไม่สำเร็จ'; } }
+      finally { event.target.value = ''; }
     }
     async function loadSpatialExample() {
-      try { const response = await fetch('sample-spatial-layer.geojson'); if (!response.ok) throw new Error('โหลดไฟล์ตัวอย่างไม่สำเร็จ'); const data = normalizeGeoJson(await response.json()); const layer = addSpatialLayer('พื้นที่เฝ้าระวังตัวอย่าง', data, { fillColor: '#7e57c2', lineColor: '#4527a0', fillOpacity: 0.3 }); document.getElementById('spatialLayerDetails').open = true; document.getElementById('spatialStatus').textContent = `เพิ่มข้อมูลตัวอย่างแล้ว · ${data.features.length} รายการ`; fitSpatialLayer(spatialLayers.indexOf(layer)); } catch (error) { alert(error.message); }
+      clearPendingSpatialImport();
+      const requestId = spatialImportRequest;
+      try { const response = await fetch('sample-spatial-layer.geojson'); if (!response.ok) throw new Error('โหลดไฟล์ตัวอย่างไม่สำเร็จ'); const data = normalizeGeoJson(await response.json()); if (requestId === spatialImportRequest && document.getElementById('tool-spatial').open) stageSpatialImport('พื้นที่เฝ้าระวังตัวอย่าง', data, { fillColor: '#7e57c2', lineColor: '#4527a0', fillOpacity: 0.3 }); } catch (error) { if (requestId === spatialImportRequest) alert(error.message); }
     }
     function handleSpatialFeatureClick(event) {
       if (interactionMode !== 'view' || !map) return;
       const ids = spatialLayers.filter(layer => layer.visible).flatMap(spatialMapLayerIds).filter(id => map.getLayer(id)); if (!ids.length) return;
-      const feature = map.queryRenderedFeatures(event.point, { layers: ids })[0]; if (!feature) return;
-      const properties = feature.properties || {}; const title = properties.name || properties.Name || properties.NAME || 'รายละเอียดพื้นที่';
-      const rows = Object.entries(properties).filter(([, value]) => value !== null && value !== '').slice(0, 20).map(([key, value]) => `<div class="csv-popup-row"><b>${escapeHtml(key)}:</b> ${escapeHtml(typeof value === 'object' ? JSON.stringify(value) : value)}</div>`).join('');
-      new maplibregl.Popup({ maxWidth: '320px' }).setLngLat(event.lngLat).setHTML(`<div class="csv-popup"><h3>${escapeHtml(title)}</h3>${rows || '<div class="panel-note">ไม่มีรายละเอียดเพิ่มเติม</div>'}</div>`).addTo(map);
+      const seen = new Set(); const hits = [];
+      map.queryRenderedFeatures(event.point, { layers: ids }).forEach(feature => {
+        const layer = spatialLayers.find(item => spatialSourceId(item) === feature.source);
+        if (!layer) return;
+        const key = JSON.stringify([layer.id, feature.id, feature.geometry, feature.properties]);
+        if (seen.has(key)) return;
+        seen.add(key); hits.push({ layer, feature });
+      });
+      if (!hits.length) return;
+      const distinctLayers = new Set(hits.map(hit => hit.layer.id)).size;
+      const heading = hits.length > 1 ? `ตรงนี้มี ${hits.length} รายการ จาก ${distinctLayers} ชั้นข้อมูล` : `ชั้นข้อมูล: ${hits[0].layer.name}`;
+      const sections = hits.map(({ layer, feature }, index) => {
+        const properties = feature.properties || {};
+        const featureName = properties.name || properties.Name || properties.NAME || 'รายการไม่มีชื่อ';
+        const rows = Object.entries(properties).filter(([, value]) => value !== null && value !== '').slice(0, 20).map(([key, value]) => `<div class="csv-popup-row"><b>${escapeHtml(key)}:</b> ${escapeHtml(typeof value === 'object' ? JSON.stringify(value) : value)}</div>`).join('');
+        const swatchColor = /^#[0-9a-f]{6}$/i.test(layer.fillColor) ? layer.fillColor : '#2e86de';
+        return `<details class="spatial-hit" ${index === 0 ? 'open' : ''}><summary><span class="spatial-hit-swatch" style="background:${swatchColor}"></span><span>${escapeHtml(layer.name)} · ${escapeHtml(featureName)}</span></summary>${rows || '<div class="panel-note">ไม่มีรายละเอียดเพิ่มเติม</div>'}</details>`;
+      }).join('');
+      new maplibregl.Popup({ maxWidth: '390px' }).setLngLat(event.lngLat).setHTML(`<div class="csv-popup"><h3>${escapeHtml(heading)}</h3>${sections}</div>`).addTo(map);
     }
     function addDrawingLayers() {
       if (map.getSource('drawn-circles')) return;
@@ -1424,9 +1540,28 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     }
 
     function closeToolDialogs(){document.querySelectorAll('.tool-dialog[open]').forEach(dialog=>dialog.close());}
+    function makeSpatialDialogDraggable(dialog, handle) {
+      let start = null;
+      handle.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || event.target.closest('button')) return;
+        const rect = dialog.getBoundingClientRect();
+        start = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+        dialog.style.left = `${rect.left}px`; dialog.style.top = `${rect.top}px`; dialog.style.transform = 'none';
+        handle.setPointerCapture(event.pointerId); event.preventDefault();
+      });
+      handle.addEventListener('pointermove', event => {
+        if (!start) return;
+        const maxLeft = Math.max(8, innerWidth - dialog.offsetWidth - 8);
+        const maxTop = Math.max(8, innerHeight - dialog.offsetHeight - 8);
+        dialog.style.left = `${Math.min(maxLeft, Math.max(8, start.left + event.clientX - start.x))}px`;
+        dialog.style.top = `${Math.min(maxTop, Math.max(8, start.top + event.clientY - start.y))}px`;
+      });
+      const finish = event => { if (!start) return; start = null; if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId); };
+      handle.addEventListener('pointerup', finish); handle.addEventListener('pointercancel', finish);
+    }
     function openToolDialog(key){
       closeToolDialogs();document.getElementById('dataPanel').hidden=true;document.getElementById('dataBtn').textContent='📋 นำเข้า/จัดการข้อมูล';
-      const dialog=document.getElementById('tool-'+key);if(dialog)dialog.showModal();
+      const dialog=document.getElementById('tool-'+key);if(dialog){if(key==='spatial')dialog.show();else dialog.showModal();}
       if(key==='radius')updatePointList();
       if(key==='data'){renderFieldSurveys();if(secureMode&&!projectListRequest)refreshCloudProjects();}
     }
@@ -1444,6 +1579,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         const dialog=document.createElement('dialog');dialog.id='tool-'+key;dialog.className='tool-dialog';dialog.setAttribute('aria-label',title);
         const head=document.createElement('div');head.className='tool-dialog-head';
         const heading=document.createElement('h2');heading.textContent=title;
+        if(key==='spatial'){const hint=document.createElement('span');hint.className='drag-hint';hint.textContent=' ↔ ลากย้ายได้';heading.append(hint);makeSpatialDialogDraggable(dialog,head);dialog.addEventListener('close',()=>{const status=document.getElementById('spatialStatus');const unfinished=!!pendingSpatialImport||status.textContent.startsWith('กำลังอ่าน');clearPendingSpatialImport();if(unfinished)status.textContent='ยกเลิกไฟล์ที่ยังไม่ยืนยันแล้ว แผนที่ไม่เปลี่ยน';});}
         const close=document.createElement('button');close.type='button';close.textContent=key==='project'?'ข้าม / ปิด':'ปิด';close.onclick=()=>dialog.close();
         if(key==='project')dialog.addEventListener('close',()=>{document.body.classList.remove('choosing-project');if(map)map.resize();});head.append(heading,close);dialog.append(head);
         if(key==='project'){const note=document.createElement('p');note.className='panel-note';note.textContent='กรอกข้อมูลแล้วบันทึกเพื่อสร้างโครงการ หรือเปิดโครงการจากรายการด้านล่าง • ข้ามได้';dialog.append(note);}
@@ -1478,6 +1614,8 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       document.getElementById('spatialImportBtn').addEventListener('click', () => document.getElementById('spatialFile').click());
       document.getElementById('spatialExampleBtn').addEventListener('click', loadSpatialExample);
       document.getElementById('spatialFile').addEventListener('change', importSpatialFile);
+      document.getElementById('spatialConfirmBtn').addEventListener('click', confirmSpatialImport);
+      document.getElementById('spatialCancelPendingBtn').addEventListener('click', () => { clearPendingSpatialImport(); document.getElementById('spatialStatus').textContent = 'ยกเลิกไฟล์ที่เลือกแล้ว แผนที่ยังไม่เปลี่ยน'; });
       document.getElementById('spatialClearBtn').addEventListener('click', () => clearSpatialLayers(true));
       document.getElementById('csvFile').addEventListener('change', importCsvFile);
       document.getElementById('csvLatColumn').addEventListener('change', event => { csvLatColumn = event.target.value; renderCsvRecords(); });
@@ -1498,6 +1636,8 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       refreshCsvHistory();
       document.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
+        const spatialDialog = document.getElementById('tool-spatial');
+        if (spatialDialog.open) { spatialDialog.close(); return; }
         const donationModal = document.getElementById('donationModal');
         if (donationModal && !donationModal.hidden) {
           closeDonationModal();
