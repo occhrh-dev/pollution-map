@@ -254,6 +254,22 @@
     #communityBlock .select2-selection__rendered { height: 28px; }
     #communityBlock .selection-count { font-size: 10px; padding: 3px 6px; }
     @media (max-width: 760px) { #controls { max-height: 38vh; } #communityBlock { flex-basis: 100%; } }
+    #controls.community-list-open { max-height: 55vh; }
+    #communityBlock.community-expanded { flex-basis: 100%; }
+    #communityBlock.community-expanded .select2-container { order: 2; flex: 1 1 100%; width: 100% !important; max-width: 100%; }
+    #communityBlock.community-expanded .select2-selection--multiple { height: auto !important; min-height: 60px !important; max-height: none !important; overflow: visible; }
+    #communityBlock.community-expanded .select2-selection__rendered { height: auto !important; min-height: 58px; max-height: min(32vh, 260px); flex-wrap: wrap; align-content: flex-start; overflow-x: hidden; overflow-y: auto; }
+    #communityBlock.community-expanded .select2-selection__choice { display: inline-flex; align-items: center; max-width: min(260px, 100%); min-height: 26px; margin: 4px 4px 0 0; padding: 2px 7px; white-space: normal; font-size: 12px; }
+    #communityBlock.community-expanded .select2-selection__choice__remove { align-self: stretch; min-width: 20px; margin-right: 5px; color: #aa251e; font-size: 16px; }
+    #symbolKind { display: none; }
+    #symbolPickerBtn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #bac8d2; border-radius: 7px !important; color: var(--navy); background: #fff; }
+    #symbolPickerBtn svg, .symbol-choice svg { display: block; width: 23px; height: 23px; flex: 0 0 23px; }
+    #symbolPicker { position: fixed; inset: auto; margin: 0; width: min(335px, calc(100vw - 16px)); max-height: min(340px, 60vh); overflow: auto; padding: 10px; border: 1px solid #b9cbd5; border-radius: 10px; color: var(--navy); background: #fff; box-shadow: 0 8px 24px #0003; }
+    #symbolPicker:not(:popover-open) { display: none; }
+    #symbolPicker .symbol-picker-title { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+    .symbol-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    #symbolPicker .symbol-choice { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 6px 8px; border: 1px solid #d4e1e6; border-radius: 7px; color: var(--navy); background: #fff; text-align: left; font-size: 12px; }
+    #symbolPicker .symbol-choice[aria-pressed="true"] { border-color: var(--teal); background: #e6f5f3; }
     header { display: block; min-height: 0; padding: 0; }
     .app-bar { min-height: 39px; padding: 5px 12px; display: flex; align-items: center; gap: 10px; }
     .app-bar .title-wrap { min-width: 0; flex: 0 1 auto; }
@@ -337,6 +353,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       <label for="communitySelect">ชุมชน</label>
       <select id="communitySelect" multiple></select>
       <span id="communitySelectionCount" class="selection-count">เลือก 0 ชุมชน</span>
+      <button type="button" id="communityExpandBtn" class="outline" aria-expanded="false" aria-controls="communityBlock">ขยายรายชื่อ</button>
       <button type="button" onclick="openCommunitySettings()">เปลี่ยนผังชุมชน</button>
       <button type="button" onclick="showAllCommunities()">เลือกทั้งหมด</button>
       <button type="button" id="clearCommunities">ล้าง</button>
@@ -350,6 +367,8 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       <button type="button" class="danger" onclick="clearMap()">ล้างสิ่งที่วาด</button>
       <span id="symbolControls" style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap">
       <select id="symbolKind" aria-label="ชนิดสัญลักษณ์"></select>
+      <button id="symbolPickerBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="symbolPicker"><span id="symbolPickerIcon" aria-hidden="true"></span><span id="symbolPickerLabel">เลือกสัญลักษณ์</span> ▾</button>
+      <div id="symbolPicker" popover aria-label="เลือกรูปสัญลักษณ์"></div>
       <button type="button" onclick="addArrow()">เพิ่มสัญลักษณ์</button>
       <input id="symbolColor" type="color" value="#87cefa" aria-label="สีสัญลักษณ์">
       <button id="symbolDelete" type="button" disabled>ลบสัญลักษณ์ที่เลือก</button>
@@ -532,7 +551,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
   <script src="https://accounts.google.com/gsi/client?hl=th" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="map-image-export.js?v=layout-1"></script>
-  <script src="symbol-tools.js?v=1"></script>
+  <script src="symbol-tools.js?v=2"></script>
   <script src="location-link.js?v=1"></script>
   <script src="config.js"></script>
   <script src="auth-client.js?v=projects-20260925"></script>
@@ -1071,11 +1090,25 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       if (source) source.setData({ type: 'FeatureCollection', features: circleFeatures });
     }
     function selectedCommunityNames() { return $('#communitySelect').val() || []; }
+    function toggleCommunityList() {
+      const block = document.getElementById('communityBlock');
+      const expanded = block.classList.toggle('community-expanded');
+      document.getElementById('controls').classList.toggle('community-list-open', expanded);
+      const button = document.getElementById('communityExpandBtn');
+      button.textContent = expanded ? 'ย่อรายชื่อ' : 'ขยายรายชื่อ';
+      button.setAttribute('aria-expanded', String(expanded));
+      if (expanded) block.querySelector('.select2-selection__rendered')?.scrollTo(0, 0);
+      if (map) map.resize();
+    }
     function updateCommunitySelectionCount() {
       const count = selectedCommunityNames().length;
       const total = communityNames.length;
       const label = document.getElementById('communitySelectionCount');
       if (label) label.textContent = count === total && total ? `เลือกทั้งหมด ${total} ชุมชน` : `เลือก ${count} จาก ${total} ชุมชน`;
+      document.querySelectorAll('#communityBlock .select2-selection__choice').forEach(choice => {
+        const remove = choice.querySelector('.select2-selection__choice__remove');
+        if (remove) remove.title = remove.ariaLabel = `ลบ ${choice.title} ออกจากที่เลือก`;
+      });
     }
     function updateCommunityVisibility() {
       if (!map || !map.getLayer('community-fill')) return;
@@ -1098,7 +1131,8 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       });
       $('#communitySelect').select2({
         placeholder: 'ค้นหาชุมชน…', width: '100%', closeOnSelect: false
-      }).on('change', () => { updateCommunityVisibility(); updateCommunitySelectionCount(); });
+      }).on('change', () => { updateCommunityVisibility(); updateCommunitySelectionCount(); })
+        .on('select2:unselect', () => setTimeout(() => $('#communitySelect').select2('close'), 0));
       updateCommunitySelectionCount();
     }
     function boundedRead(promise,ms){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('โหลดผังใช้เวลานานเกินไป')),ms);promise.then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});});}
@@ -1642,6 +1676,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       document.getElementById('communityReset').addEventListener('click', resetCommunityFile);
       document.getElementById('showPolygonToggle').addEventListener('change', updateCommunityVisibility);
       document.getElementById('showAllLayoutsToggle').addEventListener('change', updateCommunityVisibility);
+      document.getElementById('communityExpandBtn').addEventListener('click', toggleCommunityList);
       document.getElementById('clearCommunities').addEventListener('click', () => {
         $('#communitySelect').val(null).trigger('change');
       });
