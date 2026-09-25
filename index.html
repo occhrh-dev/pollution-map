@@ -230,7 +230,7 @@
     #controls input, #controls select { font-size: 12px; }
     #controls input[type="number"] { width: 84px; padding: 4px 6px; }
     #controls input[type="color"] { width: 28px; height: 24px; }
-    #interactionMode { min-width: 100px; }
+#interactionMode { min-width: 100px; }
     #communityBlock { flex-basis: 530px; }
     #communityBlock .select2-container { min-width: min(170px, 100%); flex-basis: 190px; font-size: 12px; }
     #communityBlock .select2-selection--multiple { height: 30px; min-height: 30px; max-height: 30px; }
@@ -241,6 +241,10 @@
 #quickSaveStatus{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:#173347;color:white;border-radius:10px;padding:12px 18px;max-width:min(600px,90vw);box-shadow:0 4px 20px #0003;font-size:14px;pointer-events:none}
 .tool-dialog{width:min(580px,94vw);max-height:88vh;overflow:auto;border:1px solid #d6e0e5;border-radius:16px;padding:20px;background:white;color:#173347}
 .tool-dialog::backdrop{background:#12334780}.tool-dialog h2{font-size:20px;margin:0}.tool-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:14px}.tool-dialog .panel-section>summary{display:none}.tool-dialog .panel-section{border:0}.tool-launch{display:block;width:100%;text-align:left;margin:8px 0;padding:12px}.tool-dialog button{cursor:pointer}.tool-dialog .panel-input,.tool-dialog .panel-select{width:100%}
+.tool-launch strong,.tool-launch small{display:block}.tool-launch strong{font-size:14px}.tool-launch small{margin-top:4px;font-size:12px;line-height:1.45;font-weight:400;opacity:.9}
+#tool-data .panel-section{border:1px solid var(--line)}#tool-data .panel-section>summary{display:list-item;font-size:14px}#tool-data .panel-section>.section-body{padding-top:2px}
+.radius-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.radius-fields .panel-label{margin-top:4px}.radius-fields input{box-sizing:border-box;width:100%}.radius-fields input[type=color]{height:38px}
+#drawingBanner{position:absolute;top:12px;left:12px;z-index:11;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:calc(100% - 24px);padding:8px 10px;border-radius:10px;background:#173347;color:white;box-shadow:0 3px 12px #0004;font-size:12px}#drawingBanner[hidden]{display:none}#drawingBanner button{padding:6px 9px;font-size:12px}
 #activeProjectBar{display:flex;align-items:baseline;gap:10px;padding:7px 14px;background:#eef7f6;border-bottom:1px solid #cbdedc;color:#173347;flex-shrink:0;min-width:0}
 #activeProjectBar>span{font-size:11px;color:#54716f;flex-shrink:0}
 #activeProjectTitle{font-size:14px;overflow-wrap:anywhere;line-height:1.4}
@@ -268,25 +272,6 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
   </header>
   <div id="quickSaveStatus" role="status" hidden></div>
   <section id="controls" aria-label="เครื่องมือแผนที่">
-    <div class="control-group">
-      <label for="interactionMode">โหมดแผนที่</label>
-      <button type="button" id="interactionMode" class="secondary" onclick="toggleInteractionMode()">ดูข้อมูล</button>
-    </div>
-    <div class="control-group">
-      <label for="radiusInput">รัศมี (เมตร)</label>
-      <input type="number" id="radiusInput" value="1000" min="100" step="100">
-      <label for="colorInput">สี</label>
-      <input type="color" id="colorInput" value="#ff0000">
-      <label><input type="checkbox" id="fillToggle" checked> เติมสี</label>
-    </div>
-    <div class="control-group">
-      <label for="latInput">ละติจูด</label>
-      <input type="number" id="latInput" step="0.000001" placeholder="12.738">
-      <label for="lngInput">ลองจิจูด</label>
-      <input type="number" id="lngInput" step="0.000001" placeholder="101.185">
-      <button type="button" onclick="addPointFromInput()">ลงจุด</button>
-      <button id="locationLinkBtn" type="button" onclick="openLocationLink()">วางลิงก์ตำแหน่ง</button>
-    </div>
     <div class="control-group" id="communityBlock">
       <label for="communitySelect">ชุมชน</label>
       <select id="communitySelect" multiple></select>
@@ -316,6 +301,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
   <div id="bootStatus" role="status" style="padding:12px;background:#fff3d9;color:#644a18">กำลังเปิดระบบ…</div>
   <main id="mapwrap">
     <div id="map" aria-label="แผนที่"></div>
+    <div id="drawingBanner" hidden role="status">กำลังวางวงรัศมี: คลิกบนแผนที่เพื่อเพิ่มวง <button type="button" onclick="openToolDialog('data');document.getElementById('radiusSection').open=true">ตั้งค่าวง</button><button type="button" class="secondary" onclick="toggleInteractionMode()">เสร็จสิ้น</button></div>
     <section id="dataPanel" hidden aria-label="จัดการข้อมูลแผนที่">
       <h2>จัดการข้อมูลแผนที่</h2>
       <div class="save-guide" id="cloudSaveGuide" hidden>
@@ -369,9 +355,9 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       </details>
       <div class="panel-note" id="agencyIsolationNote" hidden></div>
       <details id="spatialSection" class="panel-section">
-        <summary>ชั้นข้อมูลพื้นที่ (GeoJSON / KML / KMZ)</summary>
+        <summary>ขอบเขตและชั้นข้อมูลแผนที่ (GeoJSON / KML / KMZ)</summary>
         <div class="section-body">
-        <div class="panel-note">รองรับ GeoJSON, JSON, KML และ KMZ · ไฟล์จะถูกเพิ่มเป็นชั้นใหม่โดยไม่ลบขอบเขตชุมชนเดิม</div>
+        <div class="panel-note">นำไฟล์ขอบเขต เส้นทาง หรือจุดมาแสดงซ้อนบนแผนที่ และปรับสีหรือซ่อนแต่ละชั้นได้ · รองรับ GeoJSON, JSON, KML และ KMZ · ไม่ลบผังชุมชนเดิม</div>
         <div class="panel-actions">
           <button type="button" id="spatialImportBtn">นำเข้าชั้นข้อมูล</button>
           <button type="button" class="outline" id="spatialExampleBtn">ลองข้อมูลตัวอย่าง</button>
@@ -386,7 +372,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         </div>
       </details>
       <details id="csvSection" class="panel-section">
-        <summary>จุดข้อมูลจาก CSV</summary>
+        <summary>นำเข้าจุดจาก CSV หรือสมุดลงพื้นที่</summary>
         <div class="section-body">
         <section class="project-card"><h3>ชุดสำรวจจากการลงพื้นที่</h3><p class="panel-note">เลือกข้อมูลที่กดส่งเข้าระบบหลักจากสมุดลงพื้นที่</p><select id="fieldSurveySelect" class="panel-select"><option value="">เลือกชุดสำรวจที่ส่งไว้</option></select><div class="panel-actions"><button onclick="refreshCloudProjects()" type="button">โหลดชุดสำรวจ</button><button id="fieldSurveyImport" onclick="importFieldSurvey()" type="button">นำเข้าชุดสำรวจ</button></div><p id="fieldSurveyStatus" class="panel-note" role="status"></p></section><label class="panel-label" for="csvHistorySelect">ประวัติไฟล์ที่เคยนำเข้า</label>
         <select class="panel-select" id="csvHistorySelect" disabled><option value="">ยังไม่มีประวัติ</option></select>
@@ -425,12 +411,29 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         </section>
         </div>
       </details>
+      <details id="radiusSection" class="panel-section">
+        <summary>สร้างวงรัศมีและวางจุดเอง</summary>
+        <div class="section-body">
+          <p class="panel-note">กำหนดขนาดและสีวง แล้วคลิกบนแผนที่ หรือกรอกพิกัด/วางลิงก์ตำแหน่ง</p>
+          <div class="radius-fields">
+            <label class="panel-label" for="radiusInput">รัศมี (เมตร)<input class="panel-input" type="number" id="radiusInput" value="1000" min="100" step="100"></label>
+            <label class="panel-label" for="colorInput">สีวง<input type="color" id="colorInput" value="#ff0000"></label>
+          </div>
+          <label class="panel-label"><input type="checkbox" id="fillToggle" checked> เติมสีภายในวง</label>
+          <div class="panel-actions"><button type="button" id="interactionMode" onclick="startRadiusDrawing()">คลิกแผนที่เพื่อวางวงรัศมี</button></div>
+          <div class="radius-fields">
+            <label class="panel-label" for="latInput">ละติจูด<input class="panel-input" type="number" id="latInput" step="0.000001" placeholder="12.738"></label>
+            <label class="panel-label" for="lngInput">ลองจิจูด<input class="panel-input" type="number" id="lngInput" step="0.000001" placeholder="101.185"></label>
+          </div>
+          <div class="panel-actions"><button type="button" onclick="addPointFromInput()">วางวงตามพิกัด</button><button id="locationLinkBtn" type="button" class="outline" onclick="closeToolDialogs();openLocationLink()">วางลิงก์ตำแหน่ง</button></div>
+        </div>
+      </details>
       <details id="pointList" class="panel-section">
-        <summary id="pointListSummary">วงรัศมีและจุดที่วางเอง (0)</summary>
+        <summary id="pointListSummary">รายการวงรัศมีที่วางเอง (0)</summary>
         <div class="section-body"><div id="pointListItems">ยังไม่มีจุด</div></div>
       </details>
     </section>
-    <div id="hint">โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · กด “โหมดวางวงรัศมี” หากต้องการสร้างวงใหม่</div>
+    <div id="hint">โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · สร้างวงรัศมีได้ที่ “จัดการข้อมูล”</div>
   </main>
   <section id="donationModal" hidden role="dialog" aria-modal="true" aria-labelledby="donationTitle">
     <div class="donation-dialog">
@@ -452,7 +455,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
   <script src="symbol-tools.js?v=1"></script>
   <script src="location-link.js?v=1"></script>
   <script src="config.js"></script>
-  <script src="auth-client.js?v=save-recovery-2"></script>
+  <script src="auth-client.js?v=projects-20260925"></script>
   <script>
     const MAPTILER_KEY = 'XOw46Ht6gxyHhSCkLXPf';
     const emptyCommunityData = () => ({ type: 'FeatureCollection', features: [] });
@@ -605,7 +608,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
           pendingCreatedProject={name,fileId:file.id,fileName:file.name,attempted:false}; rememberPendingProject();
         }
         status.textContent='ไฟล์ถูกเก็บบน Drive แล้ว กำลังเพิ่มเข้ารายการโครงการ…';
-        const existing=pendingCreatedProject.attempted?(await PollutionMapAuth.api('listProjects',{agencyId:secureOrganizationId})||[]).find(p=>p.fileId===pendingCreatedProject.fileId):null;
+        const existing=pendingCreatedProject.attempted?(await PollutionMapAuth.listProjects(secureOrganizationId)).find(p=>p.fileId===pendingCreatedProject.fileId):null;
         pendingCreatedProject.attempted=true;rememberPendingProject();
         if(!existing)await PollutionMapAuth.api('saveProject',{agencyId:secureOrganizationId,project:{id:'',...pendingCreatedProject}});
         pendingCreatedProject=null;rememberPendingProject();projectPageIndex=0;refreshCloudProjects();
@@ -621,7 +624,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       projectListRequest=(async()=>{
         projectListState='loading';renderProjectCards();renderFieldSurveys();
         try{
-          cloudProjects=await PollutionMapAuth.api('listProjects',{agencyId:secureOrganizationId})||[];
+          cloudProjects=await PollutionMapAuth.listProjects(secureOrganizationId);
           projectListState='ready';projectListError='';
           const select=document.getElementById('cloudProjectSelect');select.replaceChildren(new Option('— โครงการใหม่ —',''));
           cloudProjects.forEach(p=>select.add(new Option(p.name,p.id)));select.value=selectId||'';
@@ -1038,13 +1041,15 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       updatePointList();
     }
     function addPointFromInput() {
-      const lat = Number(document.getElementById('latInput').value);
-      const lng = Number(document.getElementById('lngInput').value);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+      const latText = document.getElementById('latInput').value.trim();
+      const lngText = document.getElementById('lngInput').value.trim();
+      const lat = Number(latText); const lng = Number(lngText);
+      if (!latText || !lngText || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
         alert('กรุณากรอกพิกัดให้ถูกต้อง'); return;
       }
       drawCircle(lng, lat);
       map.easeTo({ center: [lng, lat], duration: 500 });
+      closeToolDialogs();
     }
     function undoLast() {
       const item = drawItems.pop();
@@ -1228,7 +1233,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       document.getElementById('csvRadiusPointName').textContent = `${title} · ${coordinates[1]}, ${coordinates[0]}`;
       renderRadiusSetRows(readRadiusSet());
       document.getElementById('csvRadiusFill').checked = document.getElementById('fillToggle').checked;
-      openToolDialog('csv');
+      openToolDialog('data'); document.getElementById('csvSection').open = true;
       document.getElementById('csvRadiusPanel').hidden = false; document.getElementById('csvRadiusPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     function closeCsvRadiusCreator() { radiusCsvIndex = -1; document.getElementById('csvRadiusPanel').hidden = true; }
@@ -1242,7 +1247,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       closeCsvRadiusCreator(); document.getElementById('csvStatus').textContent = `สร้างชุดวงรัศมี ${radiusSet.length} วงจากจุด CSV แล้ว`;
     }
     function openCsvEditor(index) {
-      const record = csvRecords[index]; if (!record) return; openToolDialog('csv'); editingCsvIndex = index;
+      const record = csvRecords[index]; if (!record) return; openToolDialog('data'); document.getElementById('csvSection').open = true; editingCsvIndex = index;
       closeCsvRadiusCreator();
       csvListExpanded = false; updateCsvListToggle();
       document.getElementById('csvMarkerShape').value = record.__markerShape || 'pin';
@@ -1275,15 +1280,20 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       interactionMode = interactionMode === 'view' ? 'draw' : 'view';
       const button = document.getElementById('interactionMode'); const hint = document.getElementById('hint');
       const drawing = interactionMode === 'draw';
-      button.textContent = drawing ? 'โหมดวางวงรัศมี' : 'ดูข้อมูล';
-      button.classList.toggle('secondary', !drawing); button.classList.toggle('danger', drawing);
-      hint.textContent = drawing ? 'โหมดวางวงรัศมี: คลิกบนแผนที่เพื่อสร้างวง · กดปุ่มเดิมเพื่อกลับไปดูข้อมูล' : 'โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · กด “โหมดวางวงรัศมี” หากต้องการสร้างวงใหม่';
+      button.textContent = drawing ? 'หยุดวางวงรัศมี' : 'คลิกแผนที่เพื่อวางวงรัศมี';
+      button.classList.toggle('danger', drawing);
+      document.getElementById('drawingBanner').hidden = !drawing;
+      hint.textContent = drawing ? 'คลิกบนแผนที่เพื่อวางวงรัศมี · กด “เสร็จสิ้น” เมื่อวางครบ' : 'โหมดดูข้อมูล: คลิกจุดเพื่อเปิดรายละเอียด · สร้างวงรัศมีได้ที่ “จัดการข้อมูล”';
+    }
+    function startRadiusDrawing() {
+      toggleInteractionMode();
+      if (interactionMode === 'draw') closeToolDialogs();
     }
     function updatePointList() {
       const list = document.getElementById('pointListItems');
       if (!list) return;
       const summary = document.getElementById('pointListSummary');
-      if (summary) summary.textContent = `วงรัศมีและจุดที่วางเอง (${circleFeatures.length.toLocaleString('th-TH')})`;
+      if (summary) summary.textContent = `รายการวงรัศมีที่วางเอง (${circleFeatures.length.toLocaleString('th-TH')})`;
       if (!circleFeatures.length) { list.textContent = 'ยังไม่มีจุด'; return; }
       list.innerHTML = circleFeatures.map((feature, index) => {
         const p = feature.properties || {};
@@ -1378,18 +1388,16 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     function openToolDialog(key){
       closeToolDialogs();document.getElementById('dataPanel').hidden=true;document.getElementById('dataBtn').textContent='จัดการข้อมูล';
       const dialog=document.getElementById('tool-'+key);if(dialog)dialog.showModal();
-      if(key==='points')updatePointList();
-      if(key==='csv'){renderFieldSurveys();if(secureMode&&!projectListRequest)refreshCloudProjects();}
+      if(key==='data'){updatePointList();renderFieldSurveys();if(secureMode&&!projectListRequest)refreshCloudProjects();}
     }
     function setupToolDialogs(){
       const panel=document.getElementById('dataPanel');
       const groups=[
         ['project','โครงการ',['.project-card','#activeProjectFields','#cloudSection','#cloudSaveGuide','#agencyIsolationNote']],
         ['community','เปลี่ยนผังชุมชน',['#communitySettings']],
-        ['csv','จุดข้อมูล CSV',['#csvSection']],
-        ['spatial','ชั้นข้อมูลพื้นที่',['#spatialSection']],
-        ['points','วงรัศมีและจุดที่วางเอง',['#pointList']],
-        ['backup','สำรองและย้ายข้อมูล',['#localBackupSection']]
+        ['data','นำเข้าและจัดการจุดข้อมูล',['#csvSection','#radiusSection','#pointList'],'นำเข้าจุดจาก CSV หรือสมุดลงพื้นที่ สร้างวงรัศมี และดูรายการจุดที่วางเอง'],
+        ['spatial','ขอบเขตและชั้นข้อมูลแผนที่',['#spatialSection'],'นำไฟล์ GeoJSON, KML หรือ KMZ มาแสดงเป็นขอบเขต เส้น หรือจุดบนแผนที่'],
+        ['backup','สำรองและย้ายข้อมูล',['#localBackupSection'],'เก็บงานในเบราว์เซอร์หรือไฟล์ JSON เพื่อสำรองและย้ายเครื่อง']
       ];
       groups.forEach(([key,title,selectors])=>{
         const dialog=document.createElement('dialog');dialog.id='tool-'+key;dialog.className='tool-dialog';dialog.setAttribute('aria-label',title);
@@ -1397,13 +1405,13 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         const heading=document.createElement('h2');heading.textContent=title;
         const close=document.createElement('button');close.type='button';close.textContent=key==='project'?'ข้าม / ปิด':'ปิด';close.onclick=()=>dialog.close();
         if(key==='project')dialog.addEventListener('close',()=>{document.body.classList.remove('choosing-project');if(map)map.resize();});head.append(heading,close);dialog.append(head);
-        if(key==='project'){const note=document.createElement('p');note.className='panel-note';note.textContent='กรอกข้อมูลแล้วบันทึกเพื่อสร้างโครงการ หรือเปิดโครงการจากรายการด้านล่าง • ข้ามได้';dialog.append(note);}
-        selectors.forEach(selector=>{const node=panel.querySelector(selector);if(node){if(node.tagName==='DETAILS')node.open=true;dialog.append(node);}});
+        if(key==='project'||key==='data'){const note=document.createElement('p');note.className='panel-note';note.textContent=key==='project'?'กรอกข้อมูลแล้วบันทึกเพื่อสร้างโครงการ หรือเปิดโครงการจากรายการด้านล่าง • ข้ามได้':'เลือกนำเข้าจุด สร้างวงรัศมี หรือดูรายการวงที่วางไว้จากหัวข้อด้านล่าง';dialog.append(note);}
+        selectors.forEach(selector=>{const node=panel.querySelector(selector);if(node){if(node.tagName==='DETAILS')node.open=key!=='data';dialog.append(node);}});
         document.body.append(dialog);
       });
       document.getElementById('createProjectBtn').disabled = !secureMode;
       panel.replaceChildren();const title=document.createElement('h2');title.textContent='เลือกข้อมูลที่ต้องการจัดการ';panel.append(title);
-      groups.filter(([key])=>!['project','community'].includes(key)).forEach(([key,title])=>{const button=document.createElement('button');button.type='button';button.className='tool-launch';button.textContent=title;button.onclick=()=>openToolDialog(key);panel.append(button);});
+      groups.filter(([key])=>!['project','community'].includes(key)).forEach(([key,title,,description])=>{const button=document.createElement('button');button.type='button';button.className='tool-launch';const name=document.createElement('strong');name.textContent=title;const detail=document.createElement('small');detail.textContent=description;button.append(name,detail);button.onclick=()=>openToolDialog(key);panel.append(button);});
     }
 
     function initializeControls() {
@@ -1468,7 +1476,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
           usingFallback = true;
           currentBase = 'streets';
           document.getElementById('baseBtn').textContent = '🛰️ ดาวเทียม';
-          document.getElementById('hint').textContent = 'ใช้แผนที่ถนนสำรอง OpenStreetMap · คลิกหมุดเพื่อดูข้อมูล หรือเลือกโหมดวางวงรัศมี';
+          document.getElementById('hint').textContent = 'ใช้แผนที่ถนนสำรอง OpenStreetMap · คลิกหมุดเพื่อดูข้อมูล หรือสร้างวงรัศมีที่ “จัดการข้อมูล”';
           map.setStyle(fallbackStreetStyle());
         }
       });
@@ -1482,7 +1490,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         addAllSpatialLayers();
         if (secureMode) {
           const requestedSurvey=new URLSearchParams(location.search).get('survey');
-          if(requestedSurvey){await refreshCloudProjects();openToolDialog('csv');document.getElementById('fieldSurveySelect').value=requestedSurvey;}
+          if(requestedSurvey){await refreshCloudProjects();openToolDialog('data');document.getElementById('csvSection').open=true;document.getElementById('fieldSurveySelect').value=requestedSurvey;}
           // Restore local map only for a return from this account's field notebook.
           if(returningMap){applyMapState(returningMap.state);cloudProjectId=returningMap.projectId||'';renderProjectCards();sessionStorage.removeItem(mapReturnKey());returningMap=null;}
         } else if (demoAgency) {
