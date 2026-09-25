@@ -1041,9 +1041,10 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       updatePointList();
     }
     function addPointFromInput() {
-      const lat = Number(document.getElementById('latInput').value);
-      const lng = Number(document.getElementById('lngInput').value);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+      const latText = document.getElementById('latInput').value.trim();
+      const lngText = document.getElementById('lngInput').value.trim();
+      const lat = Number(latText); const lng = Number(lngText);
+      if (!latText || !lngText || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
         alert('กรุณากรอกพิกัดให้ถูกต้อง'); return;
       }
       drawCircle(lng, lat);
