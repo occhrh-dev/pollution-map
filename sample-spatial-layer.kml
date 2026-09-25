@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>ตัวอย่างชั้นข้อมูลแผนที่</name>
+    <Placemark>
+      <name>พื้นที่เฝ้าระวัง A</name>
+      <description>ตัวอย่างขอบเขตพื้นที่ จ.ระยอง</description>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>101.165,12.728,0 101.195,12.728,0 101.195,12.748,0 101.165,12.748,0 101.165,12.728,0</coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+    <Placemark>
+      <name>จุดตรวจวัดตัวอย่าง</name>
+      <description>ตัวอย่างจุดภายในพื้นที่เฝ้าระวัง</description>
+      <Point>
+        <coordinates>101.18,12.738,0</coordinates>
+      </Point>
+    </Placemark>
+  </Document>
+</kml>
