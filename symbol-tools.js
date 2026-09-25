@@ -10,6 +10,19 @@ const SymbolTools = (() => {
   };
   let selected = null;
   const number = (v,fallback) => Number.isFinite(Number(v)) ? Number(v) : fallback;
+  function sampleSvg(kind, color) {
+    return `<svg viewBox="0 0 100 100" aria-hidden="true"><g fill="${color}" stroke="#16324a" stroke-width="5">${shapes[kind][1]}</g></svg>`;
+  }
+  function renderPicker() {
+    const kind = document.getElementById('symbolKind').value;
+    const color = document.getElementById('symbolColor').value;
+    document.getElementById('symbolPickerIcon').innerHTML = sampleSvg(kind, color);
+    document.getElementById('symbolPickerLabel').textContent = `รูป: ${shapes[kind][0]}`;
+    document.querySelectorAll('#symbolPicker .symbol-choice').forEach(button => {
+      button.querySelector('.symbol-choice-icon').innerHTML = sampleSvg(button.dataset.kind, color);
+      button.setAttribute('aria-pressed', String(button.dataset.kind === kind));
+    });
+  }
   function select(el) {
     document.querySelectorAll('.map-symbol.selected').forEach(item=>item.classList.remove('selected'));
     selected=el; selectedArrow=el;
@@ -85,7 +98,25 @@ const SymbolTools = (() => {
       .symbol-corner{cursor:nwse-resize}.symbol-angle{position:absolute;left:100%;top:-30px;background:white;color:#16324a;font:12px sans-serif}
     `;document.head.appendChild(style);
     document.getElementById('symbolKind').innerHTML=Object.entries(shapes).map(([id,item])=>'<option value="'+id+'">'+item[0]+'</option>').join('');
-    document.getElementById('symbolColor').addEventListener('input',event=>{if(selected?.isConnected){selected.dataset.color=event.target.value;paint(selected);}});
+    const picker=document.getElementById('symbolPicker');
+    picker.innerHTML='<p class="symbol-picker-title">เลือกรูปสัญลักษณ์ที่จะวางบนแผนที่</p><div class="symbol-choice-grid">'+Object.entries(shapes).map(([id,item])=>`<button type="button" class="symbol-choice" data-kind="${id}"><span class="symbol-choice-icon"></span><span>${item[0]}</span></button>`).join('')+'</div>';
+    const pickerButton=document.getElementById('symbolPickerBtn');
+    pickerButton.addEventListener('click',()=>{
+      if(window.jQuery && jQuery('#communitySelect').data('select2'))jQuery('#communitySelect').select2('close');
+      if(picker.matches(':popover-open')){picker.hidePopover();return;}
+      const rect=pickerButton.getBoundingClientRect();
+      picker.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-335-8))+'px';
+      picker.style.top=(rect.bottom+340>window.innerHeight?Math.max(8,rect.top-346):rect.bottom+6)+'px';
+      picker.showPopover();
+    });
+    picker.addEventListener('toggle',()=>pickerButton.setAttribute('aria-expanded',String(picker.matches(':popover-open'))));
+    picker.addEventListener('click',event=>{
+      const choice=event.target.closest('.symbol-choice');if(!choice)return;
+      document.getElementById('symbolKind').value=choice.dataset.kind;
+      renderPicker();picker.hidePopover();
+    });
+    document.getElementById('symbolColor').addEventListener('input',event=>{if(selected?.isConnected){selected.dataset.color=event.target.value;paint(selected);}renderPicker();});
+    renderPicker();
     document.getElementById('symbolDelete').onclick=remove;
     document.addEventListener('pointerdown',e=>{if(!e.target.closest('.map-symbol')&&!e.target.closest('#symbolControls'))select(null);});
     document.addEventListener('keydown',e=>{
