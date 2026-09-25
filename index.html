@@ -10,7 +10,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
   <style>
     :root {
       --navy: #16324a;
@@ -63,22 +62,9 @@
     .control-group input[type="number"] { width: 98px; }
     .control-group input[type="color"] { width: 36px; height: 28px; padding: 1px; border: 0; }
     input[type="number"] { padding: 6px 7px; border: 1px solid #bac8d2; border-radius: 6px; background: #fff; }
-    #communityBlock { flex: 1 1 420px; min-width: 0; }
-    #communitySelect { width: 100%; }
-    .select2-container { min-width: 220px; flex: 1 1 260px; }
-    .select2-container--default .select2-selection--multiple {
-      height: 36px; min-height: 36px; max-height: 36px; overflow: hidden; border-color: #bac8d2;
-    }
-    #communityBlock .select2-selection__rendered {
-      height: 34px; display: flex; align-items: center; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-      scrollbar-width: thin;
-    }
-    #communityBlock .select2-selection__choice { flex: 0 0 auto; margin-top: 3px; }
-    #communityBlock .select2-search--inline { flex: 0 0 115px; }
-    .selection-count {
-      flex: 0 0 auto; padding: 4px 8px; border-radius: 12px; color: var(--navy);
-      background: #dceced; font-size: 11px; font-weight: 700; white-space: nowrap;
-    }
+    #communityBlock { flex: 0 1 auto; min-width: 0; }
+    #communitySelect { display: none; }
+    #communitySelectionCount { color: #075e5c; background: #e2f4f1; border: 1px solid #9ccfcc; font-weight: 700; }
     #mapwrap { position: relative; flex: 1; min-height: 0; }
     #map { position: absolute; inset: 0; }
     #dataPanel {
@@ -233,8 +219,7 @@
     #controls { flex-shrink: 0; max-height: 42vh; overflow-y: auto; }
     #controls .control-group { min-width: 0; max-width: 100%; flex-wrap: wrap; }
     #controls button { flex-shrink: 0; white-space: nowrap; }
-    #communityBlock { flex-basis: 620px; }
-    #communityBlock .select2-container { min-width: min(220px, 100%); max-width: 100%; }
+    #communityBlock { flex-basis: auto; }
     #symbolControls { min-width: 0; max-width: 100%; }
 
     /* Compact toolbar leaves more room for map work. */
@@ -248,19 +233,8 @@
     #controls input[type="number"] { width: 84px; padding: 4px 6px; }
     #controls input[type="color"] { width: 28px; height: 24px; }
 #interactionMode { min-width: 100px; }
-    #communityBlock { flex-basis: 530px; }
-    #communityBlock .select2-container { min-width: min(170px, 100%); flex-basis: 190px; font-size: 12px; }
-    #communityBlock .select2-selection--multiple { height: 30px; min-height: 30px; max-height: 30px; }
-    #communityBlock .select2-selection__rendered { height: 28px; }
-    #communityBlock .selection-count { font-size: 10px; padding: 3px 6px; }
+    #communityBlock { flex-basis: auto; }
     @media (max-width: 760px) { #controls { max-height: 38vh; } #communityBlock { flex-basis: 100%; } }
-    #controls.community-list-open { max-height: 55vh; }
-    #communityBlock.community-expanded { flex-basis: 100%; }
-    #communityBlock.community-expanded .select2-container { order: 2; flex: 1 1 100%; width: 100% !important; max-width: 100%; }
-    #communityBlock.community-expanded .select2-selection--multiple { height: auto !important; min-height: 60px !important; max-height: none !important; overflow: visible; }
-    #communityBlock.community-expanded .select2-selection__rendered { height: auto !important; min-height: 58px; max-height: min(32vh, 260px); flex-wrap: wrap; align-content: flex-start; overflow-x: hidden; overflow-y: auto; }
-    #communityBlock.community-expanded .select2-selection__choice { display: inline-flex; align-items: center; max-width: min(260px, 100%); min-height: 26px; margin: 4px 4px 0 0; padding: 2px 7px; white-space: normal; font-size: 12px; }
-    #communityBlock.community-expanded .select2-selection__choice__remove { align-self: stretch; min-width: 20px; margin-right: 5px; color: #aa251e; font-size: 16px; }
     #symbolKind { display: none; }
     #symbolPickerBtn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #bac8d2; border-radius: 7px !important; color: var(--navy); background: #fff; }
     #symbolPickerBtn svg, .symbol-choice svg { display: block; width: 23px; height: 23px; flex: 0 0 23px; }
@@ -295,6 +269,21 @@
 #quickSaveStatus{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:#173347;color:white;border-radius:10px;padding:12px 18px;max-width:min(600px,90vw);box-shadow:0 4px 20px #0003;font-size:14px;pointer-events:none}
 .tool-dialog{width:min(580px,94vw);max-height:88vh;overflow:auto;border:1px solid #d6e0e5;border-radius:16px;padding:20px;background:white;color:#173347}
 .tool-dialog::backdrop{background:#12334780}.tool-dialog h2{font-size:20px;margin:0}.tool-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:14px}.tool-dialog .panel-section>summary{display:none}.tool-dialog .panel-section{border:0}.tool-launch{display:block;width:100%;text-align:left;margin:8px 0;padding:12px}.tool-dialog button{cursor:pointer}.tool-dialog .panel-input,.tool-dialog .panel-select{width:100%}
+#communityPickerDialog { width: min(660px, 94vw); }
+#communityPickerDialog .tool-dialog-head { position: sticky; top: -20px; z-index: 2; padding: 8px 0; background: #fff; }
+.community-picker-note { margin: 0 0 12px; color: #536b77; font-size: 12px; line-height: 1.45; }
+#communitySearch { display: block; width: 100%; padding: 10px 12px; border: 1px solid #b9cbd5; border-radius: 8px; font: inherit; }
+.community-picker-section { margin-top: 14px; }
+.community-picker-section h3 { margin: 0 0 7px; font-size: 14px; }
+#communityPickedList { display: flex; flex-wrap: wrap; gap: 6px; max-height: 125px; overflow: auto; padding: 8px; border: 1px solid #d7e0e7; border-radius: 8px; background: #f7fafb; }
+.community-chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid #b7d4d1; border-radius: 7px; color: #075e5c; background: #e7f5f2; font-size: 12px; text-align: left; }
+.community-chip .remove-mark { color: #b42318; font-size: 17px; line-height: 1; }
+#communityOptionList { max-height: min(36vh, 300px); overflow: auto; border: 1px solid #d7e0e7; border-radius: 8px; }
+.community-option { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-bottom: 1px solid #edf1f3; cursor: pointer; font-size: 13px; }
+.community-option:last-child { border-bottom: 0; }
+.community-option:hover { background: #eef8f6; }
+.community-option input { width: 17px; height: 17px; flex: 0 0 auto; }
+.community-empty { margin: 0; padding: 12px; color: #627782; font-size: 12px; }
 #tool-spatial[open]{position:fixed;inset:auto;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;z-index:30;max-height:75vh;box-shadow:0 12px 35px #0004}
 #tool-spatial .tool-dialog-head{position:sticky;top:0;z-index:2;padding:5px 0;background:#fff;cursor:move;touch-action:none;user-select:none}
 #tool-spatial .tool-dialog-head h2{min-width:0;font-size:18px;line-height:1.25}
@@ -350,13 +339,10 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
   <div id="quickSaveStatus" role="status" hidden></div>
   <section id="controls" aria-label="เครื่องมือแผนที่">
     <div class="control-group" id="communityBlock">
-      <label for="communitySelect">ชุมชน</label>
+      <span>ชุมชน</span>
       <select id="communitySelect" multiple></select>
-      <span id="communitySelectionCount" class="selection-count">เลือก 0 ชุมชน</span>
-      <button type="button" id="communityExpandBtn" class="outline" aria-expanded="false" aria-controls="communityBlock">ขยายรายชื่อ</button>
+      <button type="button" id="communitySelectionCount" aria-haspopup="dialog" aria-controls="communityPickerDialog" title="ค้นหา เลือก และนำชุมชนออก">เลือก 0 จาก 0 ชุมชน ▾</button>
       <button type="button" onclick="openCommunitySettings()">เปลี่ยนผังชุมชน</button>
-      <button type="button" onclick="showAllCommunities()">เลือกทั้งหมด</button>
-      <button type="button" id="clearCommunities">ล้าง</button>
     </div>
     <div class="control-group">
       <label><input type="checkbox" id="showPolygonToggle" checked> แสดงขอบเขตที่เลือก</label>
@@ -377,6 +363,21 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       <button type="button" class="outline" onclick="clearAllMapData()">ล้างทั้งหมด</button>
     </div>
   </section>
+  <dialog id="communityPickerDialog" class="tool-dialog" aria-labelledby="communityPickerTitle">
+    <div class="tool-dialog-head"><h2 id="communityPickerTitle">จัดการชุมชนบนแผนที่</h2><button type="button" id="communityPickerClose">ปิด</button></div>
+    <p class="community-picker-note">ค้นหาแล้วติ๊กเลือกชุมชนที่ต้องการแสดงบนแผนที่ กด X ที่ชื่อด้านล่างเพื่อเอาออกทีละแห่ง</p>
+    <label class="panel-label" for="communitySearch">ค้นหาชุมชน</label>
+    <input id="communitySearch" type="search" placeholder="พิมพ์ชื่อชุมชน…" autocomplete="off">
+    <section class="community-picker-section" aria-label="ชุมชนที่เลือก">
+      <h3 id="communityPickedHeading">ที่เลือก (0)</h3>
+      <div id="communityPickedList"></div>
+    </section>
+    <section class="community-picker-section" aria-label="รายชื่อชุมชนทั้งหมด">
+      <h3 id="communityResultsCount">รายชื่อชุมชน (0)</h3>
+      <div id="communityOptionList"></div>
+    </section>
+    <div class="panel-actions"><button type="button" onclick="showAllCommunities()">เลือกทั้งหมด</button><button type="button" id="clearCommunities" class="outline">ล้างที่เลือก</button></div>
+  </dialog>
   <div id="activeProjectBar" role="status"><span>โครงการที่กำลังทำงาน</span><strong id="activeProjectTitle">ยังไม่ได้เลือกโครงการ</strong></div>
   <div id="bootStatus" role="status" style="padding:12px;background:#fff3d9;color:#644a18">กำลังเปิดระบบ…</div>
   <main id="mapwrap">
@@ -543,15 +544,13 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       <p class="donation-note">สแกน QR ด้วยแอปธนาคารของท่านได้เลยครับ</p>
     </div>
   </section>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://accounts.google.com/gsi/client?hl=th" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="map-image-export.js?v=layout-1"></script>
-  <script src="symbol-tools.js?v=2"></script>
+  <script src="symbol-tools.js?v=3"></script>
   <script src="location-link.js?v=1"></script>
   <script src="config.js"></script>
   <script src="auth-client.js?v=projects-20260925"></script>
@@ -1089,26 +1088,62 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       const source = map && map.getSource('drawn-circles');
       if (source) source.setData({ type: 'FeatureCollection', features: circleFeatures });
     }
-    function selectedCommunityNames() { return $('#communitySelect').val() || []; }
-    function toggleCommunityList() {
-      const block = document.getElementById('communityBlock');
-      const expanded = block.classList.toggle('community-expanded');
-      document.getElementById('controls').classList.toggle('community-list-open', expanded);
-      const button = document.getElementById('communityExpandBtn');
-      button.textContent = expanded ? 'ย่อรายชื่อ' : 'ขยายรายชื่อ';
-      button.setAttribute('aria-expanded', String(expanded));
-      if (expanded) block.querySelector('.select2-selection__rendered')?.scrollTo(0, 0);
-      if (map) map.resize();
+    function selectedCommunityNames() { return [...document.getElementById('communitySelect').selectedOptions].map(option => option.value); }
+    function setSelectedCommunities(names) {
+      const selected = new Set(Array.from(names || [], String));
+      const select = document.getElementById('communitySelect');
+      [...select.options].forEach(option => { option.selected = selected.has(option.value); });
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    function openCommunityPicker() {
+      closeToolDialogs();
+      const search = document.getElementById('communitySearch');
+      search.value = '';
+      renderCommunityPickerOptions();
+      renderCommunityPickerState();
+      document.getElementById('communityPickerDialog').showModal();
+      search.focus();
     }
     function updateCommunitySelectionCount() {
       const count = selectedCommunityNames().length;
       const total = communityNames.length;
-      const label = document.getElementById('communitySelectionCount');
-      if (label) label.textContent = count === total && total ? `เลือกทั้งหมด ${total} ชุมชน` : `เลือก ${count} จาก ${total} ชุมชน`;
-      document.querySelectorAll('#communityBlock .select2-selection__choice').forEach(choice => {
-        const remove = choice.querySelector('.select2-selection__choice__remove');
-        if (remove) remove.title = remove.ariaLabel = `ลบ ${choice.title} ออกจากที่เลือก`;
+      document.getElementById('communitySelectionCount').textContent = count === total && total ? `เลือกทั้งหมด ${total} ชุมชน ▾` : `เลือก ${count} จาก ${total} ชุมชน ▾`;
+    }
+    function renderCommunityPickerOptions() {
+      const query = document.getElementById('communitySearch').value.trim().toLocaleLowerCase();
+      const matches = communityNames.filter(name => String(name).toLocaleLowerCase().includes(query));
+      const selected = new Set(selectedCommunityNames());
+      const list = document.getElementById('communityOptionList');
+      list.replaceChildren();
+      document.getElementById('communityResultsCount').textContent = `รายชื่อชุมชน (${matches.length} จาก ${communityNames.length})`;
+      if (!matches.length) { const empty = document.createElement('p'); empty.className = 'community-empty'; empty.textContent = communityNames.length ? 'ไม่พบชื่อชุมชนที่ค้นหา' : 'ยังไม่มีชุมชนในผังนี้ กรุณากด “เปลี่ยนผังชุมชน” เพื่อเพิ่มข้อมูล'; list.append(empty); return; }
+      matches.forEach(name => {
+        const row = document.createElement('label'); row.className = 'community-option';
+        const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = selected.has(name); checkbox.dataset.name = name;
+        checkbox.addEventListener('change', () => {
+          const next = new Set(selectedCommunityNames());
+          if (checkbox.checked) next.add(name); else next.delete(name);
+          setSelectedCommunities(next);
+        });
+        const text = document.createElement('span'); text.textContent = name;
+        row.append(checkbox, text); list.append(row);
       });
+    }
+    function renderCommunityPickerState() {
+      const names = selectedCommunityNames();
+      const selected = new Set(names);
+      document.getElementById('communityPickedHeading').textContent = `ที่เลือก (${names.length})`;
+      const list = document.getElementById('communityPickedList');
+      list.replaceChildren();
+      if (!names.length) { const empty = document.createElement('span'); empty.className = 'community-empty'; empty.textContent = 'ยังไม่ได้เลือกชุมชน'; list.append(empty); }
+      names.forEach(name => {
+        const chip = document.createElement('button'); chip.type = 'button'; chip.className = 'community-chip'; chip.setAttribute('aria-label', `นำ ${name} ออกจากที่เลือก`);
+        const x = document.createElement('span'); x.className = 'remove-mark'; x.textContent = '×'; x.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span'); label.textContent = name;
+        chip.append(x, label); chip.addEventListener('click', () => setSelectedCommunities(names.filter(item => item !== name)));
+        list.append(chip);
+      });
+      document.querySelectorAll('#communityOptionList input[type="checkbox"]').forEach(checkbox => { checkbox.checked = selected.has(checkbox.dataset.name); });
     }
     function updateCommunityVisibility() {
       if (!map || !map.getLayer('community-fill')) return;
@@ -1122,18 +1157,14 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     }
     function populateCommunitySelect() {
       const select = document.getElementById('communitySelect');
-      if ($('#communitySelect').hasClass('select2-hidden-accessible')) $('#communitySelect').select2('destroy');
-      $('#communitySelect').off('change', updateCommunityVisibility);
-      select.innerHTML = '';
+      select.replaceChildren();
       communityNames.forEach(name => {
         const option = document.createElement('option');
         option.value = name; option.textContent = name; select.appendChild(option);
       });
-      $('#communitySelect').select2({
-        placeholder: 'ค้นหาชุมชน…', width: '100%', closeOnSelect: false
-      }).on('change', () => { updateCommunityVisibility(); updateCommunitySelectionCount(); })
-        .on('select2:unselect', () => setTimeout(() => $('#communitySelect').select2('close'), 0));
       updateCommunitySelectionCount();
+      renderCommunityPickerOptions();
+      renderCommunityPickerState();
     }
     function boundedRead(promise,ms){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('โหลดผังใช้เวลานานเกินไป')),ms);promise.then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});});}
     async function loadCommunities() {
@@ -1168,7 +1199,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         })
       };
       populateCommunitySelect();
-      if (communityConfig) $('#communitySelect').val(communityNames).trigger('change');
+      if (communityConfig) setSelectedCommunities(communityNames);
       if (map.getSource('communities')) map.getSource('communities').setData(communityData);
       if (map.getSource('community-labels')) map.getSource('community-labels').setData(communityLabels);
       addCommunityLayers();
@@ -1209,7 +1240,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         if (secureMode) await saveCommunityConfigCloud(config);
         else localStorage.setItem(COMMUNITY_CONFIG_KEY, JSON.stringify(config));
         communityConfig = config; installCommunityData(data); updateCommunityConfigStatus();
-        $('#communitySelect').val(communityNames).trigger('change');
+        setSelectedCommunities(communityNames);
         const bounds = turf.bbox(data); map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]], {padding:60,maxZoom:14});
         pendingCommunity = null; document.getElementById('communityApply').disabled = true;
       } catch (error) { alert(`เปลี่ยนผังไม่สำเร็จ: ${error.message}`); }
@@ -1289,7 +1320,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       document.getElementById('lngInput').value = '';
       updatePointList();
     }
-    function showAllCommunities() { $('#communitySelect').val(communityNames).trigger('change'); }
+    function showAllCommunities() { setSelectedCommunities(communityNames); }
     function toggleBase() {
       usingFallback = false;
       currentBase = currentBase === 'streets' ? 'satellite' : 'streets';
@@ -1600,7 +1631,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       if (Array.isArray(state.radiusSet) && state.radiusSet.length) localStorage.setItem(RADIUS_SET_KEY, JSON.stringify(state.radiusSet));
       if (state.communities) {
         const matching = state.communities.filter(name => communityNames.includes(name));
-        $('#communitySelect').val(communityConfig && state.communities.length && !matching.length ? communityNames : matching).trigger('change');
+        setSelectedCommunities(communityConfig && state.communities.length && !matching.length ? communityNames : matching);
       }
       if (state.csv && state.csv.records && state.csv.records.length) { currentCsvName = state.csv.name || ''; csvHeaders = state.csv.headers || []; csvRecords = state.csv.records || []; csvLatColumn = state.csv.latColumn || ''; csvLngColumn = state.csv.lngColumn || ''; setColumnOptions(); document.getElementById('csvLatColumn').value = csvLatColumn; document.getElementById('csvLngColumn').value = csvLngColumn; plotCsvRecords(); }
       (state.arrows || []).forEach(restoreArrow); (state.textBoxes || []).forEach(restoreTextBox);
@@ -1676,9 +1707,12 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       document.getElementById('communityReset').addEventListener('click', resetCommunityFile);
       document.getElementById('showPolygonToggle').addEventListener('change', updateCommunityVisibility);
       document.getElementById('showAllLayoutsToggle').addEventListener('change', updateCommunityVisibility);
-      document.getElementById('communityExpandBtn').addEventListener('click', toggleCommunityList);
+      document.getElementById('communitySelectionCount').addEventListener('click', openCommunityPicker);
+      document.getElementById('communityPickerClose').addEventListener('click', () => document.getElementById('communityPickerDialog').close());
+      document.getElementById('communitySearch').addEventListener('input', renderCommunityPickerOptions);
+      document.getElementById('communitySelect').addEventListener('change', () => { updateCommunityVisibility(); updateCommunitySelectionCount(); renderCommunityPickerState(); });
       document.getElementById('clearCommunities').addEventListener('click', () => {
-        $('#communitySelect').val(null).trigger('change');
+        setSelectedCommunities([]);
       });
       document.getElementById('spatialImportBtn').addEventListener('click', () => document.getElementById('spatialFile').click());
       document.getElementById('spatialExampleBtn').addEventListener('click', loadSpatialExample);
