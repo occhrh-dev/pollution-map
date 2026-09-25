@@ -62,6 +62,14 @@
     } catch(error) { if(error.name==='AbortError') { const timeout=new Error('ระบบกลางไม่ตอบกลับภายใน '+(timeoutMs/1000)+' วินาที กรุณาลองใหม่'); timeout.code='TIMEOUT'; throw timeout; } throw error; } finally { clearTimeout(timer); }
   }
 
+  async function listProjects(agencyId) {
+    const projects = await api('listProjects', { agencyId });
+    if (!Array.isArray(projects)) {
+      throw new Error('ระบบกลางส่งรายการโครงการผิดรูปแบบ กรุณาลองโหลดรายการใหม่');
+    }
+    return projects;
+  }
+
   function savedDriveToken() {
     const saved = readJson(DRIVE_TOKEN_KEY);
     if (!saved || !saved.accessToken || Date.now() >= Number(saved.expiresAt || 0) - 60000) return null;
@@ -161,7 +169,7 @@
   }
 
   window.PollutionMapAuth = {
-    configured, credential, session, setLogin, clearLogin, api, remembered, rememberWorkspace, forgetAccount,
+    configured, credential, session, setLogin, clearLogin, api, listProjects, remembered, rememberWorkspace, forgetAccount,
     requestDriveToken, saveJsonFile, loadJsonFile, trashDriveFile,
     hasDriveToken: () => !!savedDriveToken()
   };

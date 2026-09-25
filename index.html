@@ -452,7 +452,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
   <script src="symbol-tools.js?v=1"></script>
   <script src="location-link.js?v=1"></script>
   <script src="config.js"></script>
-  <script src="auth-client.js?v=save-recovery-2"></script>
+  <script src="auth-client.js?v=projects-20260925"></script>
   <script>
     const MAPTILER_KEY = 'XOw46Ht6gxyHhSCkLXPf';
     const emptyCommunityData = () => ({ type: 'FeatureCollection', features: [] });
@@ -605,7 +605,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
           pendingCreatedProject={name,fileId:file.id,fileName:file.name,attempted:false}; rememberPendingProject();
         }
         status.textContent='ไฟล์ถูกเก็บบน Drive แล้ว กำลังเพิ่มเข้ารายการโครงการ…';
-        const existing=pendingCreatedProject.attempted?(await PollutionMapAuth.api('listProjects',{agencyId:secureOrganizationId})||[]).find(p=>p.fileId===pendingCreatedProject.fileId):null;
+        const existing=pendingCreatedProject.attempted?(await PollutionMapAuth.listProjects(secureOrganizationId)).find(p=>p.fileId===pendingCreatedProject.fileId):null;
         pendingCreatedProject.attempted=true;rememberPendingProject();
         if(!existing)await PollutionMapAuth.api('saveProject',{agencyId:secureOrganizationId,project:{id:'',...pendingCreatedProject}});
         pendingCreatedProject=null;rememberPendingProject();projectPageIndex=0;refreshCloudProjects();
@@ -621,7 +621,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
       projectListRequest=(async()=>{
         projectListState='loading';renderProjectCards();renderFieldSurveys();
         try{
-          cloudProjects=await PollutionMapAuth.api('listProjects',{agencyId:secureOrganizationId})||[];
+          cloudProjects=await PollutionMapAuth.listProjects(secureOrganizationId);
           projectListState='ready';projectListError='';
           const select=document.getElementById('cloudProjectSelect');select.replaceChildren(new Option('— โครงการใหม่ —',''));
           cloudProjects.forEach(p=>select.add(new Option(p.name,p.id)));select.value=selectId||'';

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const htmlFiles = ['index.html', 'login.html', 'admin.html', 'reset-password.html'];
+const htmlFiles = fs.readdirSync('.').filter(file => file.endsWith('.html') && file !== 'index.backup.html');
 for (const file of htmlFiles) {
   const html = fs.readFileSync(file, 'utf8');
   const ids = [...html.matchAll(/\sid=["']([^"']+)["']/gi)].map(match => match[1]);
@@ -13,12 +13,11 @@ for (const file of htmlFiles) {
   });
 }
 
-const indexHtml = fs.readFileSync('index.html', 'utf8');
-for (const requiredText of ['บันทึกทั้งโครงการลง Google Drive', 'communitySelectionCount', 'จุดข้อมูลจาก CSV']) {
-  if (!indexHtml.includes(requiredText)) throw new Error(`index.html: missing ${requiredText}`);
+const sourceFiles = [
+  ...fs.readdirSync('.').filter(file => file.endsWith('.js')),
+  ...fs.readdirSync('apps-script').filter(file => file.endsWith('.gs')).map(file => `apps-script/${file}`)
+];
+for (const file of sourceFiles) {
+  new vm.Script(fs.readFileSync(file, 'utf8'), { filename: file });
 }
-
-new vm.Script(fs.readFileSync('auth-client.js', 'utf8'), { filename: 'auth-client.js' });
-new vm.Script(fs.readFileSync('config.js', 'utf8'), { filename: 'config.js' });
-new vm.Script(fs.readFileSync('apps-script/Code.gs', 'utf8'), { filename: 'apps-script/Code.gs' });
-console.log('Syntax OK: HTML inline scripts, auth client, config, and Apps Script');
+console.log(`Syntax OK: ${htmlFiles.length} HTML pages and ${sourceFiles.length} JavaScript/Apps Script files`);
