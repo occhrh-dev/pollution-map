@@ -36,7 +36,6 @@
     .header-spacer { flex: 1; }
     .agency-badge { max-width: 310px; padding: 5px 11px; border: 1px solid rgba(255,255,255,.28); border-radius: 16px; background: rgba(255,255,255,.12); font-size: 12px; line-height: 1.25; }
     .donation-btn { color: #17324a; background: #ffd86b; border: 1px solid rgba(255,255,255,.45); }
-    .radius-shortcut { background: #18a09b; border: 1px solid rgba(255,255,255,.65); box-shadow: 0 0 0 2px rgba(255,255,255,.12); font-weight: 700; }
     .cloud-section { margin-bottom: 12px; padding: 11px; border: 1px solid #a9ccc9; border-radius: 10px; background: #eef8f7; }
     .cloud-section h3 { margin: 0 0 7px; font-size: 14px; color: var(--navy); }
     .role-badge { display: inline-block; margin-top: 6px; padding: 3px 8px; border-radius: 12px; background: #d7edeb; font-size: 11px; font-weight: 700; }
@@ -238,6 +237,27 @@
     #communityBlock .select2-selection__rendered { height: 28px; }
     #communityBlock .selection-count { font-size: 10px; padding: 3px 6px; }
     @media (max-width: 760px) { #controls { max-height: 38vh; } #communityBlock { flex-basis: 100%; } }
+    header { display: block; min-height: 0; padding: 0; }
+    .app-bar { min-height: 39px; padding: 5px 12px; display: flex; align-items: center; gap: 10px; }
+    .app-bar .title-wrap { min-width: 0; flex: 0 1 auto; }
+    .app-bar h1 { font-size: 16px; white-space: nowrap; }
+    .app-bar .subtitle { display: none; }
+    .app-bar .agency-badge { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .app-bar-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+    .app-bar-actions button { font-size: 11px; padding: 5px 9px; }
+    .command-ribbon { display: flex; align-items: stretch; gap: 0; padding: 4px 8px; overflow-x: auto; overflow-y: hidden; white-space: nowrap; background: #f7fafb; border-bottom: 1px solid #cbd8df; scrollbar-width: thin; }
+    .ribbon-group { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; padding: 0 9px; border-right: 1px solid #d8e2e8; }
+    .ribbon-group:last-child { border-right: 0; }
+    .ribbon-group-label { margin: 0 0 3px; color: #637986; font-size: 10px; font-weight: 700; line-height: 1.1; }
+    .ribbon-actions { display: flex; align-items: center; gap: 4px; }
+    .command-ribbon button { min-height: 30px; padding: 5px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--navy); background: transparent; font-size: 12px; font-weight: 700; }
+    .command-ribbon button:hover, .command-ribbon button:focus-visible { border-color: #b8d6d4; background: #e8f3f2; filter: none; }
+    .command-ribbon .ribbon-primary { border-color: #9ccfcc; color: #075e5c; background: #e2f4f1; }
+    .command-ribbon .ribbon-save { border-color: #0e7c7b; color: #fff; background: var(--teal); }
+    .command-ribbon .ribbon-save:hover, .command-ribbon .ribbon-save:focus-visible { color: #fff; background: #096d6c; }
+    .command-ribbon .ribbon-save:disabled { opacity: .55; }
+    @media (max-width: 900px) { .app-bar .agency-badge { max-width: 190px; } }
+    @media (max-width: 620px) { .app-bar { gap: 6px; padding: 5px 8px; } .app-bar h1 { max-width: 170px; overflow: hidden; text-overflow: ellipsis; font-size: 14px; } .app-bar .agency-badge { max-width: 120px; font-size: 10px; } .app-bar-actions button { padding: 5px 7px; } .command-ribbon { padding: 4px; } .ribbon-group { padding: 0 7px; } }
   #quickSaveBtn[hidden],#quickSaveStatus[hidden]{display:none}
 #quickSaveStatus{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10000;background:#173347;color:white;border-radius:10px;padding:12px 18px;max-width:min(600px,90vw);box-shadow:0 4px 20px #0003;font-size:14px;pointer-events:none}
 .tool-dialog{width:min(580px,94vw);max-height:88vh;overflow:auto;border:1px solid #d6e0e5;border-radius:16px;padding:20px;background:white;color:#173347}
@@ -255,22 +275,39 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
 </head>
 <body>
   <header>
-    <div class="title-wrap">
-      <h1>🗺️ ระบบจัดการแผนที่อย่างง่าย</h1>
-      <div class="subtitle">MapLibre · สำหรับจัดการแผนที่การกระจายของความเสี่ยง</div>
+    <div class="app-bar">
+      <div class="title-wrap">
+        <h1>🗺️ ระบบจัดการแผนที่อย่างง่าย</h1>
+        <div class="subtitle">MapLibre · สำหรับจัดการแผนที่การกระจายของความเสี่ยง</div>
+      </div>
+      <div class="agency-badge" id="agencyBadge" hidden></div>
+      <div class="header-spacer"></div>
+      <div class="app-bar-actions">
+        <button id="loginBtn" type="button" onclick="location.href='login.html'">เข้าสู่ระบบหน่วยงาน</button>
+        <button id="donationBtn" type="button" class="donation-btn" onclick="openDonationModal()">สนับสนุนระบบ</button>
+        <button id="logoutBtn" type="button" class="secondary" hidden onclick="signOutSecure()">ออกจากระบบ</button>
+      </div>
     </div>
-    <div class="agency-badge" id="agencyBadge" hidden></div>
-    <div class="header-spacer"></div>
-    <button type="button" onclick="openFieldNotebook()">เก็บจุดลงพื้นที่</button>
-    <button id="radiusShortcut" type="button" class="radius-shortcut" onclick="openToolDialog('radius')" title="กำหนดขนาดและสี แล้ววางวงรัศมีบนแผนที่หรือจากพิกัด">◎ สร้างวงรัศมี</button>
-    <button id="loginBtn" type="button" onclick="location.href='login.html'">เข้าสู่ระบบหน่วยงาน</button>
-    <button id="quickSaveBtn" type="button" hidden onclick="saveCloudProject()" title="บันทึกจุด ชั้นข้อมูล และงานแผนที่ทั้งโครงการลง Google Drive">💾 บันทึกโครงการ</button>
-    <button type="button" onclick="openToolDialog('project')">โครงการ</button><button id="dataBtn" type="button" onclick="toggleDataPanel()">จัดการข้อมูล</button>
-    <button id="exportImageBtn" type="button" onclick="exportMapImage()">บันทึกเป็นรูป PNG</button>
-    <button id="donationBtn" type="button" class="donation-btn" onclick="openDonationModal()">สนับสนุนระบบ</button>
-    <button id="logoutBtn" type="button" class="secondary" hidden onclick="signOutSecure()">ออกจากระบบ</button>
-    <button id="baseBtn" type="button" onclick="toggleBase()">🛰️ ดาวเทียม</button>
-    <button id="toggleMapBtn" type="button" class="secondary" onclick="toggleMapView()">ขยายแผนที่</button>
+    <nav class="command-ribbon" aria-label="เมนูเครื่องมือหลัก">
+      <div class="ribbon-group"><span class="ribbon-group-label">ลงพื้นที่</span><div class="ribbon-actions">
+        <button type="button" onclick="openFieldNotebook()" title="เปิดสมุดบันทึกพิกัดระหว่างลงพื้นที่">📍 เก็บจุดลงพื้นที่</button>
+      </div></div>
+      <div class="ribbon-group"><span class="ribbon-group-label">วาดบนแผนที่</span><div class="ribbon-actions">
+        <button id="radiusShortcut" type="button" class="ribbon-primary" onclick="openToolDialog('radius')" title="กำหนดขนาดและสี แล้ววางวงรัศมีบนแผนที่หรือจากพิกัด">◎ สร้างวงรัศมี</button>
+      </div></div>
+      <div class="ribbon-group"><span class="ribbon-group-label">โครงการ</span><div class="ribbon-actions">
+        <button type="button" onclick="openToolDialog('project')" title="สร้างโครงการใหม่หรือเปิดโครงการที่บันทึกไว้">📂 เปิด/สร้างโครงการ</button>
+        <button id="quickSaveBtn" type="button" class="ribbon-save" hidden onclick="saveCloudProject()" title="บันทึกจุด ชั้นข้อมูล และงานแผนที่ทั้งโครงการลง Google Drive">💾 บันทึกโครงการลง Drive</button>
+      </div></div>
+      <div class="ribbon-group"><span class="ribbon-group-label">ข้อมูลและส่งออก</span><div class="ribbon-actions">
+        <button id="dataBtn" type="button" onclick="toggleDataPanel()" title="นำเข้าจุด CSV ชั้นข้อมูลแผนที่ หรือสำรองข้อมูล">📋 นำเข้า/จัดการข้อมูล</button>
+        <button id="exportImageBtn" type="button" onclick="exportMapImage()" title="ดาวน์โหลดภาพแผนที่เป็นไฟล์ PNG">🖼️ บันทึกภาพ PNG</button>
+      </div></div>
+      <div class="ribbon-group"><span class="ribbon-group-label">มุมมอง</span><div class="ribbon-actions">
+        <button id="baseBtn" type="button" onclick="toggleBase()">🛰️ แผนที่ดาวเทียม</button>
+        <button id="toggleMapBtn" type="button" onclick="toggleMapView()">⛶ ขยายแผนที่</button>
+      </div></div>
+    </nav>
   </header>
   <div id="quickSaveStatus" role="status" hidden></div>
   <section id="controls" aria-label="เครื่องมือแผนที่">
@@ -696,7 +733,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         document.getElementById('cloudStatus').textContent = `บันทึกทั้งโครงการ “${name}” ใน Google Drive แล้ว · ${new Date().toLocaleString('th-TH')}`;
         showSaveNotice(`บันทึกโครงการ “${name}” ลง Drive แล้ว`);
       } catch (error) { document.getElementById('cloudStatus').textContent = `บันทึกไม่สำเร็จ: ${error.message}`; showSaveNotice(`บันทึกไม่สำเร็จ: ${error.message}`); }
-      finally { button.disabled = !canEditCloud(); quickButton.disabled = !canEditCloud(); quickButton.textContent = '💾 บันทึกโครงการ'; }
+      finally { button.disabled = !canEditCloud(); quickButton.disabled = !canEditCloud(); quickButton.textContent = '💾 บันทึกโครงการลง Drive'; }
     }
     async function deleteCloudProject(targetId = cloudProjectId) {
       if (String(secureMembership.role).toUpperCase() !== 'ADMIN' || !targetId) { document.getElementById('cloudStatus').textContent = 'เลือกโครงการก่อนลบ'; return; }
@@ -1072,7 +1109,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     function toggleBase() {
       usingFallback = false;
       currentBase = currentBase === 'streets' ? 'satellite' : 'streets';
-      document.getElementById('baseBtn').textContent = currentBase === 'streets' ? '🛰️ ดาวเทียม' : '🗺️ แผนที่ถนน';
+      document.getElementById('baseBtn').textContent = currentBase === 'streets' ? '🛰️ แผนที่ดาวเทียม' : '🗺️ แผนที่ถนน';
       map.once('idle', restoreCustomLayers);
       map.setStyle(STYLES[currentBase]);
     }
@@ -1084,7 +1121,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     function toggleMapView() {
       document.body.classList.toggle('map-full');
       const full = document.body.classList.contains('map-full');
-      document.getElementById('toggleMapBtn').textContent = full ? 'แสดงเครื่องมือ' : 'ขยายแผนที่';
+      document.getElementById('toggleMapBtn').textContent = full ? '▤ แสดงแถบเครื่องมือ' : '⛶ ขยายแผนที่';
       setTimeout(() => map.resize(), 30);
     }
     function openDonationModal() {
@@ -1275,7 +1312,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
     function toggleDataPanel() {
       const panel = document.getElementById('dataPanel');
       panel.hidden = !panel.hidden;
-      document.getElementById('dataBtn').textContent = panel.hidden ? 'จัดการข้อมูล' : 'ซ่อนจัดการข้อมูล';
+      document.getElementById('dataBtn').textContent = panel.hidden ? '📋 นำเข้า/จัดการข้อมูล' : '📋 ปิดเมนูข้อมูล';
       updatePointList();
     }
     function toggleInteractionMode() {
@@ -1388,7 +1425,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
 
     function closeToolDialogs(){document.querySelectorAll('.tool-dialog[open]').forEach(dialog=>dialog.close());}
     function openToolDialog(key){
-      closeToolDialogs();document.getElementById('dataPanel').hidden=true;document.getElementById('dataBtn').textContent='จัดการข้อมูล';
+      closeToolDialogs();document.getElementById('dataPanel').hidden=true;document.getElementById('dataBtn').textContent='📋 นำเข้า/จัดการข้อมูล';
       const dialog=document.getElementById('tool-'+key);if(dialog)dialog.showModal();
       if(key==='radius')updatePointList();
       if(key==='data'){renderFieldSurveys();if(secureMode&&!projectListRequest)refreshCloudProjects();}
@@ -1479,7 +1516,7 @@ body.choosing-project>header,body.choosing-project>#controls,body.choosing-proje
         if (!usingFallback && /api\.maptiler\.com/.test(message)) {
           usingFallback = true;
           currentBase = 'streets';
-          document.getElementById('baseBtn').textContent = '🛰️ ดาวเทียม';
+          document.getElementById('baseBtn').textContent = '🛰️ แผนที่ดาวเทียม';
           document.getElementById('hint').textContent = 'ใช้แผนที่ถนนสำรอง OpenStreetMap · คลิกหมุดเพื่อดูข้อมูล หรือสร้างวงรัศมีจากปุ่มด้านบน';
           map.setStyle(fallbackStreetStyle());
         }
